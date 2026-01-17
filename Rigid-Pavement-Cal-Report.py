@@ -768,7 +768,7 @@ def main():
             | ทางหลวงแผ่นดิน (4 ช่องจราจร) | 10,000,000 - 50,000,000 |
             """)
         
-               w18_design = st.number_input(
+            w18_design = st.number_input(
             "ESAL ที่ต้องการรองรับ (W₁₈)",
             min_value=10_000,
             max_value=500_000_000,
@@ -776,7 +776,7 @@ def main():
             step=100_000,
             format="%d",
             help="จำนวน Equivalent Single Axle Load (18 kip) ตลอดอายุการใช้งาน"
-        )
+      
               # แสดงหน่วยคำพูดภาษาไทย
         if w18_design >= 1_000_000:
             esal_text = f"{w18_design / 1_000_000:,.2f} ล้าน ESALs"
@@ -789,6 +789,7 @@ def main():
         
         st.markdown(f"<h3 style='color: #1E88E5; margin-top: -10px;'>{esal_text}</h3>", 
                     unsafe_allow_html=True)
+          )
         st.markdown("---")
         
         # 2. Serviceability
