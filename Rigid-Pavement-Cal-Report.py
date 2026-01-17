@@ -785,7 +785,7 @@ def main():
         st.markdown(
             f"""
             <div style="
-                font-size:32px;
+                font-size:20px;
                 font-weight:bold;
                 color:#0B5ED7;
                 text-align:center;
@@ -796,7 +796,8 @@ def main():
         """,
         unsafe_allow_html=True
         )
-
+        st.markdown("---")
+        st.markdown(
         # 2. Serviceability
         st.subheader("2️⃣ Serviceability")
         pt = st.slider(
