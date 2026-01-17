@@ -796,8 +796,8 @@ def main():
         """,
         unsafe_allow_html=True
         )
+
         st.markdown("---")
-        st.markdown(
         # 2. Serviceability
         st.subheader("2️⃣ Serviceability")
         pt = st.slider(
