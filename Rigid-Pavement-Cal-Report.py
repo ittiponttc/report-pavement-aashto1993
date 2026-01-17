@@ -755,12 +755,7 @@ def main():
         
         # 1. ESAL ที่ต้องการรองรับ
         st.subheader("1️⃣ ปริมาณจราจร")
-                if w18_design >= 1_000_000:
-            esal_text = f"{w18_design / 1_000_000:,.2f} ล้าน"
-        else:
-            esal_text = f"{w18_design:,.0f}"
-        
-        st.markdown(f"<h3 style='color: #1E88E5;'>{esal_text} ESALs</h3>", unsafe_allow_html=True)
+
         # แสดงตัวช่วยประมาณ ESAL
         with st.expander("📊 ตัวช่วยประมาณ ESAL ตามประเภทถนน"):
             st.markdown("""
