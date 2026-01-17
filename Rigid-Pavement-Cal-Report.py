@@ -777,8 +777,6 @@ def main():
             format="%d",
             help="จำนวน Equivalent Single Axle Load (18 kip) ตลอดอายุการใช้งาน"
         )
-        
-        st.markdown("---")
             
         st.markdown("---")
         
