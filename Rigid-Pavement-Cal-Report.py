@@ -1,11 +1,10 @@
 """
 โปรแกรมออกแบบและตรวจสอบความหนาถนนคอนกรีต (Rigid Pavement)
 ตามวิธี AASHTO 1993
-รองรับทั้ง JPCP (Jointed Plain Concrete Pavement) JRCP (Jointed Reinforced Concrete Pavement)และ CRCP (Continuously Reinforced Concrete Pavement)
+รองรับทั้ง JPCP (Jointed Plain Concrete Pavement) และ CRCP (Continuously Reinforced Concrete Pavement)
 
-พัฒนาโดย รศ.ดร.อิทธิพล มีผล สำหรับใช้ในการเรียนการสอน
+พัฒนาสำหรับใช้ในการเรียนการสอน
 ภาควิชาครุศาสตร์โยธา มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ
-17-1-69- ปรับปรุงการแสดงผลภาพ และปรับหน่วย นิ้ว ให้เป็นจำนวนเต็ม cm สอดตล้องกรมทางหลวง
 """
 
 import streamlit as st
@@ -402,13 +401,18 @@ def create_word_report(
     inputs: dict,
     calculated_values: dict,
     comparison_results: list,
-    selected_d: float,
+    selected_d_cm: float,
     main_result: tuple,
-    layers_data: list = None
+    layers_data: list = None,
+    project_name: str = ""
 ) -> BytesIO:
     """
     สร้างรายงานการคำนวณในรูปแบบไฟล์ Word (.docx)
     ใช้ python-docx library
+    
+    Parameters:
+        selected_d_cm: ความหนาที่เลือก (เซนติเมตร)
+        project_name: ชื่อโครงการ
     """
     try:
         from docx import Document
@@ -420,6 +424,9 @@ def create_word_report(
     except ImportError:
         st.error("กรุณาติดตั้ง python-docx: pip install python-docx")
         return None
+    
+    # แปลง cm เป็น inch สำหรับแสดงผล
+    selected_d_inch = selected_d_cm / 2.54
     
     # สร้างเอกสารใหม่
     doc = Document()
@@ -439,6 +446,8 @@ def create_word_report(
     
     # ข้อมูลทั่วไป
     doc.add_heading('1. ข้อมูลทั่วไป', level=1)
+    if project_name:
+        doc.add_paragraph(f'ชื่อโครงการ: {project_name}')
     doc.add_paragraph(f'ประเภทถนน: {pavement_type}')
     doc.add_paragraph(f'วันที่คำนวณ: {datetime.now().strftime("%d/%m/%Y %H:%M")}')
     
@@ -531,22 +540,24 @@ def create_word_report(
     # ผลการเปรียบเทียบ
     doc.add_heading('6. ผลการเปรียบเทียบความหนาต่างๆ', level=1)
     
-    table3 = doc.add_table(rows=1, cols=5)
+    table3 = doc.add_table(rows=1, cols=6)
     table3.style = 'Table Grid'
     hdr_cells3 = table3.rows[0].cells
-    hdr_cells3[0].text = 'D (นิ้ว)'
-    hdr_cells3[1].text = 'log₁₀(W₁₈)'
-    hdr_cells3[2].text = 'W₁₈ รองรับได้'
-    hdr_cells3[3].text = 'อัตราส่วน'
-    hdr_cells3[4].text = 'ผลการตรวจสอบ'
+    hdr_cells3[0].text = 'D (ซม.)'
+    hdr_cells3[1].text = 'D (นิ้ว)'
+    hdr_cells3[2].text = 'log₁₀(W₁₈)'
+    hdr_cells3[3].text = 'W₁₈ รองรับได้'
+    hdr_cells3[4].text = 'อัตราส่วน'
+    hdr_cells3[5].text = 'ผลการตรวจสอบ'
     
     for result in comparison_results:
         row_cells = table3.add_row().cells
-        row_cells[0].text = f"{result['d']:.0f}"
-        row_cells[1].text = f"{result['log_w18']:.4f}"
-        row_cells[2].text = f"{result['w18']:,.0f}"
-        row_cells[3].text = f"{result['ratio']:.2f}"
-        row_cells[4].text = "ผ่าน ✓" if result['passed'] else "ไม่ผ่าน ✗"
+        row_cells[0].text = f"{result['d_cm']:.0f}"
+        row_cells[1].text = f"{result['d_inch_display']:.0f}"
+        row_cells[2].text = f"{result['log_w18']:.4f}"
+        row_cells[3].text = f"{result['w18']:,.0f}"
+        row_cells[4].text = f"{result['ratio']:.2f}"
+        row_cells[5].text = "ผ่าน ✓" if result['passed'] else "ไม่ผ่าน ✗"
     
     # สรุปผล
     doc.add_heading('7. สรุปผลการออกแบบ', level=1)
@@ -554,10 +565,19 @@ def create_word_report(
     passed, ratio = main_result
     status = "ผ่านเกณฑ์ ✓" if passed else "ไม่ผ่านเกณฑ์ ✗"
     
+    # หา ESAL ที่รองรับได้และค่านิ้วที่แสดงจาก comparison_results
+    w18_capacity_selected = None
+    d_inch_display_selected = round(selected_d_cm / 2.54)
+    for r in comparison_results:
+        if r['d_cm'] == selected_d_cm:
+            w18_capacity_selected = r['w18']
+            d_inch_display_selected = r.get('d_inch_display', round(selected_d_cm / 2.54))
+            break
+    
     summary = f"""
-    ความหนาที่เลือก: {selected_d:.0f} นิ้ว ({selected_d * 2.5:.1f} ซม.)
+    ความหนาที่เลือก: {selected_d_cm:.0f} ซม. ({d_inch_display_selected:.0f} นิ้ว)
     ESAL ที่ต้องการ: {inputs['w18_design']:,.0f} ESALs
-    ESAL ที่รองรับได้: {[r for r in comparison_results if r['d'] == selected_d][0]['w18'] if any(r['d'] == selected_d for r in comparison_results) else 'N/A':,.0f} ESALs
+    ESAL ที่รองรับได้: {w18_capacity_selected:,.0f} ESALs (โดยประมาณ)
     อัตราส่วน: {ratio:.2f}
     ผลการตรวจสอบ: {status}
     """
@@ -606,6 +626,16 @@ def main():
     
     with col1:
         st.header("📥 ข้อมูลนำเข้า (Input)")
+        
+        # ชื่อโครงการ
+        project_name = st.text_input(
+            "🏗️ ชื่อโครงการ",
+            value="",
+            placeholder="กรอกชื่อโครงการ...",
+            help="ชื่อโครงการจะแสดงในรายงาน Word"
+        )
+        
+        st.markdown("---")
         
         # เลือกประเภทผิวทางคอนกรีต
         pavement_type = st.selectbox(
@@ -747,18 +777,7 @@ def main():
             format="%d",
             help="จำนวน Equivalent Single Axle Load (18 kip) ตลอดอายุการใช้งาน"
         )
-              # แสดงหน่วยคำพูดภาษาไทย
-        if w18_design >= 1_000_000:
-            esal_text = f"{w18_design / 1_000_000:,.2f} ล้าน"
-        elif w18_design >= 100_000:
-            esal_text = f"{w18_design / 100_000:,.2f} แสน"
-        elif w18_design >= 10_000:
-            esal_text = f"{w18_design / 10_000:,.2f} หมื่น"
-        else:
-            esal_text = f"{w18_design:,.0f}"
         
-        st.markdown(f"<h3 style='color: #1E88E5; margin-top: -10px;'>{esal_text}</h3>", 
-                    unsafe_allow_html=True)
         st.markdown("---")
         
         # 2. Serviceability
@@ -912,10 +931,12 @@ def main():
         # ตารางอ้างอิงค่า J
         with st.expander("📊 ตารางค่า Load Transfer Coefficient (J)"):
             st.markdown("""
-            | ประเภทถนน | J (AC Shoulder_Yes) |J (AC Shoulder_No) | J (Tied P.C.C_Yes)|J (Tied P.C.C_No)| 
-            |-------------|-----------|-----------|-----------|-----------|
-            |1. JRCP/JPCP |3.2 |3.8-4.4| 2.5-3.1(Mid 2.8) |3.6-4.2| 
-            |2. CRCP |2.9-3.2 | N/A | 2.3-2.9(Mid 2.5) | N/A |
+            | ประเภทผิวทาง | J Default |
+            |-------------|-----------|
+            | JRCP | 2.8 |
+            | JPCP | 2.8 |
+            | JRCP/JPCP | 2.8 |
+            | CRCP | 2.5 |
             
             **หมายเหตุ:** ค่า J ต่ำ = การถ่ายแรงดี = รองรับ ESAL ได้มากขึ้น
             
@@ -950,26 +971,28 @@ def main():
         
         # 7. ความหนาคอนกรีต
         st.subheader("7️⃣ ความหนาคอนกรีตที่ต้องการตรวจสอบ")
-        d_selected = st.slider(
-            "ความหนาคอนกรีต D (นิ้ว)",
-            min_value=8,
-            max_value=16,
-            value=12,
+        d_cm_selected = st.slider(
+            "ความหนาคอนกรีต D (ซม.)",
+            min_value=20,
+            max_value=40,
+            value=30,
             step=1,
-            help="ความหนาแผ่นพื้นคอนกรีต"
+            help="ความหนาแผ่นพื้นคอนกรีต (20-40 ซม.)"
         )
-        st.info(f"D = {d_selected} นิ้ว = **{d_selected * 2.5:.1f} ซม.**")
+        # แปลงเป็นนิ้วสำหรับคำนวณ (ใช้ค่าจริง)
+        d_inch_selected = d_cm_selected / 2.54
+        # ค่านิ้วสำหรับแสดงผล (ปัดเป็นจำนวนเต็ม)
+        display_inch_map = {20: 8, 22: 9, 25: 10, 28: 11, 30: 12, 32: 13, 35: 14, 38: 15, 40: 16}
+        d_inch_display = display_inch_map.get(d_cm_selected, round(d_cm_selected / 2.54))
+        st.info(f"D = **{d_cm_selected} ซม.** ({d_inch_display} นิ้ว)")
         
         st.markdown("---")
         
         # แสดงรูปโครงสร้างชั้นทาง (รวมชั้นคอนกรีตบนสุด)
         st.subheader("📐 รูปตัดโครงสร้างชั้นทาง")
         
-        # คำนวณความหนาคอนกรีตเป็นเซนติเมตร
-        concrete_cm = d_selected * 2.5
-        
         # สร้างรูป (ชั้นคอนกรีตจะอยู่บนสุด)
-        fig_structure = create_pavement_structure_figure(layers_data, concrete_thickness_cm=concrete_cm)
+        fig_structure = create_pavement_structure_figure(layers_data, concrete_thickness_cm=d_cm_selected)
         
         if fig_structure:
             st.pyplot(fig_structure)
@@ -993,16 +1016,25 @@ def main():
         
         # เก็บผลการคำนวณสำหรับความหนาต่างๆ
         comparison_results = []
-        thicknesses = [8, 9, 10, 11, 12, 13, 14, 15, 16]
+        
+        # ใช้ความหนาเป็นเซนติเมตรที่ลงตัว พร้อมค่านิ้วที่ปัดแล้ว (สำหรับแสดงผล)
+        # การคำนวณจริงยังใช้ d_cm / 2.54
+        thicknesses_cm = [20, 22, 25, 28, 30, 32, 35, 38, 40]
+        display_inch = {20: 8, 22: 9, 25: 10, 28: 11, 30: 12, 32: 13, 35: 14, 38: 15, 40: 16}
         
         # คำนวณสำหรับแต่ละความหนา
         st.subheader("📋 ตารางเปรียบเทียบความหนาต่างๆ")
         
         # สร้างตาราง
         table_data = []
-        for d in thicknesses:
+        for d_cm in thicknesses_cm:
+            # แปลง cm เป็น inch สำหรับคำนวณ (ใช้ค่าจริง)
+            d_inch_calc = d_cm / 2.54
+            # ค่านิ้วสำหรับแสดงผล (ปัดเป็นจำนวนเต็ม)
+            d_inch_display = display_inch.get(d_cm, round(d_cm / 2.54))
+            
             log_w18, w18_capacity = calculate_aashto_rigid_w18(
-                d_inch=d,
+                d_inch=d_inch_calc,
                 delta_psi=delta_psi,
                 pt=pt,
                 zr=zr,
@@ -1016,7 +1048,9 @@ def main():
             passed, ratio = check_design(w18_design, w18_capacity)
             
             comparison_results.append({
-                'd': d,
+                'd_cm': d_cm,
+                'd_inch': d_inch_calc,
+                'd_inch_display': d_inch_display,
                 'log_w18': log_w18,
                 'w18': w18_capacity,
                 'passed': passed,
@@ -1024,8 +1058,8 @@ def main():
             })
             
             table_data.append({
-                'D (นิ้ว)': d,
-                'D (ซม.)': f"{d * 2.5:.1f}",
+                'D (ซม.)': d_cm,
+                'D (นิ้ว)': d_inch_display,
                 'log₁₀(W₁₈)': f"{log_w18:.4f}",
                 'W₁₈ รองรับได้': f"{w18_capacity:,.0f}",
                 'อัตราส่วน': f"{ratio:.2f}",
@@ -1046,10 +1080,10 @@ def main():
         st.markdown("---")
         
         # ผลการคำนวณสำหรับความหนาที่เลือก
-        st.subheader(f"🎯 ผลการตรวจสอบ D = {d_selected} นิ้ว")
+        st.subheader(f"🎯 ผลการตรวจสอบ D = {d_cm_selected} ซม. ({d_inch_display} นิ้ว)")
         
         log_w18_selected, w18_selected = calculate_aashto_rigid_w18(
-            d_inch=d_selected,
+            d_inch=d_inch_selected,
             delta_psi=delta_psi,
             pt=pt,
             zr=zr,
@@ -1091,7 +1125,7 @@ def main():
             st.success(f"""
             ✅ **ผ่านเกณฑ์การออกแบบ**
             
-            ความหนา D = {d_selected} นิ้ว ({d_selected * 2.54:.1f} ซม.) 
+            ความหนา D = {d_cm_selected} ซม. ({d_inch_display} นิ้ว) 
             สามารถรองรับ ESAL ได้ {w18_selected:,.0f} ESALs
             ซึ่งมากกว่า ESAL ที่ต้องการ {w18_design:,.0f} ESALs
             
@@ -1101,7 +1135,7 @@ def main():
             st.error(f"""
             ❌ **ไม่ผ่านเกณฑ์การออกแบบ**
             
-            ความหนา D = {d_selected} นิ้ว ({d_selected * 2.54:.1f} ซม.) 
+            ความหนา D = {d_cm_selected} ซม. ({d_inch_display} นิ้ว) 
             รองรับ ESAL ได้เพียง {w18_selected:,.0f} ESALs
             ซึ่งน้อยกว่า ESAL ที่ต้องการ {w18_design:,.0f} ESALs
             
@@ -1162,9 +1196,10 @@ def main():
                         inputs=inputs_dict,
                         calculated_values=calculated_dict,
                         comparison_results=comparison_results,
-                        selected_d=d_selected,
+                        selected_d_cm=d_cm_selected,
                         main_result=(passed_selected, ratio_selected),
-                        layers_data=layers_data
+                        layers_data=layers_data,
+                        project_name=project_name
                     )
                     
                     if buffer:
@@ -1199,9 +1234,8 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.caption("พัฒนาโดย: รศ.ดร.อิทธิพล มีผล // ภาควิชาครุศาสตร์โยธา มจพ. | AASHTO 1993 Rigid Pavement Design Tool")
+    st.caption("พัฒนาโดย: ภาควิชาครุศาสตร์โยธา มจพ. | AASHTO 1993 Rigid Pavement Design Tool")
 
 
 if __name__ == "__main__":
     main()
-
