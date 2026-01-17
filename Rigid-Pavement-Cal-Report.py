@@ -768,15 +768,15 @@ def main():
             | ทางหลวงแผ่นดิน (4 ช่องจราจร) | 10,000,000 - 50,000,000 |
             """)
         
-         w18_design = st.number_input(
-            "ESAL ที่ต้องการรองรับ (W₁₈)",
-            min_value=10_000,
-            max_value=500_000_000,
-            value=500_000,
-            step=100_000,
-            format="%d",
-            help="จำนวน Equivalent Single Axle Load (18 kip) ตลอดอายุการใช้งาน"
-        )
+w18_design = st.number_input(
+    "ESAL ที่ต้องการรองรับ (W₁₈)",
+    min_value=10_000,
+    max_value=500_000_000,
+    value=500_000,
+    step=100_000,
+    format="%d",
+    help="จำนวน Equivalent Single Axle Load (18 kip) ตลอดอายุการใช้งาน"
+)
             
         st.markdown("---")
         
