@@ -1096,7 +1096,7 @@ def main():
         st.markdown("---")
         
         # ผลการคำนวณสำหรับความหนาที่เลือก
-        st.subheader(f"🎯 ผลการตรวจสอบ D = {d_cm_selected} ซม. ({d_inch_display_selected} นิ้ว)")
+        st.subheader(f"🎯 ผลการตรวจสอบ D = {d_cm_selected} ซม. ({d_inch_display} นิ้ว)")
         
         log_w18_selected, w18_selected = calculate_aashto_rigid_w18(
             d_inch=d_inch_selected,
