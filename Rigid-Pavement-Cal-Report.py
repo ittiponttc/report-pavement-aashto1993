@@ -779,7 +779,24 @@ def main():
         )
             
         st.markdown("---")
-        
+
+        w18_million = w18_design / 1_000_000
+
+st.markdown(
+    f"""
+    <div style="
+        font-size:32px;
+        font-weight:bold;
+        color:#0B5ED7;
+        text-align:center;
+        margin-top:10px;
+    ">
+        ปริมาณจราจรออกแบบ = {w18_million:,.2f} ล้าน ESALs
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
         # 2. Serviceability
         st.subheader("2️⃣ Serviceability")
         pt = st.slider(
