@@ -260,7 +260,7 @@ def create_pavement_structure_figure(layers_data: list, concrete_thickness_cm: f
         "วัสดุคัดเลือก ก": "#E8DAEF",
         "ดินถมคันทาง / ดินเดิม": "#F5CBA7",
         "กำหนดเอง...": "#FADBD8",
-        "Concrete Slab": "#5DADE2",
+        "Concrete Slab": "#808080",
     }
     
     # กรองเฉพาะชั้นที่มีความหนา > 0
@@ -798,6 +798,23 @@ def main():
             help="จำนวน Equivalent Single Axle Load (18 kip) ตลอดอายุการใช้งาน"
         )
         
+        # แสดงค่า ESAL เป็นภาษาไทย
+        def format_thai_number(num):
+            if num >= 1_000_000_000:
+                return f"{num/1_000_000_000:.2f} พันล้าน"
+            elif num >= 1_000_000:
+                return f"{num/1_000_000:.2f} ล้าน"
+            elif num >= 100_000:
+                return f"{num/100_000:.2f} แสน"
+            elif num >= 10_000:
+                return f"{num/10_000:.2f} หมื่น"
+            elif num >= 1_000:
+                return f"{num/1_000:.2f} พัน"
+            else:
+                return f"{num:.0f}"
+        
+        st.markdown(f"<span style='color: #1E90FF; font-size: 1.2em; font-weight: bold;'>{format_thai_number(w18_design)}</span>", unsafe_allow_html=True)
+        
         st.markdown("---")
         
         # 2. Serviceability
@@ -951,12 +968,10 @@ def main():
         # ตารางอ้างอิงค่า J
         with st.expander("📊 ตารางค่า Load Transfer Coefficient (J)"):
             st.markdown("""
-            | ประเภทผิวทาง | J Default |
-            |-------------|-----------|
-            | JRCP | 2.8 |
-            | JPCP | 2.8 |
-            | JRCP/JPCP | 2.8 |
-            | CRCP | 2.5 |
+            | ประเภทถนน | J (AC Shoulder_Yes) | J (AC Shoulder_No) | J (Tied P.C.C_Yes) | J (Tied P.C.C_No) |
+            |-----------|---------------------|--------------------|--------------------|-------------------|
+            | 1. JRCP/JPCP | 3.2 | 3.8-4.4 | 2.5-3.1 (Mid 2.8) | 3.6-4.2 |
+            | 2. CRCP | 2.9-3.2 | N/A | 2.3-2.9 (Mid 2.5) | N/A |
             
             **หมายเหตุ:** ค่า J ต่ำ = การถ่ายแรงดี = รองรับ ESAL ได้มากขึ้น
             
