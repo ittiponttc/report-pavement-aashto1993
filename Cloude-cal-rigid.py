@@ -232,8 +232,8 @@ def create_pavement_structure_figure(layers_data: list, concrete_thickness_cm: f
     """
     # แปลงชื่อวัสดุเป็นภาษาอังกฤษสำหรับแสดงในรูป
     THAI_TO_ENG = {
-        "ผิวทางลาดยาง AC": "AC Surface",
-        "ผิวทางลาดยาง PMA": "PMA Surface",
+        "รองผิวทางคอนกรีตด้วย AC": "AC Interlayer",
+        "รองผิวทางคอนกรีตด้วย PMA(AC)": "PMA Interlayer",
         "พื้นทางซีเมนต์ CTB": "Cement Treated Base",
         "หินคลุกผสมซีเมนต์ UCS 24.5 ksc": "Soil Cement",
         "หินคลุก CBR 80%": "Crushed Rock Base",
@@ -249,8 +249,8 @@ def create_pavement_structure_figure(layers_data: list, concrete_thickness_cm: f
     
     # สีสำหรับแต่ละประเภทวัสดุ
     LAYER_COLORS = {
-        "ผิวทางลาดยาง AC": "#2C3E50",
-        "ผิวทางลาดยาง PMA": "#1A252F",
+        "รองผิวทางคอนกรีตด้วย AC": "#2C3E50",
+        "รองผิวทางคอนกรีตด้วย PMA(AC)": "#1A252F",
         "พื้นทางซีเมนต์ CTB": "#7F8C8D",
         "หินคลุกผสมซีเมนต์ UCS 24.5 ksc": "#95A5A6",
         "หินคลุก CBR 80%": "#BDC3C7",
@@ -335,7 +335,7 @@ def create_pavement_structure_figure(layers_data: list, concrete_thickness_cm: f
         display_name = THAI_TO_ENG.get(name, name)
         
         # กำหนดสีข้อความตามสีพื้นหลัง
-        is_dark = name in ["ผิวทางลาดยาง AC", "ผิวทางลาดยาง PMA", "Concrete Slab", 
+        is_dark = name in ["รองผิวทางคอนกรีตด้วย AC", "รองผิวทางคอนกรีตด้วย PMA(AC)", "Concrete Slab", 
                           "พื้นทางซีเมนต์ CTB", "หินคลุกผสมซีเมนต์ UCS 24.5 ksc",
                           "วัสดุหมุนเวียน (Recycling)"]
         text_color = 'white' if is_dark else 'black'
@@ -454,45 +454,53 @@ def create_word_report(
     doc.add_paragraph(f'วันที่คำนวณ: {datetime.now().strftime("%d/%m/%Y %H:%M")}')
     
     # ตารางชั้นโครงสร้างทาง
+    doc.add_heading('2. ชั้นโครงสร้างทาง (Pavement Layers)', level=1)
+    
+    table_layers = doc.add_table(rows=1, cols=4)
+    table_layers.style = 'Table Grid'
+    hdr_layers = table_layers.rows[0].cells
+    hdr_layers[0].text = 'ลำดับ'
+    hdr_layers[1].text = 'ชนิดวัสดุ'
+    hdr_layers[2].text = 'ความหนา (ซม.)'
+    hdr_layers[3].text = 'Modulus E (MPa)'
+    
+    # แถวที่ 1: ผิวทางคอนกรีต
+    row_cells = table_layers.add_row().cells
+    row_cells[0].text = '1'
+    row_cells[1].text = f'ผิวทางคอนกรีต {pavement_type}'
+    row_cells[2].text = f'{selected_d_cm}'
+    row_cells[3].text = '-'
+    
+    # แถวถัดไป: ชั้นวัสดุอื่นๆ
     if layers_data and len(layers_data) > 0:
-        doc.add_heading('2. ชั้นโครงสร้างทาง (Pavement Layers)', level=1)
-        
-        table_layers = doc.add_table(rows=1, cols=4)
-        table_layers.style = 'Table Grid'
-        hdr_layers = table_layers.rows[0].cells
-        hdr_layers[0].text = 'ลำดับ'
-        hdr_layers[1].text = 'ชนิดวัสดุ'
-        hdr_layers[2].text = 'ความหนา (ซม.)'
-        hdr_layers[3].text = 'Modulus E (MPa)'
-        
         for i, layer in enumerate(layers_data):
             row_cells = table_layers.add_row().cells
-            row_cells[0].text = str(i + 1)
+            row_cells[0].text = str(i + 2)
             row_cells[1].text = layer.get('name', f'Layer {i+1}')
             row_cells[2].text = f"{layer.get('thickness_cm', 0)}"
             row_cells[3].text = f"{layer.get('E_MPa', 0):,}"
+    
+    doc.add_paragraph('')  # เว้นบรรทัด
+    
+    # เพิ่มรูปโครงสร้างชั้นทาง
+    if structure_figure is not None:
+        doc.add_paragraph('รูปตัดโครงสร้างชั้นทาง:')
+        
+        # บันทึกรูปเป็น bytes
+        img_buffer = BytesIO()
+        structure_figure.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight',
+                                 facecolor='white', edgecolor='none')
+        img_buffer.seek(0)
+        
+        # เพิ่มรูปในเอกสาร
+        from docx.shared import Inches
+        doc.add_picture(img_buffer, width=Inches(5.5))
+        
+        # จัดกึ่งกลางรูป
+        last_paragraph = doc.paragraphs[-1]
+        last_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         
         doc.add_paragraph('')  # เว้นบรรทัด
-        
-        # เพิ่มรูปโครงสร้างชั้นทาง
-        if structure_figure is not None:
-            doc.add_paragraph('รูปตัดโครงสร้างชั้นทาง:')
-            
-            # บันทึกรูปเป็น bytes
-            img_buffer = BytesIO()
-            structure_figure.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight',
-                                     facecolor='white', edgecolor='none')
-            img_buffer.seek(0)
-            
-            # เพิ่มรูปในเอกสาร
-            from docx.shared import Inches
-            doc.add_picture(img_buffer, width=Inches(5.5))
-            
-            # จัดกึ่งกลางรูป
-            last_paragraph = doc.paragraphs[-1]
-            last_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            
-            doc.add_paragraph('')  # เว้นบรรทัด
     
     # ข้อมูลนำเข้า
     doc.add_heading('3. ข้อมูลนำเข้า (Input Parameters)', level=1)
@@ -672,8 +680,8 @@ def main():
         
         # ตารางค่า Modulus ตามประเภทวัสดุ (ตามข้อมูลอาจารย์)
         MATERIAL_MODULUS = {
-            "ผิวทางลาดยาง AC": 2500,
-            "ผิวทางลาดยาง PMA": 3700,
+            "รองผิวทางคอนกรีตด้วย AC": 2500,
+            "รองผิวทางคอนกรีตด้วย PMA(AC)": 3700,
             "พื้นทางซีเมนต์ CTB": 1200,
             "หินคลุกผสมซีเมนต์ UCS 24.5 ksc": 850,
             "หินคลุก CBR 80%": 350,
@@ -699,7 +707,7 @@ def main():
         
         # ค่า Default สำหรับแต่ละชั้น
         default_layers = [
-            {"name": "ผิวทางลาดยาง AC", "thickness_cm": 5},
+            {"name": "รองผิวทางคอนกรีตด้วย AC", "thickness_cm": 5},
             {"name": "พื้นทางซีเมนต์ CTB", "thickness_cm": 20},
             {"name": "หินคลุก CBR 80%", "thickness_cm": 15},
             {"name": "รองพื้นทางวัสดุมวลรวม CBR 25%", "thickness_cm": 25},
@@ -714,8 +722,8 @@ def main():
             st.markdown("""
             | วัสดุชั้นทาง | MR (MPa) |
             |-------------|----------|
-            | ผิวทางลาดยาง AC | 2,500 |
-            | ผิวทางลาดยาง PMA | 3,700 |
+            | รองผิวทางคอนกรีตด้วย AC | 2,500 |
+            | รองผิวทางคอนกรีตด้วย PMA(AC) | 3,700 |
             | พื้นทางซีเมนต์ CTB | 1,200 |
             | หินคลุกผสมซีเมนต์ UCS 24.5 ksc | 850 |
             | หินคลุก CBR 80% | 350 |
@@ -811,7 +819,7 @@ def main():
             elif num >= 1_000:
                 return f"{num/1_000:.2f} พัน ESALs"
             else:
-                return f"{num:.0f}"
+                return f"{num:.0f} ESALs"
         
         st.markdown(f"<span style='color: #1E90FF; font-size: 1.2em; font-weight: bold;'>{format_thai_number(w18_design)}</span>", unsafe_allow_html=True)
         
