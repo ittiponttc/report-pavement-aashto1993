@@ -342,11 +342,11 @@ def create_pavement_structure_figure(layers_data: list, concrete_thickness_cm: f
         
         # ข้อความในกล่อง (ความหนา)
         ax.text(x_center, y_center_pos, f"{thickness} cm",
-                ha='center', va='center', fontsize=11, fontweight='bold', color=text_color)
+                ha='center', va='center', fontsize=20, fontweight='bold', color=text_color)
         
         # ข้อความด้านซ้าย (ชื่อวัสดุ)
         ax.text(x_start - 0.5, y_center_pos, display_name,
-                ha='right', va='center', fontsize=10, fontweight='bold', color='black')
+                ha='right', va='center', fontsize=14, fontweight='bold', color='black')
         
         # ข้อความด้านขวา (E value)
         if e_mpa:
