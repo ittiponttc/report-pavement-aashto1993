@@ -801,15 +801,15 @@ def main():
         # แสดงค่า ESAL เป็นภาษาไทย
         def format_thai_number(num):
             if num >= 1_000_000_000:
-                return f"{num/1_000_000_000:.2f} พันล้าน"
+                return f"{num/1_000_000_000:.2f} พันล้าน ESALs"
             elif num >= 1_000_000:
-                return f"{num/1_000_000:.2f} ล้าน"
+                return f"{num/1_000_000:.2f} ล้าน ESALs"
             elif num >= 100_000:
-                return f"{num/100_000:.2f} แสน"
+                return f"{num/100_000:.2f} แสน ESALs"
             elif num >= 10_000:
-                return f"{num/10_000:.2f} หมื่น"
+                return f"{num/10_000:.2f} หมื่น ESALs"
             elif num >= 1_000:
-                return f"{num/1_000:.2f} พัน"
+                return f"{num/1_000:.2f} พัน ESALs"
             else:
                 return f"{num:.0f}"
         
