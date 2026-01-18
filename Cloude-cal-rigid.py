@@ -1277,7 +1277,7 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.caption("พัฒนาโดย: ภาควิชาครุศาสตร์โยธา มจพ. | AASHTO 1993 Rigid Pavement Design Tool")
+    st.caption("พัฒนาโดย: รศ.ดร.อิทธิพล มีผล ภาควิชาครุศาสตร์โยธา มจพ. | AASHTO 1993 Rigid Pavement Design Tool")
 
 
 if __name__ == "__main__":
