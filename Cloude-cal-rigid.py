@@ -256,7 +256,7 @@ def create_pavement_structure_figure(layers_data: list, concrete_thickness_cm: f
         "หินคลุก CBR 80%": "#BDC3C7",
         "ดินซีเมนต์ UCS 17.5 ksc": "#AAB7B8",
         "วัสดุหมุนเวียน (Recycling)": "#85929E",
-        "รองพื้นทางวัสดุมวลรวม CBR 25%": "#FFCC99,
+        "รองพื้นทางวัสดุมวลรวม CBR 25%": "#FFCC99",
         "วัสดุคัดเลือก ก": "#E8DAEF",
         "ดินถมคันทาง / ดินเดิม": "#F5CBA7",
         "กำหนดเอง...": "#FADBD8",
