@@ -628,7 +628,7 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
             layer_center_y,
             f'{thickness_cm:.0f} cm',
             ha='center', va='center',
-            fontsize=18, fontweight='bold',
+            fontsize=20, fontweight='bold',
             color=text_color
         )
         
@@ -638,7 +638,7 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
             layer_center_y,
             thai_name,
             ha='right', va='center',
-            fontsize=15,
+            fontsize=20,
             fontproperties=thai_font_bold,
             color='#1565C0'
         )
