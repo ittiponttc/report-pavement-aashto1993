@@ -1,6 +1,6 @@
 """
 ================================================================================
-AASHTO 1993 Flexible Pavement Design - Streamlit Application (Version 2)
+AASHTO 1993 Flexible Pavement Design - Streamlit Application (Version 3)
 ================================================================================
 แอปพลิเคชันสำหรับออกแบบ Flexible Pavement ตามวิธี AASHTO 1993
 ปรับปรุงตามมาตรฐานกรมทางหลวง (DOH Thailand)
@@ -9,9 +9,10 @@ Features:
 - Material database ตามมาตรฐาน ทล.
 - Step-by-step thickness calculation (หาความหนาแต่ละชั้น)
 - Drainage coefficient default = 1.0
+- ปรับปรุงรูปภาพตัดขวางให้มีรูปแบบเดียวกับ Rigid Pavement
 
 Author: Civil Engineering Department
-Version: 2.0
+Version: 3.0
 ================================================================================
 """
 
@@ -20,6 +21,7 @@ import numpy as np
 from scipy.optimize import brentq
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.font_manager as fm
 from io import BytesIO
 from datetime import datetime
 from docx import Document
@@ -50,7 +52,8 @@ MATERIALS = {
         "mr_mpa": 2500,
         "layer_type": "surface",
         "color": "#1C1C1C",  # สีดำ (Black)
-        "short_name": "AC"
+        "short_name": "AC",
+        "english_name": "Asphalt Concrete"
     },
     "ผิวทางลาดยาง PMA": {
         "layer_coeff": 0.40,
@@ -59,7 +62,8 @@ MATERIALS = {
         "mr_mpa": 3700,
         "layer_type": "surface",
         "color": "#2C2C2C",  # สีดำเข้ม (Dark Black)
-        "short_name": "PMA"
+        "short_name": "PMA",
+        "english_name": "Polymer Modified Asphalt"
     },
     
     # ============ ชั้นพื้นทาง (Base) ============
@@ -70,7 +74,8 @@ MATERIALS = {
         "mr_mpa": 1200,
         "layer_type": "base",
         "color": "#78909C",  # สีเทา (Gray)
-        "short_name": "CTB"
+        "short_name": "CTB",
+        "english_name": "Cement Treated Base"
     },
     "พื้นทางหินคลุกผสมซีเมนต์ UCS 24.5 ksc.": {
         "layer_coeff": 0.15,
@@ -79,7 +84,8 @@ MATERIALS = {
         "mr_mpa": 850,
         "layer_type": "base",
         "color": "#607D8B",  # สีเทาเข้ม
-        "short_name": "SCAB"
+        "short_name": "SCAB",
+        "english_name": "Soil Cement Aggregate Base"
     },
     "พื้นทางหินคลุก CBR 80%": {
         "layer_coeff": 0.13,
@@ -88,7 +94,8 @@ MATERIALS = {
         "mr_mpa": 350,
         "layer_type": "base",
         "color": "#795548",  # สีน้ำตาล
-        "short_name": "CAB"
+        "short_name": "CAB",
+        "english_name": "Crushed Rock Base"
     },
     "พื้นทางดินซีเมนต์ UCS 17.5 ksc.": {
         "layer_coeff": 0.13,
@@ -97,7 +104,8 @@ MATERIALS = {
         "mr_mpa": 350,
         "layer_type": "base",
         "color": "#8D6E63",  # สีน้ำตาลอ่อน
-        "short_name": "SCB"
+        "short_name": "SCB",
+        "english_name": "Soil Cement Base"
     },
     "พื้นทางวัสดุหมุนเวียน (Recycling)": {
         "layer_coeff": 0.15,
@@ -106,7 +114,8 @@ MATERIALS = {
         "mr_mpa": 850,
         "layer_type": "base",
         "color": "#5D4037",  # สีน้ำตาลเข้ม
-        "short_name": "RAP"
+        "short_name": "RAP",
+        "english_name": "Recycled Asphalt Pavement"
     },
     
     # ============ ชั้นรองพื้นทาง (Subbase) - วัสดุมวลรวม ============
@@ -117,7 +126,8 @@ MATERIALS = {
         "mr_mpa": 150,
         "layer_type": "subbase",
         "color": "#FFB74D",  # สีส้มอ่อน (Light Orange) - วัสดุมวลรวม
-        "short_name": "GSB"
+        "short_name": "GSB",
+        "english_name": "Aggregate Subbase"
     },
     
     # ============ วัสดุคัดเลือก (Selected Material) - ทราย ============
@@ -128,7 +138,8 @@ MATERIALS = {
         "mr_mpa": 100,
         "layer_type": "selected",
         "color": "#FFF176",  # สีเหลือง (Yellow) - ทราย
-        "short_name": "SM-A"
+        "short_name": "SM-A",
+        "english_name": "Selected Material"
     },
     
     # ============ ไม่ใช้วัสดุ (Skip layer) ============
@@ -139,7 +150,8 @@ MATERIALS = {
         "mr_mpa": 0,
         "layer_type": "none",
         "color": "#D7CCC8",
-        "short_name": "NONE"
+        "short_name": "NONE",
+        "english_name": "None"
     }
 }
 
@@ -221,10 +233,6 @@ def calculate_w18_supported(SN: float, Zr: float, So: float,
     Calculate W18 that can be supported by a given SN
     
     คำนวณค่า W₁₈ ที่โครงสร้างรองรับได้จากค่า SN ที่ออกแบบ
-    
-    สูตร: log₁₀(W₁₈) = Zr×So + 9.36×log₁₀(SN+1) - 0.20 
-                       + log₁₀(ΔPSI/(4.2-1.5)) / (0.4 + 1094/(SN+1)^5.19)
-                       + 2.32×log₁₀(Mr) - 8.07
     """
     term1 = Zr * So
     term2 = 9.36 * np.log10(SN + 1) - 0.20
@@ -248,12 +256,6 @@ def calculate_layer_thicknesses(W18: float, Zr: float, So: float, delta_psi: flo
     Calculate minimum thickness for each layer using AASHTO 1993 method
     
     คำนวณความหนาขั้นต่ำของแต่ละชั้น ตามวิธี AASHTO 1993
-    
-    สูตร:
-    - SN₁ = จากสมการ AASHTO โดยใช้ MR ของชั้นถัดไป
-    - D₁* ≥ SN₁ / (a₁ × m₁)
-    - D₂* ≥ (SN₂ - a₁×D₁×m₁) / (a₂ × m₂)
-    - เป็นต้น
     """
     results = {
         'layers': [],
@@ -269,21 +271,13 @@ def calculate_layer_thicknesses(W18: float, Zr: float, So: float, delta_psi: flo
     if not active_layers:
         return results
     
-    # Calculate SN values for each layer interface
-    # SN_n = SN required when layer n is placed on layer n+1 (or subgrade)
-    
     num_layers = len(active_layers)
     sn_values = []
     
-    # Calculate SN for each layer from bottom to top
-    # SN_n uses MR of the layer below
-    
     for i in range(num_layers):
         if i == num_layers - 1:
-            # Bottom layer uses subgrade MR
             mr_below = subgrade_mr
         else:
-            # Use MR of layer below
             mat_below = MATERIALS[active_layers[i + 1]['material']]
             mr_below = mat_below['mr_psi']
         
@@ -295,11 +289,8 @@ def calculate_layer_thicknesses(W18: float, Zr: float, So: float, delta_psi: flo
         })
     
     results['sn_values'] = sn_values
-    
-    # Calculate total SN required (using subgrade MR)
     results['total_sn_required'] = calculate_sn_for_layer(W18, Zr, So, delta_psi, subgrade_mr)
     
-    # Calculate minimum thickness for each layer
     cumulative_sn = 0
     
     for i, layer in enumerate(active_layers):
@@ -307,12 +298,9 @@ def calculate_layer_thicknesses(W18: float, Zr: float, So: float, delta_psi: flo
         a_i = mat['layer_coeff']
         m_i = layer.get('drainage_coeff', 1.0)
         
-        # Get SN required at this layer
         sn_required_at_layer = sn_values[i]['sn_required'] if sn_values[i]['sn_required'] else 0
         
-        # Calculate minimum thickness
         if a_i > 0 and m_i > 0:
-            # D_i* ≥ (SN_i - cumulative_SN) / (a_i × m_i)
             remaining_sn = max(0, sn_required_at_layer - cumulative_sn)
             min_thickness_inch = remaining_sn / (a_i * m_i)
             min_thickness_cm = min_thickness_inch * 2.54
@@ -320,22 +308,21 @@ def calculate_layer_thicknesses(W18: float, Zr: float, So: float, delta_psi: flo
             min_thickness_inch = 0
             min_thickness_cm = 0
         
-        # Get design thickness from user input
         design_thickness_cm = layer['thickness_cm']
         design_thickness_inch = design_thickness_cm / 2.54
         
-        # Calculate SN contribution
         sn_contribution = a_i * design_thickness_inch * m_i
         cumulative_sn += sn_contribution
         
-        # Check if design thickness is adequate
         is_ok = design_thickness_cm >= min_thickness_cm
         
         results['layers'].append({
             'layer_no': i + 1,
             'material': layer['material'],
             'short_name': mat['short_name'],
+            'english_name': mat.get('english_name', mat['short_name']),
             'mr_psi': mat['mr_psi'],
+            'mr_mpa': mat['mr_mpa'],
             'a_i': a_i,
             'm_i': m_i,
             'sn_required_at_layer': sn_required_at_layer,
@@ -345,7 +332,8 @@ def calculate_layer_thicknesses(W18: float, Zr: float, So: float, delta_psi: flo
             'design_thickness_inch': round(design_thickness_inch, 2),
             'sn_contribution': round(sn_contribution, 4),
             'cumulative_sn': round(cumulative_sn, 2),
-            'is_ok': is_ok
+            'is_ok': is_ok,
+            'color': mat['color']
         })
     
     results['total_sn_provided'] = round(cumulative_sn, 2)
@@ -374,129 +362,349 @@ def check_design(sn_required: float, sn_provided: float) -> dict:
     }
 
 
+
 # ================================================================================
-# VISUALIZATION FUNCTIONS
+# VISUALIZATION FUNCTIONS - ปรับปรุงใหม่ตามรูปแบบ Rigid Pavement
 # ================================================================================
 
-def plot_pavement_section(layers_result: list, subgrade_mr: float = None) -> plt.Figure:
+def plot_pavement_section(layers_result: list, subgrade_mr: float = None, 
+                          subgrade_cbr: float = None) -> plt.Figure:
     """
-    Draw vertical pavement section diagram
+    Draw vertical pavement section diagram - รูปแบบเดียวกับ Rigid Pavement
     
-    Layout: ความหนา (ซ้าย) | ชั้นวัสดุ | ชนิดวัสดุ (ขวา)
+    Layout:
+    - ซ้าย: ชื่อวัสดุ (Material name)
+    - กลาง: ความหนา (Thickness)
+    - ขวา: E = xxx MPa
+    - ขวาสุด: เส้นแสดงความหนารวม (Total thickness arrow)
+    - ล่าง: กรอบ Total Pavement Thickness
     """
     
-    # Set Thai font
-    import matplotlib.font_manager as fm
-    thai_font_path = '/usr/share/fonts/truetype/tlwg/Garuda.ttf'
-    try:
-        thai_font = fm.FontProperties(fname=thai_font_path)
-    except:
-        # Fallback: try other Thai fonts
-        try:
-            thai_font = fm.FontProperties(family='TH Sarabun New')
-        except:
-            thai_font = fm.FontProperties()
+    plt.rcParams['font.family'] = 'DejaVu Sans'
     
     if not layers_result:
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(12, 8))
         ax.text(0.5, 0.5, 'No layers defined', ha='center', va='center', fontsize=14)
         ax.axis('off')
         return fig
     
-    fig, ax = plt.subplots(figsize=(14, 10))
-    
+    # คำนวณความหนารวม
     total_thickness = sum([l['design_thickness_cm'] for l in layers_result])
-    subgrade_thickness = max(15, total_thickness * 0.20)
+    num_layers = len(layers_result)
     
-    layer_width = 8
-    x_center = 6
-    current_y = total_thickness + subgrade_thickness
+    # สร้าง figure - ขนาดขึ้นกับจำนวนชั้น
+    fig_height = max(8, 1.5 * num_layers + 3)
+    fig, ax = plt.subplots(figsize=(12, fig_height))
     
-    # Draw each layer
+    # กำหนดความสูงคงที่ต่อชั้น (normalized)
+    layer_height = 1.0
+    total_height = num_layers * layer_height
+    
+    # ตำแหน่ง x
+    layer_x_start = 3.5
+    layer_width = 2.5
+    layer_x_end = layer_x_start + layer_width
+    
+    # วาดแต่ละชั้น
+    current_y = total_height
+    
     for i, layer in enumerate(layers_result):
         thickness_cm = layer['design_thickness_cm']
+        color = layer.get('color', '#888888')
+        english_name = layer.get('english_name', layer['short_name'])
+        mr_mpa = layer.get('mr_mpa', 0)
         
-        # Get color from MATERIALS
-        mat = MATERIALS.get(layer['material'], {})
-        color = mat.get('color', '#888888')
-        short_name = mat.get('short_name', layer.get('short_name', 'Layer'))
-        
-        # Create rectangle
-        rect = mpatches.FancyBboxPatch(
-            (x_center - layer_width/2, current_y - thickness_cm),
-            layer_width, thickness_cm,
-            boxstyle="round,pad=0.02",
+        # วาดสี่เหลี่ยม
+        rect = mpatches.Rectangle(
+            (layer_x_start, current_y - layer_height),
+            layer_width, layer_height,
             facecolor=color,
-            edgecolor='black', linewidth=2
+            edgecolor='black',
+            linewidth=1.5
         )
         ax.add_patch(rect)
         
-        # Text color based on background (สีเข้มใช้ตัวอักษรสีขาว)
-        dark_colors = ['#1C1C1C', '#2C2C2C', '#78909C', '#607D8B', '#795548', '#8D6E63', '#5D4037', '#6D4C41']
+        # กำหนดสีข้อความ
+        dark_colors = ['#1C1C1C', '#2C2C2C', '#78909C', '#607D8B', '#795548', 
+                       '#8D6E63', '#5D4037', '#6D4C41', '#455A64']
         text_color = 'white' if color in dark_colors else 'black'
         
-        # LEFT SIDE: Thickness (ความหนา)
-        ax.annotate(
+        # ตำแหน่งกลางชั้น
+        layer_center_y = current_y - layer_height / 2
+        
+        # ข้อความกลางชั้น: ความหนา
+        ax.text(
+            layer_x_start + layer_width / 2,
+            layer_center_y,
             f'{thickness_cm:.0f} cm',
-            xy=(x_center - layer_width/2 - 0.1, current_y - thickness_cm/2),
-            xytext=(x_center - layer_width/2 - 1.8, current_y - thickness_cm/2),
-            fontsize=12, fontweight='bold',
-            arrowprops=dict(arrowstyle='->', color='black', lw=1.5),
-            va='center', ha='right',
-            bbox=dict(boxstyle='round,pad=0.4', facecolor='lightyellow', edgecolor='orange', linewidth=1.5)
-        )
-        
-        # RIGHT SIDE: Material name in Thai (ชื่อวัสดุภาษาไทย)
-        material_name = layer['material']
-        ax.annotate(
-            material_name,
-            xy=(x_center + layer_width/2 + 0.1, current_y - thickness_cm/2),
-            xytext=(x_center + layer_width/2 + 1.8, current_y - thickness_cm/2),
-            fontsize=11, fontweight='bold',
-            fontproperties=thai_font,
-            arrowprops=dict(arrowstyle='->', color='black', lw=1.5),
-            va='center', ha='left',
-            bbox=dict(boxstyle='round,pad=0.4', facecolor='lightcyan', edgecolor='steelblue', linewidth=1.5)
-        )
-        
-        current_y -= thickness_cm
-    
-    # Draw subgrade
-    subgrade_rect = mpatches.FancyBboxPatch(
-        (x_center - layer_width/2, current_y - subgrade_thickness),
-        layer_width, subgrade_thickness,
-        boxstyle="round,pad=0.02",
-        facecolor='#6D4C41', edgecolor='black', linewidth=2, linestyle='--'
-    )
-    ax.add_patch(subgrade_rect)
-    
-    # Subgrade label (right side only) - Thai
-    ax.annotate(
-        'ดินเดิม (Subgrade)',
-        xy=(x_center + layer_width/2 + 0.1, current_y - subgrade_thickness/2),
-        xytext=(x_center + layer_width/2 + 1.8, current_y - subgrade_thickness/2),
-        fontsize=11, fontweight='bold',
-        fontproperties=thai_font,
-        arrowprops=dict(arrowstyle='->', color='black', lw=1.5),
-        va='center', ha='left',
-        bbox=dict(boxstyle='round,pad=0.4', facecolor='lightcyan', edgecolor='steelblue', linewidth=1.5)
-    )
-    
-    # Title - Thai
-    ax.text(x_center, total_thickness + subgrade_thickness + 3,
-            'ภาพตัดขวางโครงสร้างชั้นทาง',
             ha='center', va='center',
-            fontsize=18, fontweight='bold',
-            fontproperties=thai_font)
+            fontsize=12, fontweight='bold',
+            color=text_color
+        )
+        
+        # ซ้าย: ชื่อวัสดุ
+        ax.text(
+            layer_x_start - 0.2,
+            layer_center_y,
+            english_name,
+            ha='right', va='center',
+            fontsize=10, fontweight='bold',
+            color='#1565C0'
+        )
+        
+        # ขวา: E = xxx MPa
+        ax.text(
+            layer_x_end + 0.2,
+            layer_center_y,
+            f'E = {mr_mpa:,} MPa',
+            ha='left', va='center',
+            fontsize=10,
+            color='#546E7A'
+        )
+        
+        current_y -= layer_height
     
-    ax.set_xlim(-4, 22)
-    ax.set_ylim(-5, total_thickness + subgrade_thickness + 5)
-    ax.set_aspect('equal')
+    # เส้นแสดงความหนารวม (ขวาสุด)
+    arrow_x = layer_x_end + 1.8
+    top_y = total_height
+    bottom_y = 0
+    
+    ax.annotate(
+        '', 
+        xy=(arrow_x, bottom_y), 
+        xytext=(arrow_x, top_y),
+        arrowprops=dict(
+            arrowstyle='<->',
+            color='#E65100',
+            lw=2,
+            shrinkA=0,
+            shrinkB=0
+        )
+    )
+    
+    # ข้อความ Total
+    ax.text(
+        arrow_x + 0.15,
+        (top_y + bottom_y) / 2,
+        f'Total\n{total_thickness:.0f} cm',
+        ha='left', va='center',
+        fontsize=11, fontweight='bold',
+        color='#E65100'
+    )
+    
+    # กรอบ Total Pavement Thickness (ล่าง)
+    box_text = f'Total Pavement Thickness: {total_thickness:.0f} cm'
+    box_y = -0.6
+    
+    ax.text(
+        layer_x_start + layer_width / 2,
+        box_y,
+        box_text,
+        ha='center', va='center',
+        fontsize=11, fontweight='bold',
+        color='#1565C0',
+        bbox=dict(
+            boxstyle='round,pad=0.4',
+            facecolor='#FFF9C4',
+            edgecolor='#FFC107',
+            linewidth=2
+        )
+    )
+    
+    # Title
+    ax.text(
+        layer_x_start + layer_width / 2,
+        total_height + 0.5,
+        'Pavement Structure',
+        ha='center', va='center',
+        fontsize=14, fontweight='bold',
+        color='#37474F'
+    )
+    
+    # ตั้งค่าแกน
+    ax.set_xlim(0, arrow_x + 1.5)
+    ax.set_ylim(box_y - 0.5, total_height + 0.8)
     ax.axis('off')
     
     plt.tight_layout()
     return fig
 
+
+def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
+                                subgrade_cbr: float = None) -> plt.Figure:
+    """
+    Draw vertical pavement section diagram - รูปแบบภาษาไทย
+    
+    Layout:
+    - ซ้าย: ชื่อวัสดุ (ภาษาไทย)
+    - กลาง: ความหนา (Thickness)
+    - ขวา: E = xxx MPa
+    - ขวาสุด: เส้นแสดงความหนารวม
+    - ล่าง: กรอบ ความหนารวมโครงสร้างชั้นทาง
+    """
+    
+    # ตั้งค่า Thai font
+    thai_font_path = '/usr/share/fonts/truetype/tlwg/Garuda.ttf'
+    try:
+        thai_font = fm.FontProperties(fname=thai_font_path)
+        thai_font_bold = fm.FontProperties(fname=thai_font_path, weight='bold')
+    except:
+        thai_font = fm.FontProperties()
+        thai_font_bold = fm.FontProperties(weight='bold')
+    
+    plt.rcParams['font.family'] = 'DejaVu Sans'
+    
+    if not layers_result:
+        fig, ax = plt.subplots(figsize=(12, 8))
+        ax.text(0.5, 0.5, 'ไม่มีข้อมูลชั้นทาง', ha='center', va='center', 
+                fontsize=14, fontproperties=thai_font)
+        ax.axis('off')
+        return fig
+    
+    # คำนวณความหนารวม
+    total_thickness = sum([l['design_thickness_cm'] for l in layers_result])
+    num_layers = len(layers_result)
+    
+    # สร้าง figure
+    fig_height = max(8, 1.5 * num_layers + 3)
+    fig, ax = plt.subplots(figsize=(14, fig_height))
+    
+    # กำหนดความสูงคงที่ต่อชั้น
+    layer_height = 1.0
+    total_height = num_layers * layer_height
+    
+    # ตำแหน่ง x - เลื่อนขวาเพื่อเว้นที่สำหรับชื่อภาษาไทย
+    layer_x_start = 5.0
+    layer_width = 2.5
+    layer_x_end = layer_x_start + layer_width
+    
+    # วาดแต่ละชั้น
+    current_y = total_height
+    
+    for i, layer in enumerate(layers_result):
+        thickness_cm = layer['design_thickness_cm']
+        color = layer.get('color', '#888888')
+        thai_name = layer.get('material', layer['short_name'])
+        mr_mpa = layer.get('mr_mpa', 0)
+        
+        # วาดสี่เหลี่ยม
+        rect = mpatches.Rectangle(
+            (layer_x_start, current_y - layer_height),
+            layer_width, layer_height,
+            facecolor=color,
+            edgecolor='black',
+            linewidth=1.5
+        )
+        ax.add_patch(rect)
+        
+        # กำหนดสีข้อความ
+        dark_colors = ['#1C1C1C', '#2C2C2C', '#78909C', '#607D8B', '#795548', 
+                       '#8D6E63', '#5D4037', '#6D4C41', '#455A64']
+        text_color = 'white' if color in dark_colors else 'black'
+        
+        # ตำแหน่งกลางชั้น
+        layer_center_y = current_y - layer_height / 2
+        
+        # ข้อความกลางชั้น: ความหนา
+        ax.text(
+            layer_x_start + layer_width / 2,
+            layer_center_y,
+            f'{thickness_cm:.0f} cm',
+            ha='center', va='center',
+            fontsize=12, fontweight='bold',
+            color=text_color
+        )
+        
+        # ซ้าย: ชื่อวัสดุภาษาไทย
+        ax.text(
+            layer_x_start - 0.2,
+            layer_center_y,
+            thai_name,
+            ha='right', va='center',
+            fontsize=9,
+            fontproperties=thai_font_bold,
+            color='#1565C0'
+        )
+        
+        # ขวา: E = xxx MPa
+        ax.text(
+            layer_x_end + 0.2,
+            layer_center_y,
+            f'E = {mr_mpa:,} MPa',
+            ha='left', va='center',
+            fontsize=10,
+            color='#546E7A'
+        )
+        
+        current_y -= layer_height
+    
+    # เส้นแสดงความหนารวม (ขวาสุด)
+    arrow_x = layer_x_end + 1.8
+    top_y = total_height
+    bottom_y = 0
+    
+    ax.annotate(
+        '', 
+        xy=(arrow_x, bottom_y), 
+        xytext=(arrow_x, top_y),
+        arrowprops=dict(
+            arrowstyle='<->',
+            color='#E65100',
+            lw=2,
+            shrinkA=0,
+            shrinkB=0
+        )
+    )
+    
+    # ข้อความ Total
+    ax.text(
+        arrow_x + 0.15,
+        (top_y + bottom_y) / 2,
+        f'รวม\n{total_thickness:.0f} cm',
+        ha='left', va='center',
+        fontsize=11, fontweight='bold',
+        fontproperties=thai_font_bold,
+        color='#E65100'
+    )
+    
+    # กรอบ Total Pavement Thickness (ล่าง)
+    box_text = f'ความหนารวมโครงสร้างชั้นทาง: {total_thickness:.0f} cm'
+    box_y = -0.6
+    
+    ax.text(
+        layer_x_start + layer_width / 2,
+        box_y,
+        box_text,
+        ha='center', va='center',
+        fontsize=11, fontweight='bold',
+        fontproperties=thai_font_bold,
+        color='#1565C0',
+        bbox=dict(
+            boxstyle='round,pad=0.4',
+            facecolor='#FFF9C4',
+            edgecolor='#FFC107',
+            linewidth=2
+        )
+    )
+    
+    # Title
+    ax.text(
+        layer_x_start + layer_width / 2,
+        total_height + 0.5,
+        'รูปตัดโครงสร้างชั้นทาง',
+        ha='center', va='center',
+        fontsize=14, fontweight='bold',
+        fontproperties=thai_font_bold,
+        color='#37474F'
+    )
+    
+    # ตั้งค่าแกน
+    ax.set_xlim(0, arrow_x + 1.5)
+    ax.set_ylim(box_y - 0.5, total_height + 0.8)
+    ax.axis('off')
+    
+    plt.tight_layout()
+    return fig
 
 def get_figure_as_bytes(fig: plt.Figure) -> BytesIO:
     """Convert matplotlib figure to bytes"""
@@ -586,7 +794,7 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
     mat_table = doc.add_table(rows=1, cols=6)
     mat_table.style = 'Table Grid'
     
-    mat_headers = ['ชั้น', 'วัสดุ', 'aᵢ', 'mᵢ', 'Mᵣ (psi)', 'Mᵣ (MPa)']
+    mat_headers = ['ชั้น', 'วัสดุ', 'aᵢ', 'mᵢ', 'Mᵣ (psi)', 'E (MPa)']
     for i, header in enumerate(mat_headers):
         cell = mat_table.rows[0].cells[i]
         cell.text = header
@@ -601,8 +809,7 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
         row.cells[2].text = f'{layer["a_i"]:.2f}'
         row.cells[3].text = f'{layer["m_i"]:.2f}'
         row.cells[4].text = f'{layer["mr_psi"]:,}'
-        mr_mpa = layer["mr_psi"] * 0.006895  # แปลง psi เป็น MPa
-        row.cells[5].text = f'{mr_mpa:,.0f}'
+        row.cells[5].text = f'{layer["mr_mpa"]:,}'
     
     # ========================================
     # SECTION 4: Step-by-Step Calculation
@@ -621,7 +828,7 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
         # Material properties
         doc.add_paragraph(f'ข้อมูลวัสดุ:')
         props_para = doc.add_paragraph()
-        props_para.add_run(f'    • Mᵣ = {layer["mr_psi"]:,} psi\n')
+        props_para.add_run(f'    • Mᵣ = {layer["mr_psi"]:,} psi = {layer["mr_mpa"]:,} MPa\n')
         props_para.add_run(f'    • Layer Coefficient (a{layer["layer_no"]}) = {layer["a_i"]:.2f}\n')
         props_para.add_run(f'    • Drainage Coefficient (m{layer["layer_no"]}) = {layer["m_i"]:.2f}')
         
@@ -636,13 +843,11 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
         doc.add_paragraph(f'การคำนวณความหนาขั้นต่ำ:')
         
         if layer['layer_no'] == 1:
-            # First layer formula
             formula_para = doc.add_paragraph()
             formula_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             formula_text = f'D₁ ≥ SN₁ / (a₁ × m₁) = {layer["sn_required_at_layer"]:.2f} / ({layer["a_i"]:.2f} × {layer["m_i"]:.2f})'
             formula_para.add_run(formula_text).italic = True
         else:
-            # Get previous cumulative SN
             prev_sn = calc_results['layers'][layer['layer_no']-2]['cumulative_sn']
             
             formula_para = doc.add_paragraph()
@@ -690,7 +895,6 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
     sn_table = doc.add_table(rows=1, cols=8)
     sn_table.style = 'Table Grid'
     
-    # จัดเรียงใหม่: ชั้น, วัสดุ, aᵢ, mᵢ, Dᵢ (นิ้ว), Dᵢ (ซม.), ΔSNᵢ, ΣSN
     sn_headers = ['ชั้น', 'วัสดุ', 'aᵢ', 'mᵢ', 'Dᵢ (นิ้ว)', 'Dᵢ (ซม.)', 'ΔSNᵢ', 'ΣSN']
     for i, header in enumerate(sn_headers):
         cell = sn_table.rows[0].cells[i]
@@ -790,6 +994,17 @@ def main():
     with st.sidebar:
         st.header("📋 ข้อมูลโครงการ")
         project_title = st.text_input("ชื่อโครงการ", value="โครงการออกแบบถนน")
+        
+        st.markdown("---")
+        
+        # ตัวเลือกภาษาสำหรับรูปภาพ
+        st.header("🖼️ ตั้งค่ารูปภาพ")
+        figure_language = st.radio(
+            "ภาษาในรูปภาพ",
+            options=["English", "ภาษาไทย"],
+            index=0,
+            help="เลือกภาษาสำหรับแสดงในรูปตัดขวาง"
+        )
         
         st.markdown("---")
         st.header("📚 ฐานข้อมูลวัสดุ (ทล.)")
@@ -928,7 +1143,7 @@ def main():
             )
         
         mat_props = MATERIALS[layer1_mat]
-        st.caption(f"a₁ = {mat_props['layer_coeff']}, MR = {mat_props['mr_psi']:,} psi ({mat_props['mr_mpa']:,} MPa)")
+        st.caption(f"a₁ = {mat_props['layer_coeff']}, E = {mat_props['mr_mpa']:,} MPa")
         
         # Placeholder สำหรับแสดงสถานะชั้นที่ 1
         status_placeholders[1] = st.empty()
@@ -979,7 +1194,7 @@ def main():
                 )
             
             mat_props = MATERIALS[layer_mat]
-            st.caption(f"a{i} = {mat_props['layer_coeff']}, MR = {mat_props['mr_psi']:,} psi ({mat_props['mr_mpa']:,} MPa)")
+            st.caption(f"a{i} = {mat_props['layer_coeff']}, E = {mat_props['mr_mpa']:,} MPa")
             
             # Placeholder สำหรับแสดงสถานะชั้นที่ i
             status_placeholders[i] = st.empty()
@@ -1044,6 +1259,7 @@ def main():
             
             with col_a:
                 st.markdown("**ข้อมูลวัสดุ:**")
+                st.markdown(f"- E (MPa) = **{layer['mr_mpa']:,}**")
                 st.markdown(f"- Mᵣ (psi) = **{layer['mr_psi']:,}**")
                 st.markdown(f"- Layer Coefficient (a{layer['layer_no']}) = **{layer['a_i']:.2f}**")
                 st.markdown(f"- Drain Coefficient (m{layer['layer_no']}) = **{layer['m_i']:.2f}**")
@@ -1163,7 +1379,12 @@ def main():
     # ========================================
     st.subheader("📐 ภาพตัดขวางโครงสร้างถนน")
     
-    fig = plot_pavement_section(calc_results['layers'], Mr)
+    # เลือกฟังก์ชันวาดรูปตามภาษาที่เลือก
+    if figure_language == "English":
+        fig = plot_pavement_section(calc_results['layers'], Mr, CBR)
+    else:
+        fig = plot_pavement_section_thai(calc_results['layers'], Mr, CBR)
+    
     st.pyplot(fig)
     
     # ========================================
@@ -1181,6 +1402,7 @@ def main():
                 'Dᵢ (cm)': layer['design_thickness_cm'],
                 'Dᵢ (in)': layer['design_thickness_inch'],
                 'mᵢ': layer['m_i'],
+                'E (MPa)': layer['mr_mpa'],
                 'SN contrib.': layer['sn_contribution'],
                 'SN cumul.': layer['cumulative_sn']
             })
@@ -1207,8 +1429,10 @@ def main():
     with col_exp1:
         if st.button("📝 Generate Word Report", type="primary"):
             with st.spinner("กำลังสร้างรายงาน..."):
+                # ใช้รูปภาษาไทยในรายงาน Word
+                fig_thai = plot_pavement_section_thai(calc_results['layers'], Mr, CBR)
                 doc_bytes = create_word_report(
-                    project_title, inputs, calc_results, design_check, fig
+                    project_title, inputs, calc_results, design_check, fig_thai
                 )
                 
                 st.download_button(
@@ -1231,7 +1455,7 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: gray;'>
-    <p>AASHTO 1993 Flexible Pavement Design Application</p>
+    <p>AASHTO 1993 Flexible Pavement Design Application v3.0</p>
     <p>พัฒนาตามมาตรฐานกรมทางหลวง (DOH Thailand)</p>
     </div>
     """, unsafe_allow_html=True)
