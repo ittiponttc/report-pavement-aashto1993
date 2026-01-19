@@ -1412,7 +1412,6 @@ def main():
     st.markdown("""
     **เอกสารอ้างอิง:**
     1. AASHTO (1993). *AASHTO Guide for Design of Pavement Structures*. American Association of State Highway and Transportation Officials.
-    2. Huang, Y.H. (2004). *Pavement Analysis and Design*. Pearson Prentice Hall.
     3. ACI 318-19 (2019). *Building Code Requirements for Structural Concrete*. American Concrete Institute.
     
     **หมายเหตุ:**
@@ -1422,7 +1421,7 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.caption("พัฒนาโดย: ภาควิชาครุศาสตร์โยธา มจพ. | AASHTO 1993 Rigid Pavement Design Tool")
+    st.caption("พัฒนาโดย: รศ.ดร.อิทธิพล มีผล // ภาควิชาครุศาสตร์โยธา // มจพ. | AASHTO 1993 Rigid Pavement Design Tool")
 
 
 if __name__ == "__main__":
