@@ -802,6 +802,11 @@ def main():
                 "E_MPa": layer_modulus
             })
         
+        # แสดงรวมความหนาชั้นวัสดุ
+        total_layer_thickness_cm = sum(l.get('thickness_cm', 0) for l in layers_data)
+        total_layer_thickness_inch = round(total_layer_thickness_cm / 2.54)
+        st.markdown(f"**รวมความหนา {total_layer_thickness_cm:.0f} ซม. ({total_layer_thickness_inch} นิ้ว)**")
+        
         st.markdown("---")
         
         # 1. ESAL ที่ต้องการรองรับ
