@@ -392,13 +392,21 @@ def plot_pavement_section(layers_result: list, subgrade_mr: float = None,
     total_thickness = sum([l['design_thickness_cm'] for l in layers_result])
     num_layers = len(layers_result)
     
-    # สร้าง figure - ขนาดขึ้นกับจำนวนชั้น
-    fig_height = max(8, 1.5 * num_layers + 3)
+    # สร้าง figure
+    fig_height = max(8, total_thickness * 0.12 + 3)
     fig, ax = plt.subplots(figsize=(12, fig_height))
     
-    # กำหนดความสูงคงที่ต่อชั้น (normalized)
-    layer_height = 1.0
-    total_height = num_layers * layer_height
+    # Scale factor - ปรับให้ความสูงสัมพันธ์กับความหนาจริง
+    # กำหนด minimum height เพื่อให้อ่านข้อความได้
+    min_layer_height = 0.8
+    scale = 0.08
+    
+    # คำนวณความสูงแต่ละชั้น (สัมพันธ์กับความหนาจริง)
+    layer_heights = []
+    for layer in layers_result:
+        h = max(layer['design_thickness_cm'] * scale, min_layer_height)
+        layer_heights.append(h)
+    total_height = sum(layer_heights)
     
     # ตำแหน่ง x
     layer_x_start = 3.5
@@ -410,6 +418,7 @@ def plot_pavement_section(layers_result: list, subgrade_mr: float = None,
     
     for i, layer in enumerate(layers_result):
         thickness_cm = layer['design_thickness_cm']
+        layer_height = layer_heights[i]
         color = layer.get('color', '#888888')
         english_name = layer.get('english_name', layer['short_name'])
         mr_mpa = layer.get('mr_mpa', 0)
@@ -566,12 +575,19 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
     num_layers = len(layers_result)
     
     # สร้าง figure
-    fig_height = max(8, 1.5 * num_layers + 3)
+    fig_height = max(8, total_thickness * 0.12 + 3)
     fig, ax = plt.subplots(figsize=(14, fig_height))
     
-    # กำหนดความสูงคงที่ต่อชั้น
-    layer_height = 1.0
-    total_height = num_layers * layer_height
+    # Scale factor - ปรับให้ความสูงสัมพันธ์กับความหนาจริง
+    min_layer_height = 0.8
+    scale = 0.08
+    
+    # คำนวณความสูงแต่ละชั้น
+    layer_heights = []
+    for layer in layers_result:
+        h = max(layer['design_thickness_cm'] * scale, min_layer_height)
+        layer_heights.append(h)
+    total_height = sum(layer_heights)
     
     # ตำแหน่ง x - เลื่อนขวาเพื่อเว้นที่สำหรับชื่อภาษาไทย
     layer_x_start = 5.0
@@ -583,6 +599,7 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
     
     for i, layer in enumerate(layers_result):
         thickness_cm = layer['design_thickness_cm']
+        layer_height = layer_heights[i]
         color = layer.get('color', '#888888')
         thai_name = layer.get('material', layer['short_name'])
         mr_mpa = layer.get('mr_mpa', 0)
