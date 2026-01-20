@@ -1,6 +1,6 @@
 # =========================================================
-# AASHTO 1993 Nomograph – FINAL STABLE VERSION
-# Export PDF + Word | Streamlit Cloud Ready
+# AASHTO 1993 Nomograph – FINAL v3 (STABLE)
+# Streamlit Cloud Ready | PDF + Word Export
 # =========================================================
 
 import streamlit as st
@@ -19,19 +19,21 @@ except ImportError:
 
 # ---------------- Word ----------------
 from docx import Document
+from docx.shared import Inches
 
 # =========================================================
-# Calibration (อ่านจาก Nomograph จริง)
+# Page config
 # =========================================================
 
-CAL = {
-    "Mr":  {"vmin": 1000, "vmax": 20000, "pmin": 850, "pmax": 350},
-    "DSB": {"vmin": 4,    "vmax": 18,    "pmin": 180, "pmax": 720},
-    "k":   {"vmin": 50,   "vmax": 1500,  "pmin": 820, "pmax": 1020}
-}
+st.set_page_config(
+    page_title="AASHTO 1993 Nomograph",
+    layout="centered"
+)
+
+st.title("AASHTO 1993 – Composite Modulus of Subgrade Reaction")
 
 # =========================================================
-# Mapping Functions (หัวใจของระบบ)
+# Mapping functions (log scale)
 # =========================================================
 
 def log_map(v, vmin, vmax, pmin, pmax):
@@ -44,74 +46,18 @@ def log_unmap(p, vmin, vmax, pmin, pmax):
     return 10 ** (np.log10(vmin) + r * (np.log10(vmax) - np.log10(vmin)))
 
 # =========================================================
-# Streamlit UI
+# User input
 # =========================================================
-
-st.set_page_config(page_title="AASHTO 1993 Nomograph", layout="centered")
-st.title("AASHTO 1993 – Composite Modulus of Subgrade Reaction")
 
 Mr = st.slider(
     "Roadbed Resilient Modulus, Mr (psi)",
-    1000, 20000, 5000, step=500
+    1000, 20000, 6000, step=500
 )
 
 DSB = st.slider(
     "Subbase Thickness, DSB (inch)",
-    4, 18, 10
+    4, 18, 14
 )
-
-# =========================================================
-# Coordinate Mapping
-# =========================================================
-
-x_dsb = log_map(
-    DSB,
-    CAL["DSB"]["vmin"],
-    CAL["DSB"]["vmax"],
-    CAL["DSB"]["pmin"],
-    CAL["DSB"]["pmax"]
-)
-
-y_mr = log_map(
-    Mr,
-    CAL["Mr"]["vmin"],
-    CAL["Mr"]["vmax"],
-    CAL["Mr"]["pmin"],
-    CAL["Mr"]["pmax"]
-)
-
-k_inf = log_unmap(
-    x_dsb,
-    CAL["k"]["vmin"],
-    CAL["k"]["vmax"],
-    CAL["k"]["pmin"],
-    CAL["k"]["pmax"]
-)
-
-# =========================================================
-# Plot Nomograph
-# =========================================================
-# =========================================================
-# Plot Nomograph with Paper Template (A4 Landscape)
-# =========================================================
-
-fig, ax = plt.subplots(figsize=(11.7, 8.3))  # A4 landscape (inch)
-
-# พื้นหลังขาว = กระดาษ
-ax.set_facecolor("white")
-
-# วางภาพ nomograph ให้อยู่ในกรอบ
-ax.imshow(
-    img,
-    extent=[0, 100, 0, 70],
-    aspect="auto"
-)
-
-# วาดกรอบกระดาษ
-ax.plot([0,100,100,0,0], [0,0,70,70,0],
-        color="black", linewidth=1.5)
-
-ax.axis("off")
 
 # =========================================================
 # Load Nomograph Image (Cloud-safe)
@@ -120,7 +66,7 @@ ax.axis("off")
 st.subheader("Nomograph Image")
 
 uploaded_file = st.file_uploader(
-    "Upload AASHTO Nomograph Image (PNG/JPG)",
+    "Upload AASHTO Nomograph Image (PNG / JPG)",
     type=["png", "jpg", "jpeg"]
 )
 
@@ -131,24 +77,65 @@ else:
         img = Image.open("nomograph.png")
     except FileNotFoundError:
         st.error(
-            "❌ nomograph.png not found.\n\n"
-            "Please upload the nomograph image using the uploader above."
+            "❌ ไม่พบไฟล์ nomograph.png\n\n"
+            "กรุณาอัปโหลดภาพ Nomograph ก่อน"
         )
         st.stop()
 
+# =========================================================
+# Paper template coordinates (A4 Landscape)
+# =========================================================
+# Logical coordinate system: x = 0–100, y = 0–70
 
-fig, ax = plt.subplots(figsize=(7, 7))
-ax.imshow(img)
-ax.axis("off")
+DSB_X = (20, 75)      # แกน Subbase thickness
+MR_Y  = (15, 55)      # แกน Mr
+K_X   = (70, 95)      # แกน k∞
+
+# =========================================================
+# Mapping input → coordinates
+# =========================================================
+
+x_dsb = log_map(DSB, 4, 18, DSB_X[0], DSB_X[1])
+y_mr  = log_map(Mr, 1000, 20000, MR_Y[1], MR_Y[0])
+
+k_inf = log_unmap(x_dsb, 50, 1500, K_X[0], K_X[1])
+
+# =========================================================
+# Plot Nomograph with A4 Template
+# =========================================================
+
+fig, ax = plt.subplots(figsize=(11.7, 8.3))  # A4 landscape
+ax.set_facecolor("white")
+
+# วางภาพลงบนกระดาษ
+ax.imshow(
+    img,
+    extent=[0, 100, 0, 70],
+    aspect="auto"
+)
+
+# กรอบกระดาษ
+ax.plot([0,100,100,0,0], [0,0,70,70,0],
+        color="black", linewidth=1.5)
 
 # เส้นอ่านค่า
-ax.plot([x_dsb, x_dsb], [y_mr, 750], color="red", linewidth=2)
-ax.plot([x_dsb, 1020], [y_mr, y_mr], color="red", linewidth=2)
-ax.scatter(x_dsb, y_mr, color="red", s=80)
+ax.plot([x_dsb, x_dsb], [y_mr, 10], color="red", linewidth=2)
+ax.plot([x_dsb, K_X[1]], [y_mr, y_mr], color="red", linewidth=2)
+ax.scatter(x_dsb, y_mr, color="red", s=90, zorder=5)
+
+ax.axis("off")
 
 st.pyplot(fig)
 
 st.success(f"Estimated composite k∞ ≈ {k_inf:,.0f} pci")
+
+# =========================================================
+# Save figure for report
+# =========================================================
+
+FIG_BUFFER = BytesIO()
+fig.savefig(FIG_BUFFER, dpi=300, bbox_inches="tight")
+FIG_BUFFER.seek(0)
 
 # =========================================================
 # Export PDF
@@ -178,9 +165,13 @@ def export_pdf():
 def export_word():
     doc = Document()
     doc.add_heading("AASHTO 1993 Nomograph Report", level=1)
+
     doc.add_paragraph(f"Roadbed Resilient Modulus (Mr): {Mr:,.0f} psi")
     doc.add_paragraph(f"Subbase Thickness (DSB): {DSB:.1f} inch")
     doc.add_paragraph(f"Composite Modulus of Subgrade Reaction (k∞): {k_inf:,.0f} pci")
+
+    doc.add_heading("Nomograph Interpretation", level=2)
+    doc.add_picture(FIG_BUFFER, width=Inches(6.5))
 
     buffer = BytesIO()
     doc.save(buffer)
@@ -188,7 +179,7 @@ def export_word():
     return buffer
 
 # =========================================================
-# Download Buttons
+# Download section
 # =========================================================
 
 st.subheader("Export Report")
