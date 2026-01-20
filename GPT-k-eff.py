@@ -91,6 +91,27 @@ k_inf = log_unmap(
 # =========================================================
 # Plot Nomograph
 # =========================================================
+# =========================================================
+# Plot Nomograph with Paper Template (A4 Landscape)
+# =========================================================
+
+fig, ax = plt.subplots(figsize=(11.7, 8.3))  # A4 landscape (inch)
+
+# พื้นหลังขาว = กระดาษ
+ax.set_facecolor("white")
+
+# วางภาพ nomograph ให้อยู่ในกรอบ
+ax.imshow(
+    img,
+    extent=[0, 100, 0, 70],   # กำหนดพื้นที่วางภาพ (logical unit)
+    aspect="auto"
+)
+
+# วาดกรอบกระดาษ
+ax.plot([0,100,100,0,0], [0,0,70,70,0],
+        color="black", linewidth=1.5)
+
+ax.axis("off")
 
 # =========================================================
 # Load Nomograph Image (Cloud-safe)
