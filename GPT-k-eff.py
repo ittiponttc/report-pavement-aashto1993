@@ -108,11 +108,36 @@ fig, ax = plt.subplots(figsize=(11.7, 8.3))  # A4 landscape
 ax.set_facecolor("white")
 
 # วางภาพลงบนกระดาษ
+# =========================================================
+# Place Nomograph Image on A4 Template (Correct Scaling)
+# =========================================================
+
+IMG_W, IMG_H = img.size   # 739 x 671
+
+paper_w, paper_h = 100, 70
+
+scale = paper_h / IMG_H
+img_w_scaled = IMG_W * scale
+
+x0 = (paper_w - img_w_scaled) / 2
+x1 = x0 + img_w_scaled
+y0 = 0
+y1 = paper_h
+
 ax.imshow(
     img,
-    extent=[0, 100, 0, 70],
+    extent=[x0, x1, y0, y1],
     aspect="auto"
 )
+
+# กรอบกระดาษ
+ax.plot(
+    [0, paper_w, paper_w, 0, 0],
+    [0, 0, paper_h, paper_h, 0],
+    color="black",
+    linewidth=1.5
+)
+
 
 # กรอบกระดาษ
 ax.plot([0,100,100,0,0], [0,0,70,70,0],
