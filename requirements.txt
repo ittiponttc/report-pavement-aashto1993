@@ -7,3 +7,4 @@ pandas>=2.0.0
 python-docx
 openpyxl
 xlrd
+reportlab
