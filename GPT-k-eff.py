@@ -98,7 +98,13 @@ K_X   = (70, 95)      # แกน k∞
 x_dsb = log_map(DSB, 4, 18, DSB_X[0], DSB_X[1])
 y_mr  = log_map(Mr, 1000, 20000, MR_Y[1], MR_Y[0])
 
-k_inf = log_unmap(x_dsb, 50, 1500, K_X[0], K_X[1])
+# อ่านค่า k∞ จากตำแหน่งเส้นแนวนอนตัดโซน k
+k_inf = log_unmap(
+    x_dsb,
+    50, 2000,          # ช่วง k∞ ใน nomograph
+    K_X[0], K_X[1]
+)
+
 
 # =========================================================
 # Plot Nomograph with A4 Template
