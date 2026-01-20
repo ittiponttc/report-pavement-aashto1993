@@ -103,7 +103,7 @@ ax.set_facecolor("white")
 # วางภาพ nomograph ให้อยู่ในกรอบ
 ax.imshow(
     img,
-    extent=[0, 100, 0, 70],   # กำหนดพื้นที่วางภาพ (logical unit)
+    extent=[0, 100, 0, 70],
     aspect="auto"
 )
 
