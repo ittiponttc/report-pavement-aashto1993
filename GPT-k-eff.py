@@ -165,11 +165,13 @@ if mode == "Calibrate Mode":
 
     st.markdown("### Calibrate by clicking coordinates")
 
-    click = st.experimental_data_editor(
-        {"x": [50.0], "y": [35.0]},
-        num_rows=1,
-        key="click_input"
-    )
+    click = st.data_editor(
+    {"x": [50.0], "y": [35.0]},
+    num_rows=1,
+    use_container_width=True,
+    key="click_input"
+)
+
 
     col1, col2, col3 = st.columns(3)
 
