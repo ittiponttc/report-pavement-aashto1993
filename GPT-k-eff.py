@@ -92,7 +92,29 @@ k_inf = log_unmap(
 # Plot Nomograph
 # =========================================================
 
-img = Image.open("nomograph.png")
+# =========================================================
+# Load Nomograph Image (Cloud-safe)
+# =========================================================
+
+st.subheader("Nomograph Image")
+
+uploaded_file = st.file_uploader(
+    "Upload AASHTO Nomograph Image (PNG/JPG)",
+    type=["png", "jpg", "jpeg"]
+)
+
+if uploaded_file is not None:
+    img = Image.open(uploaded_file)
+else:
+    try:
+        img = Image.open("nomograph.png")
+    except FileNotFoundError:
+        st.error(
+            "❌ nomograph.png not found.\n\n"
+            "Please upload the nomograph image using the uploader above."
+        )
+        st.stop()
+
 
 fig, ax = plt.subplots(figsize=(7, 7))
 ax.imshow(img)
