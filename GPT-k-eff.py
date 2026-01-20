@@ -1,6 +1,6 @@
 # =========================================================
-# AASHTO 1993 Nomograph – FINAL v3 (STABLE)
-# Streamlit Cloud Ready | PDF + Word Export
+# AASHTO 1993 Nomograph – FINAL v4
+# Calibrate Mode + Save/Load Calibration
 # =========================================================
 
 import streamlit as st
@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from io import BytesIO
+import json
 
 # ---------------- PDF (safe import) ----------------
 try:
@@ -46,21 +47,13 @@ def log_unmap(p, vmin, vmax, pmin, pmax):
     return 10 ** (np.log10(vmin) + r * (np.log10(vmax) - np.log10(vmin)))
 
 # =========================================================
-# User input
+# Mode selection
 # =========================================================
 
-Mr = st.slider(
-    "Roadbed Resilient Modulus, Mr (psi)",
-    1000, 20000, 6000, step=500
-)
-
-DSB = st.slider(
-    "Subbase Thickness, DSB (inch)",
-    4, 18, 14
-)
+mode = st.radio("Mode", ["Normal Mode", "Calibrate Mode"])
 
 # =========================================================
-# Load Nomograph Image (Cloud-safe)
+# Load Nomograph Image
 # =========================================================
 
 st.subheader("Nomograph Image")
@@ -76,50 +69,14 @@ else:
     try:
         img = Image.open("nomograph.png")
     except FileNotFoundError:
-        st.error(
-            "❌ ไม่พบไฟล์ nomograph.png\n\n"
-            "กรุณาอัปโหลดภาพ Nomograph ก่อน"
-        )
+        st.error("❌ กรุณาอัปโหลดภาพ Nomograph")
         st.stop()
 
 # =========================================================
-# Paper template coordinates (A4 Landscape)
-# =========================================================
-# Logical coordinate system: x = 0–100, y = 0–70
-
-DSB_X = (20, 75)      # แกน Subbase thickness
-MR_Y  = (15, 55)      # แกน Mr
-K_X   = (70, 95)      # แกน k∞
-
-# =========================================================
-# Mapping input → coordinates
+# Paper template setup
 # =========================================================
 
-x_dsb = log_map(DSB, 4, 18, DSB_X[0], DSB_X[1])
-y_mr  = log_map(Mr, 1000, 20000, MR_Y[1], MR_Y[0])
-
-# อ่านค่า k∞ จากตำแหน่งเส้นแนวนอนตัดโซน k
-k_inf = log_unmap(
-    x_dsb,
-    50, 2000,          # ช่วง k∞ ใน nomograph
-    K_X[0], K_X[1]
-)
-
-
-# =========================================================
-# Plot Nomograph with A4 Template
-# =========================================================
-
-fig, ax = plt.subplots(figsize=(11.7, 8.3))  # A4 landscape
-ax.set_facecolor("white")
-
-# วางภาพลงบนกระดาษ
-# =========================================================
-# Place Nomograph Image on A4 Template (Correct Scaling)
-# =========================================================
-
-IMG_W, IMG_H = img.size   # 739 x 671
-
+IMG_W, IMG_H = img.size
 paper_w, paper_h = 100, 70
 
 scale = paper_h / IMG_H
@@ -130,108 +87,167 @@ x1 = x0 + img_w_scaled
 y0 = 0
 y1 = paper_h
 
+# =========================================================
+# Session state for calibration
+# =========================================================
+
+if "calib_points" not in st.session_state:
+    st.session_state.calib_points = {
+        "Mr": [],
+        "DSB": [],
+        "k": []
+    }
+
+if "CAL" not in st.session_state:
+    st.session_state.CAL = {}
+
+# =========================================================
+# Plot base figure
+# =========================================================
+
+fig, ax = plt.subplots(figsize=(11.7, 8.3))
+ax.set_facecolor("white")
+
 ax.imshow(
     img,
     extent=[x0, x1, y0, y1],
     aspect="auto"
 )
 
-# กรอบกระดาษ
-ax.plot(
-    [0, paper_w, paper_w, 0, 0],
-    [0, 0, paper_h, paper_h, 0],
-    color="black",
-    linewidth=1.5
-)
-
-
-# กรอบกระดาษ
 ax.plot([0,100,100,0,0], [0,0,70,70,0],
-        color="black", linewidth=1.5)
+        color="black", linewidth=1.2)
 
-# เส้นอ่านค่า
-ax.plot([x_dsb, x_dsb], [y_mr, 10], color="red", linewidth=2)
-ax.plot([x_dsb, K_X[1]], [y_mr, y_mr], color="red", linewidth=2)
-ax.scatter(x_dsb, y_mr, color="red", s=90, zorder=5)
-
+ax.set_xlim(0,100)
+ax.set_ylim(0,70)
 ax.axis("off")
 
-st.pyplot(fig)
-
-st.success(f"Estimated composite k∞ ≈ {k_inf:,.0f} pci")
-
 # =========================================================
-# Save figure for report
+# Show calibration points
 # =========================================================
 
-FIG_BUFFER = BytesIO()
-fig.savefig(FIG_BUFFER, dpi=300, bbox_inches="tight")
-FIG_BUFFER.seek(0)
+colors = {"Mr": "blue", "DSB": "green", "k": "purple"}
+
+for key in st.session_state.calib_points:
+    for p in st.session_state.calib_points[key]:
+        ax.scatter(p[0], p[1], color=colors[key], s=60, zorder=5)
 
 # =========================================================
-# Export PDF
+# Normal Mode
 # =========================================================
 
-def export_pdf():
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer)
-    styles = getSampleStyleSheet()
+if mode == "Normal Mode" and st.session_state.CAL:
 
-    content = [
-        Paragraph("<b>AASHTO 1993 Nomograph Report</b>", styles["Title"]),
-        Spacer(1, 12),
-        Paragraph(f"Roadbed Resilient Modulus (Mr): {Mr:,.0f} psi", styles["Normal"]),
-        Paragraph(f"Subbase Thickness (DSB): {DSB:.1f} inch", styles["Normal"]),
-        Paragraph(f"Composite Modulus of Subgrade Reaction (k∞): {k_inf:,.0f} pci", styles["Normal"]),
-    ]
+    Mr = st.slider("Roadbed Resilient Modulus, Mr (psi)", 1000, 20000, 6000, step=500)
+    DSB = st.slider("Subbase Thickness, DSB (inch)", 4, 18, 14)
 
-    doc.build(content)
-    buffer.seek(0)
-    return buffer
+    CAL_MR = st.session_state.CAL["Mr"]
+    CAL_DSB = st.session_state.CAL["DSB"]
+    CAL_K = st.session_state.CAL["k"]
 
-# =========================================================
-# Export Word
-# =========================================================
+    x_dsb = log_map(DSB, **CAL_DSB)
+    y_mr = log_map(Mr, **CAL_MR)
+    k_inf = log_unmap(x_dsb, **CAL_K)
 
-def export_word():
-    doc = Document()
-    doc.add_heading("AASHTO 1993 Nomograph Report", level=1)
+    ax.plot([x_dsb, x_dsb], [y_mr, y0 + 5], color="red", linewidth=2)
+    ax.plot([x_dsb, CAL_K["pmax"]], [y_mr, y_mr], color="red", linewidth=2)
+    ax.scatter(x_dsb, y_mr, color="red", s=90, zorder=6)
 
-    doc.add_paragraph(f"Roadbed Resilient Modulus (Mr): {Mr:,.0f} psi")
-    doc.add_paragraph(f"Subbase Thickness (DSB): {DSB:.1f} inch")
-    doc.add_paragraph(f"Composite Modulus of Subgrade Reaction (k∞): {k_inf:,.0f} pci")
+    st.success(f"Estimated composite k∞ ≈ {k_inf:,.0f} pci")
 
-    doc.add_heading("Nomograph Interpretation", level=2)
-    doc.add_picture(FIG_BUFFER, width=Inches(6.5))
-
-    buffer = BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
-    return buffer
+elif mode == "Normal Mode":
+    st.info("⚠️ กรุณา Calibrate ก่อนใช้งาน Normal Mode")
 
 # =========================================================
-# Download section
+# Calibrate Mode
 # =========================================================
 
-st.subheader("Export Report")
+if mode == "Calibrate Mode":
 
-col1, col2 = st.columns(2)
+    st.markdown("### Calibrate by clicking coordinates")
 
-with col1:
-    if REPORTLAB_OK:
-        st.download_button(
-            "📄 Download PDF",
-            export_pdf(),
-            file_name="AASHTO1993_Nomograph_Report.pdf",
-            mime="application/pdf"
-        )
-    else:
-        st.warning("PDF export disabled (reportlab not installed)")
-
-with col2:
-    st.download_button(
-        "📝 Download Word",
-        export_word(),
-        file_name="AASHTO1993_Nomograph_Report.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    click = st.experimental_data_editor(
+        {"x": [50.0], "y": [35.0]},
+        num_rows=1,
+        key="click_input"
     )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("Add Mr point"):
+            st.session_state.calib_points["Mr"].append(
+                (click["x"][0], click["y"][0])
+            )
+
+    with col2:
+        if st.button("Add DSB point"):
+            st.session_state.calib_points["DSB"].append(
+                (click["x"][0], click["y"][0])
+            )
+
+    with col3:
+        if st.button("Add k point"):
+            st.session_state.calib_points["k"].append(
+                (click["x"][0], click["y"][0])
+            )
+
+    # Build calibration
+    if (
+        len(st.session_state.calib_points["Mr"]) >= 2 and
+        len(st.session_state.calib_points["DSB"]) >= 2 and
+        len(st.session_state.calib_points["k"]) >= 2
+    ):
+        st.success("Calibration points complete")
+
+        if st.button("Build Calibration"):
+            st.session_state.CAL = {
+                "Mr": {
+                    "vmin": 1000,
+                    "vmax": 20000,
+                    "pmin": st.session_state.calib_points["Mr"][1][1],
+                    "pmax": st.session_state.calib_points["Mr"][0][1]
+                },
+                "DSB": {
+                    "vmin": 4,
+                    "vmax": 18,
+                    "pmin": st.session_state.calib_points["DSB"][0][0],
+                    "pmax": st.session_state.calib_points["DSB"][1][0]
+                },
+                "k": {
+                    "vmin": 50,
+                    "vmax": 2000,
+                    "pmin": st.session_state.calib_points["k"][0][0],
+                    "pmax": st.session_state.calib_points["k"][1][0]
+                }
+            }
+            st.success("Calibration built successfully")
+
+# =========================================================
+# Save / Load Calibration
+# =========================================================
+
+st.subheader("Calibration File")
+
+if st.session_state.CAL:
+    calib_json = json.dumps(st.session_state.CAL, indent=2)
+    st.download_button(
+        "💾 Save Calibration (.json)",
+        calib_json,
+        file_name="aashto_nomograph_calibration.json",
+        mime="application/json"
+    )
+
+uploaded_calib = st.file_uploader(
+    "Load Calibration File (.json)",
+    type=["json"]
+)
+
+if uploaded_calib is not None:
+    st.session_state.CAL = json.load(uploaded_calib)
+    st.success("Calibration loaded successfully")
+
+# =========================================================
+# Render plot
+# =========================================================
+
+st.pyplot(fig)
