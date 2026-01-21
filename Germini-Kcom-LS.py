@@ -35,16 +35,22 @@ def draw_arrow_fixed(draw, start, end, color, width=4, arrow_size=15):
         py = dx
         
         # Arrow points
-        x3 = end[0] - width*dx + arrow_size*dx  # Tip
-        y3 = end[1] - width*dy + arrow_size*dy
+        x3 = end[0] - width*dx + arrow_size*dx  # Tip (adjust to not overshoot too much if needed)
+        # Actually end point is tip
+        x3 = end[0] 
+        y3 = end[1]
         
-        # Back points (Base of triangle)
-        x4 = end[0] - arrow_size*dx + arrow_size*0.6*px
-        y4 = end[1] - arrow_size*dy + arrow_size*0.6*py
-        x5 = end[0] - arrow_size*dx - arrow_size*0.6*px
-        y5 = end[1] - arrow_size*dy - arrow_size*0.6*py
+        # Back base of triangle logic needs to be relative to tip
+        # Move back from tip
+        base_x = end[0] - arrow_size * dx
+        base_y = end[1] - arrow_size * dy
         
-        draw.polygon([(end[0], end[1]), (x4, y4), (x5, y5)], fill=color)
+        x4 = base_x + arrow_size * 0.5 * px
+        y4 = base_y + arrow_size * 0.5 * py
+        x5 = base_x - arrow_size * 0.5 * px
+        y5 = base_y - arrow_size * 0.5 * py
+        
+        draw.polygon([(x3, y3), (x4, y4), (x5, y5)], fill=color)
 
 # ============================================
 # Word Report Generation
@@ -168,7 +174,7 @@ def main():
     if 'img2_bytes' not in st.session_state:
         st.session_state.img2_bytes = None
         
-    # Presets for LS Lines (Extracted from user images)
+    # --- Config: LS Presets from User Images ---
     # Format: (x1, y1, x2, y2)
     LS_PRESETS = {
         0.0: (138, 715, 753, 84),
@@ -199,10 +205,12 @@ def main():
                 st.subheader("⚙️ ปรับเส้นอ่านค่า")
                 
                 with st.expander("1. เส้น Turning Line (เขียว)", expanded=True):
-                    gx1 = st.slider("X เริ่ม", 0, width, int(width*0.4), key="gx1")
-                    gy1 = st.slider("Y เริ่ม", 0, height, int(height*0.3), key="gy1")
-                    gx2 = st.slider("X จบ", 0, width, int(width*0.7), key="gx2")
-                    gy2 = st.slider("Y จบ", 0, height, int(height*0.6), key="gy2")
+                    # --- UPDATED DEFAULTS FOR GREEN LINE ---
+                    # Using values from user image: 411, 339, 470, 396
+                    gx1 = st.slider("X เริ่ม", 0, width, 411, key="gx1")
+                    gy1 = st.slider("Y เริ่ม", 0, height, 339, key="gy1")
+                    gx2 = st.slider("X จบ", 0, width, 470, key="gx2")
+                    gy2 = st.slider("Y จบ", 0, height, 396, key="gy2")
                     
                     draw.line([(gx1, gy1), (gx2, gy2)], fill="green", width=5)
                     slope_green = (gy2 - gy1) / (gx2 - gx1) if (gx2 - gx1) != 0 else 0
@@ -269,21 +277,21 @@ def main():
                 st.write("#### 1. เลือกค่า LS (เส้นแดง)")
                 ls_select = st.selectbox("เลือกค่า LS", [0.0, 0.5, 1.0, 1.5, 2.0, 3.0], index=2)
                 
-                # Update session state logic for sliders when dropdown changes
+                # Logic to update sliders when dropdown changes
                 if 'last_ls_select' not in st.session_state or st.session_state.last_ls_select != ls_select:
                     st.session_state.last_ls_select = ls_select
                     coords = LS_PRESETS.get(ls_select, (150, 718, 903, 84))
-                    # Set defaults for sliders (using specific keys)
+                    # Set defaults in session state so sliders pick them up
                     st.session_state['_ls_x1'] = coords[0]
                     st.session_state['_ls_y1'] = coords[1]
                     st.session_state['_ls_x2'] = coords[2]
                     st.session_state['_ls_y2'] = coords[3]
 
                 with st.expander("ปรับแต่งตำแหน่งเส้น LS ละเอียด", expanded=False):
-                    ls_x1 = st.slider("จุดเริ่ม X", 0, w2, key="_ls_x1")
-                    ls_y1 = st.slider("จุดเริ่ม Y", 0, h2, key="_ls_y1")
-                    ls_x2 = st.slider("จุดจบ X", 0, w2, key="_ls_x2")
-                    ls_y2 = st.slider("จุดจบ Y", 0, h2, key="_ls_y2")
+                    ls_x1 = st.slider("จุดเริ่ม X", -100, w2+100, key="_ls_x1")
+                    ls_y1 = st.slider("จุดเริ่ม Y", -100, h2+100, key="_ls_y1")
+                    ls_x2 = st.slider("จุดจบ X", -100, w2+100, key="_ls_x2")
+                    ls_y2 = st.slider("จุดจบ Y", -100, h2+100, key="_ls_y2")
 
                 # Draw LS Line (Red)
                 draw2.line([(ls_x1, ls_y1), (ls_x2, ls_y2)], fill="red", width=6)
@@ -296,19 +304,21 @@ def main():
                     m_red = None # Vertical line
                     c_red = 0
 
-                # --- 2. Green Line Logic (Updated) ---
+                # --- 2. Green Line Logic (UPDATED) ---
                 st.markdown("---")
                 st.write("#### 2. ค่า k และขอบเขตแกน (เส้นเขียว)")
                 
                 # Boundary Settings (To make lines stop exactly at axes)
-                with st.expander("📍 ตั้งค่าตำแหน่งแกนกราฟ (X, Y)", expanded=True):
-                    # Default values estimated from user images
+                with st.expander("📍 ตั้งค่าตำแหน่งแกนกราฟ (เพื่อให้เส้นไม่ล้น)", expanded=True):
+                    st.caption("ปรับให้ตรงกับเส้นแกนสีดำของรูปภาพ")
                     col_b1, col_b2 = st.columns(2)
                     with col_b1:
-                        # Axis Left X: Where the vertical Y-axis is located
+                        # Axis Left X: Where the vertical Y-axis is located. 
+                        # Default ~100 based on user images
                         axis_left_x = st.number_input("ตำแหน่งแกน Y (ซ้ายสุด)", value=100, step=5)
                     with col_b2:
-                        # Axis Bottom Y: Where the horizontal X-axis is located
+                        # Axis Bottom Y: Where the horizontal X-axis is located. 
+                        # Default ~730 based on user images
                         axis_bottom_y = st.number_input("ตำแหน่งแกน X (ล่างสุด)", value=h2-50, step=5)
                 
                 st.caption(f"ค่า k จาก Step 1 คือ: {st.session_state.k_inf_result} pci")
@@ -322,11 +332,12 @@ def main():
                 intersect_y = int(intersect_y)
                 
                 # Draw Green Lines (Perpendicular)
-                # 1. Vertical Up (From Bottom Axis to Red Line) - No Arrow
+                # 1. Vertical Up (From Bottom Axis to Red Line)
+                # เริ่มจาก axis_bottom_y ขึ้นไปหา intersect_y
                 draw2.line([(k_input_x, axis_bottom_y), (k_input_x, intersect_y)], fill="springgreen", width=5)
                 
-                # 2. Horizontal Left (From Red Line to Left Axis) - With Arrow
-                # Ensure it stops at axis_left_x
+                # 2. Horizontal Left (From Red Line to Left Axis)
+                # เริ่มจาก k_input_x ไปหา axis_left_x (ทางซ้าย)
                 draw_arrow_fixed(draw2, (k_input_x, intersect_y), (axis_left_x, intersect_y), "springgreen", width=5)
                 
                 # Intersection Dot
@@ -383,14 +394,14 @@ def main():
         st.markdown("""
         ### ขั้นตอนที่ 1: หาค่า Composite k∞
         1. อัปโหลดรูป **Figure 3.3**
-        2. ปรับ **Turning Line (เส้นเขียว)** ให้ตรงกับเส้นบนกราฟ
+        2. ปรับ **Turning Line (เส้นเขียว)** ให้ตรงกับเส้นบนกราฟ (ตั้งค่าเริ่มต้นให้แล้ว)
         3. ปรับตำแหน่งลูกศรสีแดง/ส้ม ให้ตรงกับค่า **MR** และ **ESB**
         4. จุดตัดจะแสดงค่า **k∞** (แกนขวา)
 
         ### ขั้นตอนที่ 2: ปรับแก้ Loss of Support (LS)
         1. อัปโหลดรูป **Figure 3.4**
-        2. **เลือกค่า LS** จากกล่องตัวเลือก (0, 0.5, 1.0, ...) เส้นสีแดงจะขยับไปตำแหน่งมาตรฐานโดยอัตโนมัติ
-        3. **ตั้งค่าตำแหน่งแกนกราฟ** (ครั้งแรก) โดยปรับ "ตำแหน่งแกน Y (ซ้ายสุด)" และ "ตำแหน่งแกน X (ล่างสุด)" ให้ตรงกับขอบแกนดำของรูปภาพ เพื่อให้ลูกศรชี้ได้แม่นยำ
+        2. **เลือกค่า LS** จากกล่องตัวเลือก (0, 0.5, 1.0, ...) เส้นสีแดงจะขยับไปตำแหน่งมาตรฐานตามรูปที่ส่งมา
+        3. **ตั้งค่าตำแหน่งแกนกราฟ** (ครั้งแรก) โดยปรับ "ตำแหน่งแกน Y (ซ้ายสุด)" และ "ตำแหน่งแกน X (ล่างสุด)" ให้ตรงกับขอบแกนดำของรูปภาพ เพื่อให้ลูกศรชี้ได้แม่นยำและไม่ล้น
         4. เลื่อน **Slider ตำแหน่ง k บนแกน X** ให้ตรงกับค่า k ที่ได้จากขั้นตอนที่ 1
         5. โปรแกรมจะวาดเส้นสีเขียวตั้งฉากจากแกนล่าง ขึ้นไปชนเส้นแดง และเลี้ยวซ้ายไปชี้ที่แกน Y
         6. อ่านค่า Corrected k และกดสร้างรายงาน
