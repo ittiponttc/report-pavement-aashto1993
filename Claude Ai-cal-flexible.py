@@ -610,7 +610,7 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
             layer_width, layer_height,
             facecolor=color,
             edgecolor='black',
-            linewidth=2
+            linewidth=2.5
         )
         ax.add_patch(rect)
         
