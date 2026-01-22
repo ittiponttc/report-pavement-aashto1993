@@ -19,15 +19,15 @@ TRUCKS = {
     'MB': {
         'desc': 'Medium Bus (รถโดยสารขนาดกลาง)',
         'axles': [
-            {'name': 'เพลาหน้า', 'load_ton': 3.1, 'type': 'Single'},
-            {'name': 'เพลาหลัง', 'load_ton': 12.2, 'type': 'Tandem'}
+            {'name': 'เพลาหน้า', 'load_ton': 4.0, 'type': 'Single'},
+            {'name': 'เพลาหลัง', 'load_ton': 11.0, 'type': 'Tandem'}
         ]
     },
     'HB': {
         'desc': 'Heavy Bus (รถโดยสารขนาดใหญ่)',
         'axles': [
-            {'name': 'เพลาหน้า', 'load_ton': 4.0, 'type': 'Single'},
-            {'name': 'เพลาหลัง', 'load_ton': 14.3, 'type': 'Tandem'}
+            {'name': 'เพลาหน้า', 'load_ton': 5.0, 'type': 'Single'},
+            {'name': 'เพลาหลัง', 'load_ton': 20.0, 'type': 'Tandem'}
         ]
     },
     'MT': {
