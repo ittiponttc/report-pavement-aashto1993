@@ -206,11 +206,11 @@ def main():
                 
                 with st.expander("1. เส้น Turning Line (เขียว)", expanded=True):
                     # --- UPDATED DEFAULTS FOR GREEN LINE ---
-                    # Using values from user image: 411, 339, 470, 396
+                    # Using values from user image: 411, 339, 470, 397
                     gx1 = st.slider("X เริ่ม", 0, width, 411, key="gx1")
                     gy1 = st.slider("Y เริ่ม", 0, height, 339, key="gy1")
                     gx2 = st.slider("X จบ", 0, width, 470, key="gx2")
-                    gy2 = st.slider("Y จบ", 0, height, 396, key="gy2")
+                    gy2 = st.slider("Y จบ", 0, height, 397, key="gy2")
                     
                     draw.line([(gx1, gy1), (gx2, gy2)], fill="green", width=5)
                     slope_green = (gy2 - gy1) / (gx2 - gx1) if (gx2 - gx1) != 0 else 0
