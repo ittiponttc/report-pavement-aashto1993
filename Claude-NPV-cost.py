@@ -302,8 +302,8 @@ def create_comparison_chart(results_df):
     colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D']
     
     fig.add_trace(
-        go.Bar(x=results_df['ประเภท'], y=results_df['NPV'],
-               marker_color=colors, text=results_df['NPV'].apply(lambda x: f'{x:.2f}'),
+        go.Bar(x=results_df['ประเภท'], y=results_df['NPV (ล้านบาท/กม.)'],
+               marker_color=colors, text=results_df['NPV (ล้านบาท/กม.)'].apply(lambda x: f'{x:.2f}'),
                textposition='outside', name='NPV'),
         row=1, col=1
     )
@@ -314,7 +314,7 @@ def create_comparison_chart(results_df):
         row=1, col=2
     )
     
-    maint_cost = results_df['NPV'] - results_df['ค่าก่อสร้าง']
+    maint_cost = results_df['NPV (ล้านบาท/กม.)'] - results_df['ค่าก่อสร้าง']
     fig.add_trace(
         go.Bar(x=results_df['ประเภท'], y=maint_cost,
                marker_color='#F18F01', name='ค่าบำรุงรักษา (NPV)'),
@@ -381,19 +381,19 @@ def generate_word_report(project_info, results_df, all_details):
     
     table = doc.add_table(rows=len(results_df)+1, cols=4)
     table.style = 'Table Grid'
-    headers = ['ประเภท', 'ค่าก่อสร้าง', 'NPV', 'อันดับ']
+    headers = ['ประเภท', 'ค่าก่อสร้าง', 'NPV (ล้านบาท/กม.)', 'อันดับ']
     for j, h in enumerate(headers):
         table.rows[0].cells[j].text = h
     
     for i, row in results_df.iterrows():
         table.rows[i+1].cells[0].text = row['ประเภท']
         table.rows[i+1].cells[1].text = f"{row['ค่าก่อสร้าง']:.2f}"
-        table.rows[i+1].cells[2].text = f"{row['NPV']:.2f}"
+        table.rows[i+1].cells[2].text = f"{row['NPV (ล้านบาท/กม.)']:.2f}"
         table.rows[i+1].cells[3].text = str(row['อันดับ'])
     
     best = results_df.loc[results_df['อันดับ'] == 1].iloc[0]
     doc.add_paragraph()
-    doc.add_paragraph(f"สรุป: {best['ประเภท']} มีความคุ้มค่าที่สุด (NPV = {best['NPV']:.2f} ล้านบาท/กม.)")
+    doc.add_paragraph(f"สรุป: {best['ประเภท']} มีความคุ้มค่าที่สุด (NPV = {best['NPV (ล้านบาท/กม.)']:.2f} ล้านบาท/กม.)")
     doc.add_paragraph(f"รายงานสร้างเมื่อ: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     
     return doc
@@ -538,14 +538,14 @@ def main():
                 npv4, cf4 = calculate_npv_jrcp(jrcp2_c, joint, 25, analysis_period, r)
                 
                 results = [
-                    {'ประเภท': 'AC1 (หินคลุก)', 'ค่าก่อสร้าง': ac1_c, 'อายุ': 20, 'NPV': npv1},
-                    {'ประเภท': 'AC2 (CMCR)', 'ค่าก่อสร้าง': ac2_c, 'อายุ': 20, 'NPV': npv2},
-                    {'ประเภท': 'JRCP1 (ดินซีเมนต์)', 'ค่าก่อสร้าง': jrcp1_c, 'อายุ': 25, 'NPV': npv3},
-                    {'ประเภท': 'JRCP2 (CMCR)', 'ค่าก่อสร้าง': jrcp2_c, 'อายุ': 25, 'NPV': npv4},
+                    {'ประเภท': 'AC1 (หินคลุก)', 'ค่าก่อสร้าง': ac1_c, 'อายุ': 20, 'NPV (ล้านบาท/กม.)': npv1},
+                    {'ประเภท': 'AC2 (CMCR)', 'ค่าก่อสร้าง': ac2_c, 'อายุ': 20, 'NPV (ล้านบาท/กม.)': npv2},
+                    {'ประเภท': 'JRCP1 (ดินซีเมนต์)', 'ค่าก่อสร้าง': jrcp1_c, 'อายุ': 25, 'NPV (ล้านบาท/กม.)': npv3},
+                    {'ประเภท': 'JRCP2 (CMCR)', 'ค่าก่อสร้าง': jrcp2_c, 'อายุ': 25, 'NPV (ล้านบาท/กม.)': npv4},
                 ]
                 
                 results_df = pd.DataFrame(results)
-                results_df['อันดับ'] = results_df['NPV'].rank().astype(int)
+                results_df['อันดับ'] = results_df['NPV (ล้านบาท/กม.)'].rank().astype(int)
                 results_df = results_df.sort_values('อันดับ')
                 
                 st.session_state['results_df'] = results_df
@@ -563,14 +563,14 @@ def main():
             
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("🏆 ทางเลือกที่ดีที่สุด", best['ประเภท'])
-            c2.metric("💰 NPV ต่ำสุด", f"{best['NPV']:.2f}")
-            c3.metric("💵 ประหยัด", f"{df['NPV'].max() - best['NPV']:.2f}")
+            c2.metric("💰 NPV ต่ำสุด", f"{best['NPV (ล้านบาท/กม.)']:.2f}")
+            c3.metric("💵 ประหยัด", f"{df['NPV (ล้านบาท/กม.)'].max() - best['NPV (ล้านบาท/กม.)']:.2f}")
             c4.metric("📅 Discount Rate", f"{discount_rate}%")
             
             st.divider()
             st.subheader("📊 ตารางเปรียบเทียบ")
-            st.dataframe(df.style.format({'ค่าก่อสร้าง': '{:.2f}', 'NPV': '{:.2f}'})
-                        .background_gradient(subset=['NPV'], cmap='RdYlGn_r'),
+            st.dataframe(df.style.format({'ค่าก่อสร้าง': '{:.2f}', 'NPV (ล้านบาท/กม.)': '{:.2f}'})
+                        .background_gradient(subset=['NPV (ล้านบาท/กม.)'], cmap='RdYlGn_r'),
                         use_container_width=True)
             
             st.plotly_chart(create_comparison_chart(df), use_container_width=True)
