@@ -161,7 +161,7 @@ def main():
     st.set_page_config(page_title="AASHTO Rigid Pavement Calculator", page_icon="🛣️", layout="wide")
     
     st.title("🛣️ AASHTO 1993 Rigid Pavement Design Calculator")
-    st.markdown("**เครื่องมือหาค่า k-value และปรับแก้ Loss of Support (LS)**")
+    st.markdown("**โปรแกรมหาค่า k-value และปรับแก้ Loss of Support (LS)**")
     
     # Define Tabs
     tab1, tab2, tab3 = st.tabs(["📊 ขั้นตอนที่ 1: Composite k∞", "📉 ขั้นตอนที่ 2: Loss of Support", "📋 คู่มือการใช้งาน"])
