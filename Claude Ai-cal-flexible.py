@@ -68,7 +68,7 @@ MATERIALS = {
     
     # ============ ชั้นพื้นทาง (Base) ============
     "พื้นทางซีเมนต์ CTB": {
-        "layer_coeff": 0.15,
+        "layer_coeff": 0.18,
         "drainage_coeff": 1.0,
         "mr_psi": 174000,
         "mr_mpa": 1200,
