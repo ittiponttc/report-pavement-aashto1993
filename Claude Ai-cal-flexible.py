@@ -447,7 +447,7 @@ def plot_pavement_section(layers_result: list, subgrade_mr: float = None,
             layer_center_y,
             f'{thickness_cm:.0f} cm',
             ha='center', va='center',
-            fontsize=12, fontweight='bold',
+            fontsize=15, fontweight='bold',
             color=text_color
         )
         
@@ -457,7 +457,7 @@ def plot_pavement_section(layers_result: list, subgrade_mr: float = None,
             layer_center_y,
             english_name,
             ha='right', va='center',
-            fontsize=10, fontweight='bold',
+            fontsize=12, fontweight='bold',
             color='#1565C0'
         )
         
