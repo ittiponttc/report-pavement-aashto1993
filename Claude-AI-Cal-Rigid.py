@@ -103,7 +103,7 @@ def estimate_modulus_of_rupture(fc_cylinder_ksc: float) -> float:
     # แปลง ksc เป็น psi
     fc_psi = fc_cylinder_ksc * 14.223
     
-    # ใช้สูตร: Sc = 10 × √f'c (ค่าเหมาะสมสำหรับคอนกรีตถนน)
+    # ใช้สูตร: Sc = 10 × √f'c (DOH ให้ใช้ไม่เกิน 600 psi)
     sc_psi = 10.0 * math.sqrt(fc_psi)
     
     return sc_psi
