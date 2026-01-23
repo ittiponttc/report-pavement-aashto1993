@@ -461,15 +461,220 @@ def main():
     
     # Define Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Nomograph: Composite k∞", "📉 Nomograph: Loss of Support",
-        "🔢 AASHTO Calculator", "💾 บันทึกโปรเจกต์", "📋 คู่มือการใช้งาน"
+        "🔢 AASHTO Calculator", "📊 Nomograph: Composite k∞", "📉 Nomograph: Loss of Support",
+        "💾 บันทึกโปรเจกต์", "📋 คู่มือการใช้งาน"
     ])
     
     # =========================================================
-    # TAB 1: Composite Modulus (Nomograph)
+    # TAB 1: AASHTO Calculator
     # =========================================================
     with tab1:
-        st.header("1️⃣ หาค่า Composite Modulus of Subgrade Reaction (k∞)")
+        st.header("1️⃣ การออกแบบความหนาถนนคอนกรีต (AASHTO 1993)")
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.subheader("📥 ข้อมูลนำเข้า (Input)")
+            project_name = st.text_input("🏗️ ชื่อโครงการ", value=ld['project_info']['project_name'] if ld else "", key="calc_project_name")
+            st.markdown("---")
+            
+            pave_options = list(J_VALUES.keys())
+            default_pave_idx = pave_options.index(ld['project_info']['pavement_type']) if ld and ld['project_info']['pavement_type'] in pave_options else 1
+            pavement_type = st.selectbox("ประเภทผิวทางคอนกรีต", pave_options, index=default_pave_idx, key="calc_pave_type")
+            st.markdown("---")
+            
+            st.subheader("🔶 ชั้นโครงสร้างทาง")
+            material_options = list(MATERIAL_MODULUS.keys())
+            num_layers = st.slider("จำนวนชั้นวัสดุ", 1, 6, ld['layers']['num_layers'] if ld else 5, key="calc_num_layers")
+            
+            default_layers = [
+                {"name": "รองผิวทางคอนกรีตด้วย AC", "thickness_cm": 5},
+                {"name": "พื้นทางซีเมนต์ CTB", "thickness_cm": 20},
+                {"name": "หินคลุก CBR 80%", "thickness_cm": 15},
+                {"name": "รองพื้นทางวัสดุมวลรวม CBR 25%", "thickness_cm": 25},
+                {"name": "วัสดุคัดเลือก ก", "thickness_cm": 30},
+                {"name": "ดินถมคันทาง / ดินเดิม", "thickness_cm": 0},
+            ]
+            
+            layers_data = []
+            for i in range(num_layers):
+                st.markdown(f"**ชั้นที่ {i+1}**")
+                col_a, col_b, col_c = st.columns([2, 1, 1])
+                if ld and i < len(ld['layers']['layers_data']):
+                    layer_def = ld['layers']['layers_data'][i]
+                    def_name = layer_def.get('name', default_layers[i]["name"] if i < len(default_layers) else "กำหนดเอง...")
+                    def_thick = layer_def.get('thickness_cm', default_layers[i]["thickness_cm"] if i < len(default_layers) else 20)
+                else:
+                    def_name = default_layers[i]["name"] if i < len(default_layers) else "กำหนดเอง..."
+                    def_thick = default_layers[i]["thickness_cm"] if i < len(default_layers) else 20
+                def_idx = material_options.index(def_name) if def_name in material_options else len(material_options) - 1
+                
+                with col_a:
+                    layer_name = st.selectbox("เลือกวัสดุ", material_options, index=def_idx, key=f"calc_layer_name_{i}")
+                with col_b:
+                    layer_thickness = st.number_input("ความหนา (ซม.)", 0, 100, def_thick, key=f"calc_layer_thick_{i}")
+                rec_mod = MATERIAL_MODULUS.get(layer_name, 100)
+                with col_c:
+                    layer_modulus = st.number_input("E (MPa)", 10, 10000, rec_mod, key=f"calc_layer_E_{i}_{layer_name}")
+                layers_data.append({"name": layer_name, "thickness_cm": layer_thickness, "E_MPa": layer_modulus})
+            
+            total_layer_cm = sum(l['thickness_cm'] for l in layers_data)
+            st.markdown(f"**รวมความหนา {total_layer_cm:.0f} ซม. ({round(total_layer_cm/2.54)} นิ้ว)**")
+            
+            # คำนวณ E_equivalent
+            valid_layers = [l for l in layers_data if l['thickness_cm'] > 0 and l['E_MPa'] > 0]
+            if valid_layers:
+                sum_h_e_cbrt = sum(l['thickness_cm'] * (l['E_MPa'] ** (1/3)) for l in valid_layers)
+                total_valid_cm = sum(l['thickness_cm'] for l in valid_layers)
+                e_eq_mpa = (sum_h_e_cbrt / total_valid_cm) ** 3 if total_valid_cm > 0 else 0
+                e_eq_psi = e_eq_mpa * 145.038
+                st.info(f"โมดูลัสเทียบเท่า (E_equivalent) = **{e_eq_psi:,.0f} psi** ({e_eq_mpa:.1f} MPa)")
+            st.markdown("---")
+            
+            st.subheader("1️⃣ ปริมาณจราจร 🔗")
+            with st.expander("📊 ตัวช่วยประมาณ ESAL ตามประเภทถนน", expanded=False):
+                st.markdown("""
+                | ประเภทถนน | ESAL (ล้าน) |
+                |-----------|-------------|
+                | ทางหลวงพิเศษระหว่างเมือง | 50-200 |
+                | ทางหลวงแผ่นดินสายหลัก | 20-80 |
+                | ทางหลวงแผ่นดินสายรอง | 5-30 |
+                | ถนนในเมือง | 1-10 |
+                """)
+            w18_design = st.number_input("ESAL ที่ต้องการรองรับ (W₁₈)", 10000, 500000000, ld['design_parameters']['w18_design'] if ld else 500000, 100000, key="calc_w18")
+            esal_million = w18_design / 1_000_000
+            st.info(f"**{esal_million:.2f} ล้าน ESALs**")
+            st.markdown("---")
+            
+            st.subheader("2️⃣ Serviceability")
+            pt = st.slider("Terminal Serviceability (Pt)", 1.5, 3.0, ld['design_parameters']['pt'] if ld else 2.0, 0.1, key="calc_pt")
+            delta_psi = 4.5 - pt
+            st.info(f"ΔPSI = 4.5 - {pt:.1f} = **{delta_psi:.1f}**")
+            st.markdown("---")
+            
+            st.subheader("3️⃣ ความเชื่อมั่น")
+            reliability = st.select_slider("Reliability (R)", [80, 85, 90, 95], ld['design_parameters']['reliability'] if ld else 90, key="calc_reliability")
+            zr = get_zr_value(reliability)
+            st.info(f"ZR = **{zr:.3f}**")
+            so = st.number_input("Standard Deviation (So)", 0.30, 0.45, ld['design_parameters']['so'] if ld else 0.35, 0.01, "%.2f", key="calc_so")
+            st.markdown("---")
+            
+            st.subheader("4️⃣ คุณสมบัติดินฐานราก")
+            cbr_value = st.number_input("ค่า CBR (%)", 1.0, 100.0, ld['subgrade']['cbr_value'] if ld else 4.0, 0.5, key="calc_cbr")
+            mr_subgrade_psi = 1500 * cbr_value if cbr_value < 10 else 1000 + 555 * cbr_value
+            mr_subgrade_mpa = mr_subgrade_psi / 145.038
+            st.info(f"M_R = {mr_subgrade_psi:,.0f} psi ({mr_subgrade_mpa:.0f} MPa)")
+            
+            k_eff = st.number_input("Effective k (pci)", 50, 1000, ld['design_parameters']['k_eff'] if ld else 200, 25, key="calc_k_eff")
+            ls_value = st.number_input("Loss of Support (LS)", 0.0, 3.0, ld['design_parameters']['ls_value'] if ld else 1.0, 0.5, "%.1f", key="calc_ls")
+            st.markdown("---")
+            
+            st.subheader("5️⃣ คุณสมบัติคอนกรีต")
+            fc_cube = st.number_input("กำลังอัด Cube (ksc)", 200, 600, ld['design_parameters']['fc_cube'] if ld else 350, 10, key="calc_fc")
+            fc_cylinder = convert_cube_to_cylinder(fc_cube)
+            ec = calculate_concrete_modulus(fc_cylinder)
+            st.info(f"f'c (Cyl) = **{fc_cylinder:.0f} ksc** | Ec = **{ec:,.0f} psi**")
+            sc_auto = estimate_modulus_of_rupture(fc_cylinder)
+            sc = st.number_input("Modulus of Rupture (Sc) psi", 400, 1000, ld['design_parameters']['sc'] if ld else int(sc_auto), 10, key="calc_sc")
+            st.markdown("---")
+            
+            st.subheader("6️⃣ Load Transfer และ Drainage")
+            st.caption(f"ค่าแนะนำสำหรับ {pavement_type}: **J = {J_VALUES[pavement_type]}**")
+            with st.expander("📊 ตารางค่า Load Transfer Coefficient (J)", expanded=False):
+                st.markdown("""
+                | ประเภทถนน | J (AC Shoulder_Yes) | J (AC Shoulder_No) | J (Tied P.C.C_Yes) | J (Tied P.C.C_No) |
+                |-----------|---------------------|--------------------|--------------------|-------------------|
+                | 1. JRCP/JPCP | 3.2 | 3.8-4.4 | 2.5-3.1 (Mid 2.8) | 3.6-4.2 |
+                | 2. CRCP | 2.9-3.2 | N/A | 2.3-2.9 (Mid 2.5) | N/A |
+                
+                **หมายเหตุ:** ค่า J ต่ำ = การถ่ายแรงดี = รองรับ ESAL ได้มากขึ้น
+                
+                ค่า J สามารถปรับได้ตามเงื่อนไข:
+                - มี Dowel Bar: ลดลง 0.2-0.3
+                - มี Tied Shoulder: ลดลง 0.2
+                - ไม่มี Dowel Bar: เพิ่มขึ้น 0.5-1.0
+                """)
+            j_auto = J_VALUES[pavement_type]
+            j_value = st.number_input("Load Transfer (J)", 2.0, 4.5, ld['design_parameters']['j_value'] if ld else j_auto, 0.1, "%.1f", key="calc_j")
+            cd = st.number_input("Drainage (Cd)", 0.7, 1.3, ld['design_parameters']['cd'] if ld else 1.0, 0.05, "%.2f", key="calc_cd")
+            st.markdown("---")
+            
+            st.subheader("7️⃣ ความหนาที่ตรวจสอบ")
+            st.caption("ความหนา D (ซม.)")
+            d_cm_selected = st.slider("", 20, 40, ld['design_parameters']['d_cm_selected'] if ld else 30, 1, key="calc_d", label_visibility="collapsed")
+            d_inch_selected = round(d_cm_selected / 2.54)
+            st.success(f"**D = {d_cm_selected} ซม. ≈ {d_inch_selected} นิ้ว**")
+        
+        with col2:
+            st.subheader("📊 ผลการคำนวณ")
+            comparison_results = []
+            thicknesses_cm = [20, 22, 25, 28, 30, 32, 35, 38, 40]
+            
+            for d_cm in thicknesses_cm:
+                d_inch = round(d_cm / 2.54)
+                log_w18, w18_capacity = calculate_aashto_rigid_w18(d_inch, delta_psi, pt, zr, so, sc, cd, j_value, ec, k_eff)
+                passed, ratio = check_design(w18_design, w18_capacity)
+                comparison_results.append({'d_cm': d_cm, 'd_inch': d_inch, 'log_w18': log_w18, 'w18': w18_capacity, 'passed': passed, 'ratio': ratio})
+            
+            import pandas as pd
+            df = pd.DataFrame([{
+                'D (ซม.)': r['d_cm'], 'D (นิ้ว)': r['d_inch'], 'log₁₀(W₁₈)': f"{r['log_w18']:.4f}",
+                'W₁₈ รองรับได้': f"{r['w18']:,.0f}", 'อัตราส่วน': f"{r['ratio']:.2f}", 'ผล': "✅" if r['passed'] else "❌"
+            } for r in comparison_results])
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            
+            st.markdown("---")
+            st.subheader(f"🎯 ผลการตรวจสอบ D = {d_cm_selected} ซม.")
+            log_w18_sel, w18_sel = calculate_aashto_rigid_w18(d_inch_selected, delta_psi, pt, zr, so, sc, cd, j_value, ec, k_eff)
+            passed_sel, ratio_sel = check_design(w18_design, w18_sel)
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.metric("log₁₀(W₁₈)", f"{log_w18_sel:.4f}")
+                st.metric("W₁₈ รองรับได้", f"{w18_sel:,.0f}", f"{w18_sel - w18_design:+,.0f}")
+            with col_b:
+                st.metric("W₁₈ ที่ต้องการ", f"{w18_design:,.0f}")
+                st.metric("อัตราส่วน", f"{ratio_sel:.2f}")
+            
+            if passed_sel:
+                st.success(f"✅ **ผ่านเกณฑ์** อัตราส่วน = {ratio_sel:.2f}")
+            else:
+                st.error(f"❌ **ไม่ผ่านเกณฑ์** อัตราส่วน = {ratio_sel:.2f}")
+            
+            st.markdown("---")
+            fig_structure = create_pavement_structure_figure(layers_data, d_cm_selected)
+            if fig_structure:
+                st.pyplot(fig_structure)
+                img_buf = save_figure_to_bytes(fig_structure)
+                st.download_button("📥 ดาวน์โหลดรูปโครงสร้าง", img_buf, f"pavement_structure_{datetime.now().strftime('%Y%m%d_%H%M')}.png", "image/png")
+                plt.close(fig_structure)
+            
+            st.markdown("---")
+            if st.button("📥 สร้างรายงาน Word", type="primary"):
+                with st.spinner("กำลังสร้างรายงาน..."):
+                    inputs_dict = {'w18_design': w18_design, 'pt': pt, 'reliability': reliability, 'so': so,
+                                   'k_eff': k_eff, 'ls': ls_value, 'fc_cube': fc_cube, 'sc': sc, 'j': j_value, 'cd': cd}
+                    calc_dict = {'fc_cylinder': fc_cylinder, 'ec': ec, 'zr': zr, 'delta_psi': delta_psi}
+                    subgrade_info = {'cbr': cbr_value, 'mr_psi': mr_subgrade_psi, 'mr_mpa': mr_subgrade_mpa}
+                    fig_report = create_pavement_structure_figure(layers_data, d_cm_selected)
+                    
+                    total_cm = sum(l['thickness_cm'] for l in layers_data)
+                    sum_h_e_cbrt = sum(l['thickness_cm'] * (l['E_MPa'] ** (1/3)) for l in layers_data if l['thickness_cm'] > 0 and l['E_MPa'] > 0)
+                    e_eq_mpa = (sum_h_e_cbrt / total_cm) ** 3 if total_cm > 0 else 0
+                    e_eq_psi = e_eq_mpa * 145.038
+                    
+                    buffer = create_word_report(pavement_type, inputs_dict, calc_dict, comparison_results, d_cm_selected,
+                                                (passed_sel, ratio_sel), layers_data, project_name, fig_report, subgrade_info, e_eq_psi)
+                    if fig_report:
+                        plt.close(fig_report)
+                    if buffer:
+                        st.download_button("⬇️ ดาวน์โหลดรายงาน (.docx)", buffer, f"AASHTO_Design_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
+                                           "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    
+    # =========================================================
+    # TAB 2: Composite Modulus (Nomograph)
+    # =========================================================
+    with tab2:
+        st.header("2️⃣ หาค่า Composite Modulus of Subgrade Reaction (k∞)")
         uploaded_file = st.file_uploader("📂 อัปโหลดภาพ Figure 3.3 (Composite k)", type=['png', 'jpg', 'jpeg'], key='uploader_1')
         
         if uploaded_file is not None:
@@ -519,10 +724,10 @@ def main():
                 st.image(img_draw, caption="Step 1: Nomograph Analysis", use_container_width=True)
     
     # =========================================================
-    # TAB 2: Loss of Support (Nomograph)
+    # TAB 3: Loss of Support (Nomograph)
     # =========================================================
-    with tab2:
-        st.header("2️⃣ ปรับแก้ Loss of Support (LS)")
+    with tab3:
+        st.header("3️⃣ ปรับแก้ Loss of Support (LS)")
         st.info("ใช้กราฟ Figure 3.4 เพื่อปรับค่า k∞ กรณีที่มีการสูญเสียการรองรับ (LS > 0)")
         uploaded_file_2 = st.file_uploader("📂 อัปโหลดภาพ Figure 3.4 (LS Correction)", type=['png', 'jpg', 'jpeg'], key='uploader_2')
         
@@ -605,175 +810,6 @@ def main():
             st.info("👆 กรุณาอัปโหลดภาพ Figure 3.4 เพื่อเริ่มใช้งาน")
     
     # =========================================================
-    # TAB 3: AASHTO Calculator
-    # =========================================================
-    with tab3:
-        st.header("3️⃣ การออกแบบความหนาถนนคอนกรีต (AASHTO 1993)")
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            st.subheader("📥 ข้อมูลนำเข้า (Input)")
-            project_name = st.text_input("🏗️ ชื่อโครงการ", value=ld['project_info']['project_name'] if ld else "", key="calc_project_name")
-            st.markdown("---")
-            
-            pave_options = list(J_VALUES.keys())
-            default_pave_idx = pave_options.index(ld['project_info']['pavement_type']) if ld and ld['project_info']['pavement_type'] in pave_options else 1
-            pavement_type = st.selectbox("ประเภทผิวทางคอนกรีต", pave_options, index=default_pave_idx, key="calc_pave_type")
-            st.markdown("---")
-            
-            st.subheader("🔶 ชั้นโครงสร้างทาง")
-            material_options = list(MATERIAL_MODULUS.keys())
-            num_layers = st.slider("จำนวนชั้นวัสดุ", 1, 6, ld['layers']['num_layers'] if ld else 5, key="calc_num_layers")
-            
-            default_layers = [
-                {"name": "รองผิวทางคอนกรีตด้วย AC", "thickness_cm": 5},
-                {"name": "พื้นทางซีเมนต์ CTB", "thickness_cm": 20},
-                {"name": "หินคลุก CBR 80%", "thickness_cm": 15},
-                {"name": "รองพื้นทางวัสดุมวลรวม CBR 25%", "thickness_cm": 25},
-                {"name": "วัสดุคัดเลือก ก", "thickness_cm": 30},
-                {"name": "ดินถมคันทาง / ดินเดิม", "thickness_cm": 0},
-            ]
-            
-            layers_data = []
-            for i in range(num_layers):
-                st.markdown(f"**ชั้นที่ {i+1}**")
-                col_a, col_b, col_c = st.columns([2, 1, 1])
-                if ld and i < len(ld['layers']['layers_data']):
-                    layer_def = ld['layers']['layers_data'][i]
-                    def_name = layer_def.get('name', default_layers[i]["name"] if i < len(default_layers) else "กำหนดเอง...")
-                    def_thick = layer_def.get('thickness_cm', default_layers[i]["thickness_cm"] if i < len(default_layers) else 20)
-                else:
-                    def_name = default_layers[i]["name"] if i < len(default_layers) else "กำหนดเอง..."
-                    def_thick = default_layers[i]["thickness_cm"] if i < len(default_layers) else 20
-                def_idx = material_options.index(def_name) if def_name in material_options else len(material_options) - 1
-                
-                with col_a:
-                    layer_name = st.selectbox("เลือกวัสดุ", material_options, index=def_idx, key=f"calc_layer_name_{i}")
-                with col_b:
-                    layer_thickness = st.number_input("ความหนา (ซม.)", 0, 100, def_thick, key=f"calc_layer_thick_{i}")
-                rec_mod = MATERIAL_MODULUS.get(layer_name, 100)
-                with col_c:
-                    layer_modulus = st.number_input("E (MPa)", 10, 10000, rec_mod, key=f"calc_layer_E_{i}_{layer_name}")
-                layers_data.append({"name": layer_name, "thickness_cm": layer_thickness, "E_MPa": layer_modulus})
-            
-            total_layer_cm = sum(l['thickness_cm'] for l in layers_data)
-            st.markdown(f"**รวมความหนา {total_layer_cm:.0f} ซม. ({round(total_layer_cm/2.54)} นิ้ว)**")
-            st.markdown("---")
-            
-            st.subheader("1️⃣ ปริมาณจราจร")
-            w18_design = st.number_input("ESAL (W₁₈)", 10000, 500000000, ld['design_parameters']['w18_design'] if ld else 500000, 100000, key="calc_w18")
-            st.markdown("---")
-            
-            st.subheader("2️⃣ Serviceability")
-            pt = st.slider("Terminal Serviceability (Pt)", 1.5, 3.0, ld['design_parameters']['pt'] if ld else 2.0, 0.1, key="calc_pt")
-            delta_psi = 4.5 - pt
-            st.info(f"ΔPSI = 4.5 - {pt:.1f} = **{delta_psi:.1f}**")
-            st.markdown("---")
-            
-            st.subheader("3️⃣ ความเชื่อมั่น")
-            reliability = st.select_slider("Reliability (R)", [80, 85, 90, 95], ld['design_parameters']['reliability'] if ld else 90, key="calc_reliability")
-            zr = get_zr_value(reliability)
-            st.info(f"ZR = **{zr:.3f}**")
-            so = st.number_input("Standard Deviation (So)", 0.30, 0.45, ld['design_parameters']['so'] if ld else 0.35, 0.01, "%.2f", key="calc_so")
-            st.markdown("---")
-            
-            st.subheader("4️⃣ คุณสมบัติดินฐานราก")
-            cbr_value = st.number_input("ค่า CBR (%)", 1.0, 100.0, ld['subgrade']['cbr_value'] if ld else 4.0, 0.5, key="calc_cbr")
-            mr_subgrade_psi = 1500 * cbr_value if cbr_value < 10 else 1000 + 555 * cbr_value
-            mr_subgrade_mpa = mr_subgrade_psi / 145.038
-            st.info(f"M_R = {mr_subgrade_psi:,.0f} psi ({mr_subgrade_mpa:.0f} MPa)")
-            
-            k_eff = st.number_input("Effective k (pci)", 50, 1000, ld['design_parameters']['k_eff'] if ld else 200, 25, key="calc_k_eff")
-            ls_value = st.number_input("Loss of Support (LS)", 0.0, 3.0, ld['design_parameters']['ls_value'] if ld else 1.0, 0.5, "%.1f", key="calc_ls")
-            st.markdown("---")
-            
-            st.subheader("5️⃣ คุณสมบัติคอนกรีต")
-            fc_cube = st.number_input("กำลังอัด Cube (ksc)", 200, 600, ld['design_parameters']['fc_cube'] if ld else 350, 10, key="calc_fc")
-            fc_cylinder = convert_cube_to_cylinder(fc_cube)
-            ec = calculate_concrete_modulus(fc_cylinder)
-            st.info(f"f'c (Cyl) = **{fc_cylinder:.0f} ksc** | Ec = **{ec:,.0f} psi**")
-            sc_auto = estimate_modulus_of_rupture(fc_cylinder)
-            sc = st.number_input("Modulus of Rupture (Sc) psi", 400, 1000, ld['design_parameters']['sc'] if ld else int(sc_auto), 10, key="calc_sc")
-            st.markdown("---")
-            
-            st.subheader("6️⃣ Load Transfer & Drainage")
-            j_auto = J_VALUES[pavement_type]
-            j_value = st.number_input("Load Transfer (J)", 2.0, 4.5, ld['design_parameters']['j_value'] if ld else j_auto, 0.1, "%.1f", key="calc_j")
-            cd = st.number_input("Drainage (Cd)", 0.7, 1.3, ld['design_parameters']['cd'] if ld else 1.0, 0.05, "%.2f", key="calc_cd")
-            st.markdown("---")
-            
-            st.subheader("7️⃣ ความหนาที่ตรวจสอบ")
-            d_cm_selected = st.slider("ความหนา D (ซม.)", 20, 40, ld['design_parameters']['d_cm_selected'] if ld else 30, 1, key="calc_d")
-            d_inch_selected = round(d_cm_selected / 2.54)
-            st.info(f"D = **{d_cm_selected} ซม.** ≈ **{d_inch_selected} นิ้ว**")
-        
-        with col2:
-            st.subheader("📊 ผลการคำนวณ")
-            comparison_results = []
-            thicknesses_cm = [20, 22, 25, 28, 30, 32, 35, 38, 40]
-            
-            for d_cm in thicknesses_cm:
-                d_inch = round(d_cm / 2.54)
-                log_w18, w18_capacity = calculate_aashto_rigid_w18(d_inch, delta_psi, pt, zr, so, sc, cd, j_value, ec, k_eff)
-                passed, ratio = check_design(w18_design, w18_capacity)
-                comparison_results.append({'d_cm': d_cm, 'd_inch': d_inch, 'log_w18': log_w18, 'w18': w18_capacity, 'passed': passed, 'ratio': ratio})
-            
-            import pandas as pd
-            df = pd.DataFrame([{
-                'D (ซม.)': r['d_cm'], 'D (นิ้ว)': r['d_inch'], 'log₁₀(W₁₈)': f"{r['log_w18']:.4f}",
-                'W₁₈ รองรับได้': f"{r['w18']:,.0f}", 'อัตราส่วน': f"{r['ratio']:.2f}", 'ผล': "✅" if r['passed'] else "❌"
-            } for r in comparison_results])
-            st.dataframe(df, use_container_width=True, hide_index=True)
-            
-            st.markdown("---")
-            st.subheader(f"🎯 ผลการตรวจสอบ D = {d_cm_selected} ซม.")
-            log_w18_sel, w18_sel = calculate_aashto_rigid_w18(d_inch_selected, delta_psi, pt, zr, so, sc, cd, j_value, ec, k_eff)
-            passed_sel, ratio_sel = check_design(w18_design, w18_sel)
-            
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.metric("log₁₀(W₁₈)", f"{log_w18_sel:.4f}")
-                st.metric("W₁₈ รองรับได้", f"{w18_sel:,.0f}", f"{w18_sel - w18_design:+,.0f}")
-            with col_b:
-                st.metric("W₁₈ ที่ต้องการ", f"{w18_design:,.0f}")
-                st.metric("อัตราส่วน", f"{ratio_sel:.2f}")
-            
-            if passed_sel:
-                st.success(f"✅ **ผ่านเกณฑ์** อัตราส่วน = {ratio_sel:.2f}")
-            else:
-                st.error(f"❌ **ไม่ผ่านเกณฑ์** อัตราส่วน = {ratio_sel:.2f}")
-            
-            st.markdown("---")
-            fig_structure = create_pavement_structure_figure(layers_data, d_cm_selected)
-            if fig_structure:
-                st.pyplot(fig_structure)
-                img_buf = save_figure_to_bytes(fig_structure)
-                st.download_button("📥 ดาวน์โหลดรูปโครงสร้าง", img_buf, f"pavement_structure_{datetime.now().strftime('%Y%m%d_%H%M')}.png", "image/png")
-                plt.close(fig_structure)
-            
-            st.markdown("---")
-            if st.button("📥 สร้างรายงาน Word", type="primary"):
-                with st.spinner("กำลังสร้างรายงาน..."):
-                    inputs_dict = {'w18_design': w18_design, 'pt': pt, 'reliability': reliability, 'so': so,
-                                   'k_eff': k_eff, 'ls': ls_value, 'fc_cube': fc_cube, 'sc': sc, 'j': j_value, 'cd': cd}
-                    calc_dict = {'fc_cylinder': fc_cylinder, 'ec': ec, 'zr': zr, 'delta_psi': delta_psi}
-                    subgrade_info = {'cbr': cbr_value, 'mr_psi': mr_subgrade_psi, 'mr_mpa': mr_subgrade_mpa}
-                    fig_report = create_pavement_structure_figure(layers_data, d_cm_selected)
-                    
-                    total_cm = sum(l['thickness_cm'] for l in layers_data)
-                    sum_h_e_cbrt = sum(l['thickness_cm'] * (l['E_MPa'] ** (1/3)) for l in layers_data if l['thickness_cm'] > 0 and l['E_MPa'] > 0)
-                    e_eq_mpa = (sum_h_e_cbrt / total_cm) ** 3 if total_cm > 0 else 0
-                    e_eq_psi = e_eq_mpa * 145.038
-                    
-                    buffer = create_word_report(pavement_type, inputs_dict, calc_dict, comparison_results, d_cm_selected,
-                                                (passed_sel, ratio_sel), layers_data, project_name, fig_report, subgrade_info, e_eq_psi)
-                    if fig_report:
-                        plt.close(fig_report)
-                    if buffer:
-                        st.download_button("⬇️ ดาวน์โหลดรายงาน (.docx)", buffer, f"AASHTO_Design_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
-                                           "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-    
-    # =========================================================
     # TAB 4: Save Project
     # =========================================================
     with tab4:
@@ -819,25 +855,25 @@ def main():
     with tab5:
         st.header("📋 คู่มือการใช้งาน")
         st.markdown("""
-        ### 📊 Tab 1: Nomograph - Composite k∞
-        1. อัปโหลดรูป **Figure 3.3**
-        2. ปรับ **Turning Line (เส้นเขียว)** ให้ตรงกับเส้นบนกราฟ
-        3. ปรับตำแหน่งลูกศรสีแดง/ส้ม ให้ตรงกับค่า **MR** และ **ESB**
-        4. บันทึกค่า k∞ ที่อ่านได้
-        
-        ### 📉 Tab 2: Nomograph - Loss of Support
-        1. อัปโหลดรูป **Figure 3.4**
-        2. เลือกค่า **LS** จากตัวเลือก
-        3. ตั้งค่าตำแหน่งแกนกราฟ
-        4. เลื่อน Slider ตำแหน่ง k บนแกน X
-        5. อ่านค่า Corrected k และบันทึก
-        
-        ### 🔢 Tab 3: AASHTO Calculator
+        ### 🔢 Tab 1: AASHTO Calculator
         1. กรอกข้อมูลโครงการและชั้นโครงสร้างทาง
         2. ระบุ ESAL, Serviceability, Reliability
         3. ระบุคุณสมบัติดินและคอนกรีต
         4. เลือกความหนาที่ต้องการตรวจสอบ
         5. ดูผลการคำนวณและสร้างรายงาน
+        
+        ### 📊 Tab 2: Nomograph - Composite k∞
+        1. อัปโหลดรูป **Figure 3.3**
+        2. ปรับ **Turning Line (เส้นเขียว)** ให้ตรงกับเส้นบนกราฟ
+        3. ปรับตำแหน่งลูกศรสีแดง/ส้ม ให้ตรงกับค่า **MR** และ **ESB**
+        4. บันทึกค่า k∞ ที่อ่านได้
+        
+        ### 📉 Tab 3: Nomograph - Loss of Support
+        1. อัปโหลดรูป **Figure 3.4**
+        2. เลือกค่า **LS** จากตัวเลือก
+        3. ตั้งค่าตำแหน่งแกนกราฟ
+        4. เลื่อน Slider ตำแหน่ง k บนแกน X
+        5. อ่านค่า Corrected k และบันทึก
         
         ### 💾 Tab 4: บันทึกโปรเจกต์
         - กดปุ่ม **สร้างไฟล์บันทึก** เพื่อบันทึกข้อมูลทั้งหมดเป็น JSON
