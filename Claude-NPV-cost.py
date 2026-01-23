@@ -272,47 +272,112 @@ def render_layer_editor(layers, key_prefix):
     """แสดง UI สำหรับแก้ไขโครงสร้างชั้นทาง"""
     updated_layers = []
     
-    # Header
-    cols = st.columns([3, 1, 1.5, 1.5])
-    cols[0].markdown("**รายการ**")
-    cols[1].markdown("**หนา**")
-    cols[2].markdown("**ปริมาณ**")
-    cols[3].markdown("**ราคา/หน่วย**")
+    # แยก layers เป็นกลุ่ม
+    surface_layers = []
+    base_layers = []
     
-    for i, layer in enumerate(layers):
+    for layer in layers:
+        name_lower = layer['name'].lower()
+        if any(x in name_lower for x in ['wearing', 'binder', 'asphalt', 'concrete', 'tack', 'prime', 'geotextile', 'steel', 'ksc']):
+            surface_layers.append(layer)
+        else:
+            base_layers.append(layer)
+    
+    # ===== ส่วนผิวทาง =====
+    st.markdown("**ผิวทาง**")
+    cols = st.columns([3, 1, 1.5, 1.5])
+    cols[0].markdown("รายการ")
+    cols[1].markdown("หนา")
+    cols[2].markdown("ปริมาณ")
+    cols[3].markdown("ราคา/หน่วย")
+    
+    for i, layer in enumerate(surface_layers):
         cols = st.columns([3, 1, 1.5, 1.5])
         
         with cols[0]:
             st.text(layer['name'])
-        
         with cols[1]:
-            thick = st.number_input(
-                "หนา", value=float(layer['thickness']),
-                key=f"{key_prefix}_t_{i}", label_visibility="collapsed",
-                min_value=0.0, step=1.0
-            )
-        
+            thick = st.number_input("หนา", value=float(layer['thickness']),
+                key=f"{key_prefix}_st_{i}", label_visibility="collapsed", min_value=0.0, step=1.0)
         with cols[2]:
-            qty = st.number_input(
-                "ปริมาณ", value=float(layer['quantity']),
-                key=f"{key_prefix}_q_{i}", label_visibility="collapsed",
-                min_value=0.0, step=100.0
-            )
-        
+            qty = st.number_input("ปริมาณ", value=float(layer['quantity']),
+                key=f"{key_prefix}_sq_{i}", label_visibility="collapsed", min_value=0.0, step=100.0)
         with cols[3]:
-            cost = st.number_input(
-                "ราคา", value=float(layer['unit_cost']),
-                key=f"{key_prefix}_c_{i}", label_visibility="collapsed",
-                min_value=0.0, step=10.0
-            )
+            cost = st.number_input("ราคา", value=float(layer['unit_cost']),
+                key=f"{key_prefix}_sc_{i}", label_visibility="collapsed", min_value=0.0, step=10.0)
         
         updated_layers.append({
-            'name': layer['name'],
-            'thickness': thick,
-            'unit': layer['unit'],
-            'quantity': qty,
-            'qty_unit': layer['qty_unit'],
-            'unit_cost': cost
+            'name': layer['name'], 'thickness': thick, 'unit': layer['unit'],
+            'quantity': qty, 'qty_unit': layer['qty_unit'], 'unit_cost': cost
+        })
+    
+    # ===== ส่วนพื้นทาง/รองพื้นทาง =====
+    st.markdown("---")
+    st.markdown("**พื้นทาง/รองพื้นทาง** (เลือกจาก Library)")
+    
+    # Library วัสดุพื้นทาง
+    base_materials = {
+        'หินคลุก CBR 80%': {'unit_cost': 714, 'qty_unit': 'cu.m'},
+        'หินคลุกผสมซีเมนต์ UCS 24.5 ksc': {'unit_cost': 914, 'qty_unit': 'cu.m'},
+        'ดินซีเมนต์ UCS 17.5 ksc': {'unit_cost': 621, 'qty_unit': 'cu.m'},
+        'พื้นทางซีเมนต์ CTB': {'unit_cost': 621, 'qty_unit': 'cu.m'},
+        'วัสดุหมุนเวียน (Recycling)': {'unit_cost': 500, 'qty_unit': 'cu.m'},
+        'รองพื้นทางวัสดุมวลรวม CBR 25%': {'unit_cost': 714, 'qty_unit': 'cu.m'},
+        'วัสดุคัดเลือก ก': {'unit_cost': 450, 'qty_unit': 'cu.m'},
+        'ทรายถมคันทาง': {'unit_cost': 361, 'qty_unit': 'cu.m'},
+        'ดินถมคันทาง': {'unit_cost': 280, 'qty_unit': 'cu.m'},
+    }
+    material_names = list(base_materials.keys())
+    
+    # จำนวนชั้นพื้นทาง (สูงสุด 5 ชั้น)
+    num_base = st.number_input("จำนวนชั้นพื้นทาง/รองพื้นทาง", value=len(base_layers), 
+                                min_value=1, max_value=5, key=f"{key_prefix}_num_base")
+    
+    cols = st.columns([3, 1, 1.5, 1.5])
+    cols[0].markdown("วัสดุ")
+    cols[1].markdown("หนา (cm)")
+    cols[2].markdown("ปริมาณ")
+    cols[3].markdown("ราคา/หน่วย")
+    
+    for i in range(int(num_base)):
+        cols = st.columns([3, 1, 1.5, 1.5])
+        
+        # ค่า default
+        if i < len(base_layers):
+            default_name = base_layers[i]['name']
+            default_thick = base_layers[i]['thickness']
+            default_qty = base_layers[i]['quantity']
+            default_cost = base_layers[i]['unit_cost']
+        else:
+            default_name = material_names[0]
+            default_thick = 20.0
+            default_qty = 4400.0
+            default_cost = 714.0
+        
+        # หา index ของวัสดุ default
+        try:
+            default_idx = material_names.index(default_name)
+        except ValueError:
+            default_idx = 0
+        
+        with cols[0]:
+            selected = st.selectbox("วัสดุ", material_names, index=default_idx,
+                key=f"{key_prefix}_bm_{i}", label_visibility="collapsed")
+        with cols[1]:
+            thick = st.number_input("หนา", value=float(default_thick),
+                key=f"{key_prefix}_bt_{i}", label_visibility="collapsed", min_value=0.0, step=5.0)
+        with cols[2]:
+            qty = st.number_input("ปริมาณ", value=float(default_qty),
+                key=f"{key_prefix}_bq_{i}", label_visibility="collapsed", min_value=0.0, step=100.0)
+        with cols[3]:
+            # ใช้ราคาจาก Library หรือแก้ไขได้
+            lib_cost = base_materials[selected]['unit_cost']
+            cost = st.number_input("ราคา", value=float(lib_cost),
+                key=f"{key_prefix}_bc_{i}", label_visibility="collapsed", min_value=0.0, step=10.0)
+        
+        updated_layers.append({
+            'name': selected, 'thickness': thick, 'unit': 'cm',
+            'quantity': qty, 'qty_unit': base_materials[selected]['qty_unit'], 'unit_cost': cost
         })
     
     return updated_layers
@@ -320,6 +385,14 @@ def render_layer_editor(layers, key_prefix):
 
 def render_joint_editor(joints, key_prefix):
     """แสดง UI สำหรับแก้ไขรอยต่อ"""
+    st.markdown("---")
+    st.markdown("**รอยต่อ (Joints)**")
+    
+    cols = st.columns([3, 1.5, 1.5])
+    cols[0].markdown("รายการ")
+    cols[1].markdown("ปริมาณ (m)")
+    cols[2].markdown("ราคา/หน่วย")
+    
     updated_joints = []
     
     for i, joint in enumerate(joints):
