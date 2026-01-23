@@ -1044,7 +1044,7 @@ def main():
             value=int(round(sc_auto)),
             step=10,
             format="%d",
-            help="ค่าเริ่มต้นคำนวณจาก 10×√f'c สามารถแก้ไขได้ตามผลทดสอบจริง"
+            help="ค่าเริ่มต้นคำนวณจาก 10×√f'c ...DOH ให้ใช้ได้ไม่เกิน 600 psi"
         )
         
         st.markdown("---")
@@ -1161,7 +1161,10 @@ def main():
                 e_equivalent_psi = e_equivalent_mpa * 145.038
                 
                 st.info(f"โมดูลัสเทียบเท่า (E_equivalent) = **{e_equivalent_psi:,.0f} psi** ({e_equivalent_mpa:.1f} MPa)")
-        
+                # แสดงรวมความหนาชั้นวัสดุ
+        total_layer_thickness_cm = sum(l.get('thickness_cm', 0) for l in layers_data)
+        total_layer_thickness_inch = round(total_layer_thickness_cm / 2.54)
+        st.markdown(f"**รวมความหนา {total_layer_thickness_cm:.0f} ซม. ({total_layer_thickness_inch} นิ้ว)**")
         st.markdown("---")
         
         # แสดงรูปโครงสร้างชั้นทาง (รวมชั้นคอนกรีตบนสุด)
