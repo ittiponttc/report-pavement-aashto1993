@@ -1,6 +1,6 @@
 """
 แอปพลิเคชันวิเคราะห์ความคุ้มค่าโครงสร้างชั้นทาง (AASHTO 1993)
-Version 2.0 - รองรับการกำหนดรายละเอียดโครงสร้างชั้นทาง
+Version 3.0 - รองรับ AC, JPCP/JRCP, CRCP พร้อม Library วัสดุ
 พัฒนาโดย: Claude AI สำหรับ อ.อิทธิพล - KMUTNB
 """
 
@@ -12,14 +12,15 @@ from plotly.subplots import make_subplots
 import json
 from datetime import datetime
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Pt, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 import io
 
 # ตั้งค่าหน้าเว็บ
 st.set_page_config(
-    page_title="วิเคราะห์ความคุ้มค่าโครงสร้างชั้นทาง",
+    page_title="วิเคราะห์ค่าก่อสร้างโครงสร้างชั้นทาง",
     page_icon="🛣️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -49,8 +50,38 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ===== ข้อมูลเริ่มต้น (จากตารางที่ 5.3-18 ถึง 5.3-25) =====
-# ปริมาณต่อ 1 กิโลเมตร (ความกว้างรวม 22 ม. สำหรับถนน 2 ทิศทาง)
+# ===== Library วัสดุ =====
+MATERIAL_LIBRARY = {
+    'ผิวทาง': {
+        'ผิวทางลาดยาง AC': {'unit_cost': 480, 'cost_unit': 'บาท/ตร.ม.'},
+        'ผิวทางลาดยาง PMA': {'unit_cost': 550, 'cost_unit': 'บาท/ตร.ม.'},
+        'คอนกรีต 325 Ksc.': {'unit_cost': 800, 'cost_unit': 'บาท/ตร.ม.'},
+        'คอนกรีต 350 Ksc.': {'unit_cost': 850, 'cost_unit': 'บาท/ตร.ม.'},
+    },
+    'พื้นทาง': {
+        'พื้นทางซีเมนต์ CTB': {'unit_cost': 621, 'cost_unit': 'บาท/ลบ.ม.'},
+        'หินคลุกผสมซีเมนต์ UCS 24.5 ksc': {'unit_cost': 914, 'cost_unit': 'บาท/ลบ.ม.'},
+        'หินคลุก CBR 80%': {'unit_cost': 714, 'cost_unit': 'บาท/ลบ.ม.'},
+        'ดินซีเมนต์ UCS 17.5 ksc': {'unit_cost': 621, 'cost_unit': 'บาท/ลบ.ม.'},
+        'วัสดุหมุนเวียน (Recycling)': {'unit_cost': 500, 'cost_unit': 'บาท/ลบ.ม.'},
+    },
+    'รองพื้นทาง': {
+        'รองพื้นทางวัสดุมวลรวม CBR 25%': {'unit_cost': 714, 'cost_unit': 'บาท/ลบ.ม.'},
+        'วัสดุคัดเลือก ก': {'unit_cost': 450, 'cost_unit': 'บาท/ลบ.ม.'},
+        'ดินถมคันทาง / ดินเดิม': {'unit_cost': 361, 'cost_unit': 'บาท/ลบ.ม.'},
+    },
+    'ชั้นคันทาง': {
+        'ทรายถมคันทาง': {'unit_cost': 361, 'cost_unit': 'บาท/ลบ.ม.'},
+        'ดินถมคันทาง': {'unit_cost': 280, 'cost_unit': 'บาท/ลบ.ม.'},
+    },
+    'วัสดุอื่นๆ': {
+        'Tack Coat': {'unit_cost': 20, 'cost_unit': 'บาท/ตร.ม.'},
+        'Prime Coat': {'unit_cost': 30, 'cost_unit': 'บาท/ตร.ม.'},
+        'Non Woven Geotextile': {'unit_cost': 78, 'cost_unit': 'บาท/ตร.ม.'},
+    },
+}
+
+# ===== ข้อมูลเริ่มต้นโครงสร้างชั้นทาง =====
 
 def get_default_ac1_layers():
     """AC1: แอสฟัลต์บนหินคลุก (ตารางที่ 5.3-18)"""
@@ -101,6 +132,36 @@ def get_default_jrcp2_layers():
         {'name': 'Cement Modified Crushed Rock', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'cu.m', 'unit_cost': 914},
         {'name': 'Sand Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'cu.m', 'unit_cost': 361},
     ]
+
+def get_default_crcp1_layers():
+    """CRCP1: คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์"""
+    return [
+        {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 25, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 850},
+        {'name': 'Steel Reinforcement', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 150},
+        {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
+        {'name': 'Soil Cement Base', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'cu.m', 'unit_cost': 621},
+        {'name': 'Sand Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'cu.m', 'unit_cost': 361},
+    ]
+
+def get_default_crcp2_layers():
+    """CRCP2: คอนกรีตเสริมเหล็กต่อเนื่องบนหินคลุกผสมซีเมนต์"""
+    return [
+        {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 25, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 850},
+        {'name': 'Steel Reinforcement', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 150},
+        {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
+        {'name': 'Cement Modified Crushed Rock', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'cu.m', 'unit_cost': 914},
+        {'name': 'Sand Embankment', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'cu.m', 'unit_cost': 361},
+    ]
+
+
+def calculate_quantity(thickness_cm, width_m, length_km, qty_unit):
+    """คำนวณปริมาณจากความหนา ความกว้าง และความยาว"""
+    area = width_m * length_km * 1000  # ตร.ม.
+    if qty_unit == 'sq.m':
+        return area
+    elif qty_unit == 'cu.m':
+        return area * thickness_cm / 100  # ลบ.ม.
+    return area
 
 
 def calculate_layer_cost(layers, road_length_km=1.0):
@@ -345,8 +406,158 @@ def create_timeline_chart(all_cash_flows, pavement_types):
     return fig
 
 
+def generate_word_report_table(project_info, structure_type, structure_name, cbr, layers, joints, road_length):
+    """สร้างรายงาน Word รูปแบบตารางค่าก่อสร้าง (ตามตัวอย่างในเอกสาร)"""
+    doc = Document()
+    
+    # ตั้งค่า font
+    style = doc.styles['Normal']
+    style.font.name = 'TH SarabunPSK'
+    style.font.size = Pt(14)
+    
+    # หัวข้อ
+    title = doc.add_paragraph()
+    title_run = title.add_run('ราคาค่าก่อสร้างของโครงสร้างชั้นทาง' + structure_name)
+    title_run.bold = True
+    title_run.font.size = Pt(16)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # ข้อมูล CBR
+    info_text = f"ผิวจราจร{structure_type} กรณีชั้นดินเดิมมีค่า CBR = {cbr}%"
+    doc.add_paragraph(info_text).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # แยก layers เป็นกลุ่ม
+    surface_layers = []
+    base_layers = []
+    for layer in layers:
+        name_lower = layer['name'].lower()
+        if any(x in name_lower for x in ['wearing', 'binder', 'asphalt', 'concrete', 'tack', 'prime', 'geotextile', 'steel']):
+            surface_layers.append(layer)
+        else:
+            base_layers.append(layer)
+    
+    # คำนวณจำนวนแถว
+    num_rows = 2 + len(surface_layers) + 1  # header + ผิวทาง header + items + รวม1
+    if joints:
+        num_rows += 1 + len(joints) + 1  # รอยต่อ header + items + รวม2
+    num_rows += 1 + len(base_layers) + 1  # พื้นทาง header + items + รวม3
+    num_rows += 2  # รวมทั้งหมด + สรุป
+    
+    table = doc.add_table(rows=num_rows, cols=7)
+    table.style = 'Table Grid'
+    
+    # Header
+    headers = ['ลำดับ', 'ค่าใช้จ่ายสำหรับวัสดุ', 'รายละเอียดหน่วย', 'ปริมาณต่อ', 'หน่วย', 'ราคาต่อหน่วย\n(บาท/หน่วย)', 'มูลค่า\n(บาท)']
+    for j, h in enumerate(headers):
+        table.rows[0].cells[j].text = h
+    
+    row_idx = 1
+    running_total = 0
+    
+    # กลุ่ม 1: ผิวทาง
+    table.rows[row_idx].cells[0].text = '1'
+    table.rows[row_idx].cells[1].text = 'ผิวทาง'
+    row_idx += 1
+    
+    surface_total = 0
+    for i, layer in enumerate(surface_layers, 1):
+        qty = layer['quantity'] * road_length
+        cost = qty * layer['unit_cost']
+        table.rows[row_idx].cells[0].text = f'1.{i}'
+        table.rows[row_idx].cells[1].text = layer['name']
+        table.rows[row_idx].cells[2].text = f"{layer['thickness']} {layer['unit']}"
+        table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
+        table.rows[row_idx].cells[4].text = layer['qty_unit']
+        table.rows[row_idx].cells[5].text = f"{layer['unit_cost']:,.0f}"
+        table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
+        surface_total += cost
+        row_idx += 1
+    
+    table.rows[row_idx].cells[1].text = 'รวม 1'
+    table.rows[row_idx].cells[6].text = f"{surface_total:,.0f}"
+    running_total += surface_total
+    row_idx += 1
+    
+    # กลุ่ม 2: รอยต่อ
+    joint_total = 0
+    if joints:
+        table.rows[row_idx].cells[0].text = '2'
+        table.rows[row_idx].cells[1].text = 'รอยต่อ'
+        row_idx += 1
+        
+        for i, joint in enumerate(joints, 1):
+            qty = joint['quantity'] * road_length
+            cost = qty * joint['unit_cost']
+            table.rows[row_idx].cells[0].text = f'2.{i}'
+            table.rows[row_idx].cells[1].text = joint['name']
+            table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
+            table.rows[row_idx].cells[4].text = joint['qty_unit']
+            table.rows[row_idx].cells[5].text = f"{joint['unit_cost']:,.0f}"
+            table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
+            joint_total += cost
+            row_idx += 1
+        
+        table.rows[row_idx].cells[1].text = 'รวม 2'
+        table.rows[row_idx].cells[6].text = f"{joint_total:,.0f}"
+        running_total += joint_total
+        row_idx += 1
+        group_num = 3
+    else:
+        group_num = 2
+    
+    # กลุ่ม 3: พื้นทางและรองพื้นทาง
+    table.rows[row_idx].cells[0].text = str(group_num)
+    table.rows[row_idx].cells[1].text = 'พื้นทางและรองพื้นทาง'
+    row_idx += 1
+    
+    base_total = 0
+    for i, layer in enumerate(base_layers, 1):
+        qty = layer['quantity'] * road_length
+        cost = qty * layer['unit_cost']
+        table.rows[row_idx].cells[0].text = f'{group_num}.{i}'
+        table.rows[row_idx].cells[1].text = layer['name']
+        table.rows[row_idx].cells[2].text = f"{layer['thickness']} {layer['unit']}"
+        table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
+        table.rows[row_idx].cells[4].text = layer['qty_unit']
+        table.rows[row_idx].cells[5].text = f"{layer['unit_cost']:,.0f}"
+        table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
+        base_total += cost
+        row_idx += 1
+    
+    table.rows[row_idx].cells[1].text = f'รวม {group_num}'
+    table.rows[row_idx].cells[6].text = f"{base_total:,.0f}"
+    running_total += base_total
+    row_idx += 1
+    
+    # รวมทั้งหมด
+    sum_text = 'รวม 1+2+3' if joints else 'รวม 1+2'
+    table.rows[row_idx].cells[1].text = sum_text
+    table.rows[row_idx].cells[3].text = f"{running_total:,.0f}"
+    table.rows[row_idx].cells[6].text = 'บาท'
+    row_idx += 1
+    
+    # สรุปราคาต่อกิโลเมตร
+    cost_per_km = running_total / road_length / 1_000_000
+    table.rows[row_idx].cells[1].text = 'สรุปราคาต่อกิโลเมตรใน2ทิศทาง'
+    table.rows[row_idx].cells[3].text = f"{cost_per_km:.2f}"
+    table.rows[row_idx].cells[6].text = 'ล้านบาท'
+    
+    # Footer
+    doc.add_paragraph()
+    lane_width = project_info.get('lane_width', 3.5)
+    shoulder_left = project_info.get('shoulder_left', 2.5)
+    shoulder_right = project_info.get('shoulder_right', 1.5)
+    total_width = project_info.get('total_width', 11.0)
+    
+    doc.add_paragraph(f"หมายเหตุ: ความกว้างช่องจราจร {lane_width} ม. ไหล่ทางซ้าย {shoulder_left} ม. ไหล่ทางขวา {shoulder_right} ม.")
+    doc.add_paragraph(f"รวมทั้งสิ้นความกว้างถนน {total_width} ม. (ช่องละ {lane_width} ม.) ยาว {road_length} กิโลเมตร")
+    doc.add_paragraph(f"รายงานสร้างเมื่อ: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    
+    return doc
+
+
 def generate_word_report(project_info, results_df, all_details):
-    """สร้างรายงาน Word"""
+    """สร้างรายงาน Word (สรุปรวม)"""
     doc = Document()
     
     style = doc.styles['Normal']
@@ -402,8 +613,8 @@ def generate_word_report(project_info, results_df, all_details):
 # ===== Main Application =====
 
 def main():
-    st.markdown('<div class="main-header">🛣️ ระบบวิเคราะห์ความคุ้มค่าโครงสร้างชั้นทาง</div>', unsafe_allow_html=True)
-    st.markdown("##### ตามแนวทาง AASHTO 1993 - รองรับการกำหนดรายละเอียดวัสดุแต่ละชั้น")
+    st.markdown('<div class="main-header">🛣️ ระบบวิเคราะห์ค่าก่อสร้างโครงสร้างชั้นทาง</div>', unsafe_allow_html=True)
+    st.markdown("##### ตามแนวทาง AASHTO 1993 - รองรับ AC, JPCP/JRCP, CRCP")
     
     # Sidebar
     with st.sidebar:
@@ -412,13 +623,38 @@ def main():
         road_length = st.number_input("ความยาวถนน (กม.)", value=1.0, min_value=0.1, step=0.1)
         
         st.divider()
-        st.header("⚙️ พารามิเตอร์")
-        cbr = st.selectbox("ค่า CBR (%)", options=[2, 3], index=0)
-        discount_rate = st.number_input("Discount Rate (%)", value=5.0, min_value=1.0, max_value=15.0, step=0.5)
-        analysis_period = st.number_input("ระยะเวลาวิเคราะห์ (ปี)", value=100, min_value=20, max_value=200, step=5)
+        st.header("📐 ขนาดถนน")
+        lane_width = st.number_input("ความกว้างช่องจราจร (ม.)", value=3.5, min_value=2.5, max_value=4.0, step=0.25)
+        shoulder_left = st.number_input("ไหล่ทางซ้าย (ม.)", value=2.5, min_value=0.0, max_value=3.5, step=0.25)
+        shoulder_right = st.number_input("ไหล่ทางขวา (ม.)", value=1.5, min_value=0.0, max_value=3.5, step=0.25)
+        num_lanes = st.selectbox("จำนวนช่องจราจร (ต่อทิศทาง)", options=[1, 2, 3], index=0)
+        
+        # คำนวณความกว้างรวม (2 ทิศทาง)
+        total_width = (lane_width * num_lanes * 2) + shoulder_left + shoulder_right
+        st.info(f"📏 ความกว้างรวม: {total_width:.2f} ม.\n(ถนน 2 ทิศทาง)")
         
         st.divider()
-        st.info(f"📐 ความกว้างถนนมาตรฐาน: 22 ม.\n(ถนน 2 ทิศทาง รวมไหล่ทาง)")
+        st.header("⚙️ พารามิเตอร์")
+        cbr = st.selectbox("ค่า CBR ดินเดิม (%)", options=[2, 3, 4, 5, 6], index=0)
+        discount_rate = st.number_input("Discount Rate (%)", value=5.0, min_value=1.0, max_value=15.0, step=0.5)
+        analysis_period = st.number_input("ระยะเวลาวิเคราะห์ (ปี)", value=100, min_value=20, max_value=200, step=5)
+    
+    # เก็บข้อมูลโครงการ
+    project_info = {
+        'name': project_name,
+        'length': road_length,
+        'lane_width': lane_width,
+        'shoulder_left': shoulder_left,
+        'shoulder_right': shoulder_right,
+        'num_lanes': num_lanes,
+        'total_width': total_width,
+        'cbr': cbr,
+        'discount_rate': discount_rate,
+        'analysis_period': analysis_period
+    }
+    
+    # คำนวณพื้นที่ต่อ กม. (ใช้สำหรับคำนวณปริมาณ)
+    area_per_km = total_width * 1000  # ตร.ม./กม.
     
     # Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏗️ โครงสร้างชั้นทาง", "💰 ค่าบำรุงรักษา", "📈 ผลการวิเคราะห์", "📋 Cash Flow", "📄 รายงาน"])
