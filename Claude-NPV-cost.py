@@ -268,6 +268,34 @@ def calculate_npv_jrcp(initial_cost, joint_cost, design_life, analysis_period, d
     return total_npv, cash_flows
 
 
+def calculate_npv_crcp(initial_cost, maint_cost, design_life, analysis_period, discount_rate):
+    """คำนวณ NPV สำหรับ CRCP"""
+    cash_flows = []
+    total_npv = 0
+    
+    for year in range(analysis_period + 1):
+        cost = 0
+        activities = []
+        
+        if year % design_life == 0:
+            cost += initial_cost
+            activities.append(f"ก่อสร้างใหม่")
+        elif year > 0 and year % 5 == 0:
+            cost += maint_cost
+            activities.append(f"บำรุงรักษา")
+        
+        pv = cost / ((1 + discount_rate) ** year)
+        total_npv += pv
+        
+        cash_flows.append({
+            'year': year, 'cost': cost, 'pv': pv,
+            'cumulative_pv': total_npv,
+            'activities': ', '.join(activities) if activities else '-'
+        })
+    
+    return total_npv, cash_flows
+
+
 def render_layer_editor(layers, key_prefix):
     """แสดง UI สำหรับแก้ไขโครงสร้างชั้นทาง"""
     updated_layers = []
@@ -734,92 +762,120 @@ def main():
     
     with tab1:
         st.header("กำหนดโครงสร้างชั้นทาง")
-        st.info("💡 แก้ไขความหนา ปริมาณ และราคาต่อหน่วยได้ตามต้องการ (ปริมาณต่อ 1 กิโลเมตร)")
+        st.info("💡 แก้ไขชื่อ ความหนา ปริมาณ และราคาต่อหน่วยได้ตามต้องการ")
         
+        # ===== AC Pavement =====
+        st.subheader("🔵 ผิวทางแอสฟัลต์คอนกรีต (AC)")
         col1, col2 = st.columns(2)
         
         with col1:
-            with st.expander("🔵 AC1: แอสฟัลต์บนหินคลุก", expanded=True):
+            ac1_name = st.text_input("ชื่อโครงสร้าง AC1", value="AC1: แอสฟัลต์บนหินคลุก", key="ac1_name")
+            with st.expander(f"● {ac1_name}", expanded=True):
                 ac1_layers = render_layer_editor(get_default_ac1_layers(), "ac1")
                 ac1_cost, ac1_details = calculate_layer_cost(ac1_layers, road_length)
                 ac1_cost_per_km = ac1_cost / road_length / 1_000_000
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง AC1:</b> {ac1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ac1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
         
         with col2:
-            with st.expander("🟣 AC2: แอสฟัลต์บนหินคลุกผสมซีเมนต์", expanded=True):
+            ac2_name = st.text_input("ชื่อโครงสร้าง AC2", value="AC2: แอสฟัลต์บนหินคลุกผสมซีเมนต์", key="ac2_name")
+            with st.expander(f"● {ac2_name}", expanded=True):
                 ac2_layers = render_layer_editor(get_default_ac2_layers(), "ac2")
                 ac2_cost, ac2_details = calculate_layer_cost(ac2_layers, road_length)
                 ac2_cost_per_km = ac2_cost / road_length / 1_000_000
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง AC2:</b> {ac2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ac2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
         
+        # ===== JRCP/JPCP =====
+        st.subheader("🟠 ผิวทางคอนกรีตเสริมเหล็ก (JRCP/JPCP)")
         col3, col4 = st.columns(2)
         
         with col3:
-            with st.expander("🟠 JRCP1: คอนกรีตบนดินซีเมนต์", expanded=True):
-                st.markdown("**ชั้นโครงสร้าง**")
+            jrcp1_name = st.text_input("ชื่อโครงสร้าง JRCP1", value="JRCP1: คอนกรีตบนดินซีเมนต์", key="jrcp1_name")
+            with st.expander(f"● {jrcp1_name}", expanded=True):
                 jrcp1_layers = render_layer_editor(get_default_jrcp1_layers(), "jrcp1")
                 jrcp1_layer_cost, jrcp1_layer_details = calculate_layer_cost(jrcp1_layers, road_length)
-                
-                st.markdown("**รอยต่อ (Joints)**")
                 jrcp1_joints = render_joint_editor(get_default_jrcp1_joints(), "jrcp1")
                 jrcp1_joint_cost, jrcp1_joint_details = calculate_joint_cost(jrcp1_joints, road_length)
-                
                 jrcp1_total = jrcp1_layer_cost + jrcp1_joint_cost
                 jrcp1_cost_per_km = jrcp1_total / road_length / 1_000_000
                 jrcp1_details = jrcp1_layer_details + jrcp1_joint_details
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง JRCP1:</b> {jrcp1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
         
         with col4:
-            with st.expander("🔴 JRCP2: คอนกรีตบนหินคลุกผสมซีเมนต์", expanded=True):
-                st.markdown("**ชั้นโครงสร้าง**")
+            jrcp2_name = st.text_input("ชื่อโครงสร้าง JRCP2", value="JRCP2: คอนกรีตบนหินคลุกผสมซีเมนต์", key="jrcp2_name")
+            with st.expander(f"● {jrcp2_name}", expanded=True):
                 jrcp2_layers = render_layer_editor(get_default_jrcp2_layers(), "jrcp2")
                 jrcp2_layer_cost, jrcp2_layer_details = calculate_layer_cost(jrcp2_layers, road_length)
-                
-                st.markdown("**รอยต่อ (Joints)**")
-                jrcp2_joints = render_joint_editor(get_default_jrcp1_joints(), "jrcp2")  # ใช้ joints เดียวกัน
+                jrcp2_joints = render_joint_editor(get_default_jrcp1_joints(), "jrcp2")
                 jrcp2_joint_cost, jrcp2_joint_details = calculate_joint_cost(jrcp2_joints, road_length)
-                
                 jrcp2_total = jrcp2_layer_cost + jrcp2_joint_cost
                 jrcp2_cost_per_km = jrcp2_total / road_length / 1_000_000
                 jrcp2_details = jrcp2_layer_details + jrcp2_joint_details
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง JRCP2:</b> {jrcp2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+        
+        # ===== CRCP =====
+        st.subheader("🔴 ผิวทางคอนกรีตเสริมเหล็กต่อเนื่อง (CRCP)")
+        col5, col6 = st.columns(2)
+        
+        with col5:
+            crcp1_name = st.text_input("ชื่อโครงสร้าง CRCP1", value="CRCP1: คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์", key="crcp1_name")
+            with st.expander(f"● {crcp1_name}", expanded=True):
+                crcp1_layers = render_layer_editor(get_default_crcp1_layers(), "crcp1")
+                crcp1_cost, crcp1_details = calculate_layer_cost(crcp1_layers, road_length)
+                crcp1_cost_per_km = crcp1_cost / road_length / 1_000_000
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+        
+        with col6:
+            crcp2_name = st.text_input("ชื่อโครงสร้าง CRCP2", value="CRCP2: คอนกรีตเสริมเหล็กต่อเนื่องบน CMCR", key="crcp2_name")
+            with st.expander(f"● {crcp2_name}", expanded=True):
+                crcp2_layers = render_layer_editor(get_default_crcp2_layers(), "crcp2")
+                crcp2_cost, crcp2_details = calculate_layer_cost(crcp2_layers, road_length)
+                crcp2_cost_per_km = crcp2_cost / road_length / 1_000_000
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
         
         # Store in session state
         st.session_state['construction'] = {
-            'AC1': {'cost': ac1_cost_per_km, 'details': ac1_details},
-            'AC2': {'cost': ac2_cost_per_km, 'details': ac2_details},
-            'JRCP1': {'cost': jrcp1_cost_per_km, 'details': jrcp1_details},
-            'JRCP2': {'cost': jrcp2_cost_per_km, 'details': jrcp2_details},
+            'AC1': {'name': ac1_name, 'cost': ac1_cost_per_km, 'details': ac1_details, 'layers': ac1_layers, 'joints': None},
+            'AC2': {'name': ac2_name, 'cost': ac2_cost_per_km, 'details': ac2_details, 'layers': ac2_layers, 'joints': None},
+            'JRCP1': {'name': jrcp1_name, 'cost': jrcp1_cost_per_km, 'details': jrcp1_details, 'layers': jrcp1_layers, 'joints': jrcp1_joints},
+            'JRCP2': {'name': jrcp2_name, 'cost': jrcp2_cost_per_km, 'details': jrcp2_details, 'layers': jrcp2_layers, 'joints': jrcp2_joints},
+            'CRCP1': {'name': crcp1_name, 'cost': crcp1_cost_per_km, 'details': crcp1_details, 'layers': crcp1_layers, 'joints': None},
+            'CRCP2': {'name': crcp2_name, 'cost': crcp2_cost_per_km, 'details': crcp2_details, 'layers': crcp2_layers, 'joints': None},
         }
+        st.session_state['project_info'] = project_info
         
         # Summary table
         st.divider()
         st.subheader("📊 สรุปค่าก่อสร้าง")
         summary_df = pd.DataFrame({
-            'ประเภท': ['AC1 (หินคลุก)', 'AC2 (CMCR)', 'JRCP1 (ดินซีเมนต์)', 'JRCP2 (CMCR)'],
-            'ค่าก่อสร้าง (ล้านบาท/กม.)': [ac1_cost_per_km, ac2_cost_per_km, jrcp1_cost_per_km, jrcp2_cost_per_km],
-            'อายุออกแบบ (ปี)': [20, 20, 25, 25]
+            'ประเภท': [ac1_name, ac2_name, jrcp1_name, jrcp2_name, crcp1_name, crcp2_name],
+            'ค่าก่อสร้าง (ล้านบาท/กม.)': [ac1_cost_per_km, ac2_cost_per_km, jrcp1_cost_per_km, jrcp2_cost_per_km, crcp1_cost_per_km, crcp2_cost_per_km],
+            'อายุออกแบบ (ปี)': [20, 20, 25, 25, 30, 30]
         })
         st.dataframe(summary_df.style.format({'ค่าก่อสร้าง (ล้านบาท/กม.)': '{:.2f}'}), use_container_width=True)
     
     with tab2:
         st.header("กำหนดค่าบำรุงรักษา")
         
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         
         with col1:
             st.subheader("🔵 AC Pavement")
             ac_seal = st.number_input("Seal Coating ทุก 3 ปี (ล้านบาท/กม.)", value=1.76, key="m_seal")
             ac_overlay = st.number_input("Overlay 5cm ทุก 9 ปี (ล้านบาท/กม.)", value=8.80, key="m_overlay")
-            st.markdown("**รอบการบำรุง (20 ปี):** Seal ปี 3,6,12,15 | Overlay ปี 9,18")
+            st.markdown("**อายุ 20 ปี:** Seal ปี 3,6,12,15 | Overlay ปี 9,18")
         
         with col2:
-            st.subheader("🟠 JRCP")
+            st.subheader("🟠 JRCP/JPCP")
             jrcp_joint = st.number_input("Joint Sealing ทุก 3 ปี (ล้านบาท/กม.)", value=1.426, key="m_joint")
-            st.markdown("**รอบการบำรุง (25 ปี):** Joint Seal ทุก 3 ปี")
+            st.markdown("**อายุ 25 ปี:** Joint Seal ทุก 3 ปี")
+        
+        with col3:
+            st.subheader("🔴 CRCP")
+            crcp_maint = st.number_input("บำรุงรักษาทุก 5 ปี (ล้านบาท/กม.)", value=0.50, key="m_crcp")
+            st.markdown("**อายุ 30 ปี:** บำรุงรักษาทุก 5 ปี")
         
         st.session_state['maintenance'] = {
-            'ac_seal': ac_seal, 'ac_overlay': ac_overlay, 'jrcp_joint': jrcp_joint
+            'ac_seal': ac_seal, 'ac_overlay': ac_overlay, 'jrcp_joint': jrcp_joint, 'crcp_maint': crcp_maint
         }
     
     with tab3:
@@ -834,10 +890,13 @@ def main():
                 ac2_c = constr.get('AC2', {}).get('cost', 29.04)
                 jrcp1_c = constr.get('JRCP1', {}).get('cost', 28.24)
                 jrcp2_c = constr.get('JRCP2', {}).get('cost', 29.53)
+                crcp1_c = constr.get('CRCP1', {}).get('cost', 30.00)
+                crcp2_c = constr.get('CRCP2', {}).get('cost', 31.00)
                 
                 seal = maint.get('ac_seal', 1.76)
                 overlay = maint.get('ac_overlay', 8.80)
                 joint = maint.get('jrcp_joint', 1.426)
+                crcp_m = maint.get('crcp_maint', 0.50)
                 
                 r = discount_rate / 100
                 
@@ -845,12 +904,24 @@ def main():
                 npv2, cf2 = calculate_npv_ac(ac2_c, seal, overlay, 20, analysis_period, r)
                 npv3, cf3 = calculate_npv_jrcp(jrcp1_c, joint, 25, analysis_period, r)
                 npv4, cf4 = calculate_npv_jrcp(jrcp2_c, joint, 25, analysis_period, r)
+                npv5, cf5 = calculate_npv_crcp(crcp1_c, crcp_m, 30, analysis_period, r)
+                npv6, cf6 = calculate_npv_crcp(crcp2_c, crcp_m, 30, analysis_period, r)
+                
+                # ดึงชื่อที่กำหนดเอง
+                ac1_name = constr.get('AC1', {}).get('name', 'AC1')
+                ac2_name = constr.get('AC2', {}).get('name', 'AC2')
+                jrcp1_name = constr.get('JRCP1', {}).get('name', 'JRCP1')
+                jrcp2_name = constr.get('JRCP2', {}).get('name', 'JRCP2')
+                crcp1_name = constr.get('CRCP1', {}).get('name', 'CRCP1')
+                crcp2_name = constr.get('CRCP2', {}).get('name', 'CRCP2')
                 
                 results = [
-                    {'ประเภท': 'AC1 (หินคลุก)', 'ค่าก่อสร้าง': ac1_c, 'อายุ': 20, 'NPV (ล้านบาท/กม.)': npv1},
-                    {'ประเภท': 'AC2 (CMCR)', 'ค่าก่อสร้าง': ac2_c, 'อายุ': 20, 'NPV (ล้านบาท/กม.)': npv2},
-                    {'ประเภท': 'JRCP1 (ดินซีเมนต์)', 'ค่าก่อสร้าง': jrcp1_c, 'อายุ': 25, 'NPV (ล้านบาท/กม.)': npv3},
-                    {'ประเภท': 'JRCP2 (CMCR)', 'ค่าก่อสร้าง': jrcp2_c, 'อายุ': 25, 'NPV (ล้านบาท/กม.)': npv4},
+                    {'ประเภท': ac1_name, 'ค่าก่อสร้าง': ac1_c, 'อายุ': 20, 'NPV (ล้านบาท/กม.)': npv1},
+                    {'ประเภท': ac2_name, 'ค่าก่อสร้าง': ac2_c, 'อายุ': 20, 'NPV (ล้านบาท/กม.)': npv2},
+                    {'ประเภท': jrcp1_name, 'ค่าก่อสร้าง': jrcp1_c, 'อายุ': 25, 'NPV (ล้านบาท/กม.)': npv3},
+                    {'ประเภท': jrcp2_name, 'ค่าก่อสร้าง': jrcp2_c, 'อายุ': 25, 'NPV (ล้านบาท/กม.)': npv4},
+                    {'ประเภท': crcp1_name, 'ค่าก่อสร้าง': crcp1_c, 'อายุ': 30, 'NPV (ล้านบาท/กม.)': npv5},
+                    {'ประเภท': crcp2_name, 'ค่าก่อสร้าง': crcp2_c, 'อายุ': 30, 'NPV (ล้านบาท/กม.)': npv6},
                 ]
                 
                 results_df = pd.DataFrame(results)
@@ -858,13 +929,8 @@ def main():
                 results_df = results_df.sort_values('อันดับ')
                 
                 st.session_state['results_df'] = results_df
-                st.session_state['all_cf'] = [cf1, cf2, cf3, cf4]
-                st.session_state['ptypes'] = ['AC1', 'AC2', 'JRCP1', 'JRCP2']
-                st.session_state['project_info'] = {
-                    'name': project_name, 'length': road_length,
-                    'cbr': cbr, 'discount_rate': discount_rate,
-                    'analysis_period': analysis_period
-                }
+                st.session_state['all_cf'] = [cf1, cf2, cf3, cf4, cf5, cf6]
+                st.session_state['ptypes'] = [ac1_name, ac2_name, jrcp1_name, jrcp2_name, crcp1_name, crcp2_name]
         
         if 'results_df' in st.session_state:
             df = st.session_state['results_df']
