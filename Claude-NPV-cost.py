@@ -461,11 +461,11 @@ def create_comparison_chart(results_df):
         specs=[[{"type": "bar"}, {"type": "bar"}]]
     )
     
-    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D']
+    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#28A745', '#6F42C1']
     
     fig.add_trace(
         go.Bar(x=results_df['ประเภท'], y=results_df['NPV (ล้านบาท/กม.)'],
-               marker_color=colors, text=results_df['NPV (ล้านบาท/กม.)'].apply(lambda x: f'{x:.2f}'),
+               marker_color=colors[:len(results_df)], text=results_df['NPV (ล้านบาท/กม.)'].apply(lambda x: f'{x:.2f}'),
                textposition='outside', name='NPV'),
         row=1, col=1
     )
@@ -491,13 +491,13 @@ def create_comparison_chart(results_df):
 def create_timeline_chart(all_cash_flows, pavement_types):
     """สร้างกราฟ Timeline"""
     fig = go.Figure()
-    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D']
+    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#28A745', '#6F42C1']
     
     for i, (ptype, cf) in enumerate(zip(pavement_types, all_cash_flows)):
         years = [c['year'] for c in cf]
         cum_pv = [c['cumulative_pv'] for c in cf]
         fig.add_trace(go.Scatter(x=years, y=cum_pv, mode='lines',
-                                  name=ptype, line=dict(color=colors[i], width=2)))
+                                  name=ptype, line=dict(color=colors[i % len(colors)], width=2)))
     
     fig.update_layout(
         title='Cumulative NPV ตลอดระยะเวลาวิเคราะห์',
