@@ -426,20 +426,45 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
         else:
             auto_qty = area_per_km * road_length
         
-        # ดึงราคาจาก Library (บาท/ตร.ม.)
+        # ดึงราคาจาก Library (บาท/ตร.ม.) ตามความหนาที่เลือก
         lib_price = get_price_from_library(layer['name'], thick)
+        
+        # ถ้าไม่มีราคาในความหนานั้น ให้หาความหนาที่ใกล้เคียงที่สุด
+        if lib_price is None and 'price_library' in st.session_state:
+            lib = st.session_state['price_library']
+            name_lower = layer['name'].lower()
+            
+            # หาประเภท AC
+            if 'pma' in name_lower and 'wearing' in name_lower:
+                prices = lib['ac_prices'].get('PMA Wearing Course', {})
+            elif 'wearing' in name_lower:
+                prices = lib['ac_prices'].get('AC Wearing Course', {})
+            elif 'binder' in name_lower:
+                prices = lib['ac_prices'].get('AC Binder Course', {})
+            elif 'asphalt' in name_lower and 'base' in name_lower:
+                prices = lib['ac_prices'].get('AC Base Course', {})
+            else:
+                prices = {}
+            
+            # หาความหนาที่ใกล้เคียงที่สุด
+            if prices:
+                available_thick = list(prices.keys())
+                closest = min(available_thick, key=lambda x: abs(x - thick))
+                lib_price = prices.get(closest)
+        
+        # ใช้ราคาจาก Library หรือค่า default
         default_cost = lib_price if lib_price else layer['unit_cost']
         
         with cols[2]:
             st.text(f"{auto_qty:,.0f}")
         with cols[3]:
-            cost = st.number_input("ราคา", value=float(default_cost),
-                key=f"{key_prefix}_sc_{i}", label_visibility="collapsed", min_value=0.0, step=10.0)
+            # แสดงราคาจาก Library โดยตรง (read-only style)
+            st.markdown(f"**{default_cost:,.2f}**")
         
         updated_layers.append({
             'name': layer['name'], 'thickness': thick, 'unit': layer['unit'],
-            'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': cost,
-            'cost_per_sqm': cost  # ราคาต่อ ตร.ม.
+            'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': default_cost,
+            'cost_per_sqm': default_cost  # ราคาต่อ ตร.ม.
         })
     
     # ===== ส่วนพื้นทาง/รองพื้นทาง =====
@@ -514,13 +539,13 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
         with cols[2]:
             st.text(f"{auto_qty:,.0f}")
         with cols[3]:
-            cost = st.number_input("ราคา", value=float(cost_per_sqm),
-                key=f"{key_prefix}_bc_{i}", label_visibility="collapsed", min_value=0.0, step=10.0)
+            # แสดงราคาที่คำนวณแล้ว (อัพเดทตามความหนาอัตโนมัติ)
+            st.markdown(f"**{cost_per_sqm:,.2f}**")
         
         updated_layers.append({
             'name': selected, 'thickness': thick, 'unit': 'cm',
-            'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': cost,
-            'cost_per_sqm': cost,  # ราคาต่อ ตร.ม.
+            'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': cost_per_sqm,
+            'cost_per_sqm': cost_per_sqm,  # ราคาต่อ ตร.ม.
             'cost_cum': lib_cost_cum  # เก็บราคา ลบ.ม. ไว้อ้างอิง
         })
     
