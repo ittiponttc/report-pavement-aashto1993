@@ -98,7 +98,7 @@ MATERIAL_LIBRARY = {
     'ผิวทาง': {
         'ผิวทางลาดยาง AC': {'unit_cost': 480, 'cost_unit': 'บาท/ตร.ม.'},
         'ผิวทางลาดยาง PMA': {'unit_cost': 550, 'cost_unit': 'บาท/ตร.ม.'},
-        'คอนกรีต 325 Ksc.': {'unit_cost': 800, 'cost_unit': 'บาท/ตร.ม.'},
+        'คอนกรีต 350 Ksc.': {'unit_cost': 800, 'cost_unit': 'บาท/ตร.ม.'},
         'คอนกรีต 350 Ksc.': {'unit_cost': 850, 'cost_unit': 'บาท/ตร.ม.'},
     },
     'พื้นทาง': {
@@ -148,7 +148,7 @@ def get_default_ac2_layers():
 def get_default_jrcp1_layers():
     """JRCP1: คอนกรีตบนดินซีเมนต์ (ตารางที่ 5.3-22)"""
     return [
-        {'name': '325 Ksc. Cubic Type Concrete', 'thickness': 28, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 800},
+        {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 28, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 800},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Soil Cement Base', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'cu.m', 'unit_cost': 621},
         {'name': 'Sand Embankment', 'thickness': 60, 'unit': 'cm', 'quantity': 13200, 'qty_unit': 'cu.m', 'unit_cost': 361},
@@ -164,7 +164,7 @@ def get_default_jrcp1_joints():
 def get_default_jrcp2_layers():
     """JRCP2: คอนกรีตบนหินคลุกผสมซีเมนต์ (ตารางที่ 5.3-24)"""
     return [
-        {'name': '325 Ksc. Cubic Type Concrete', 'thickness': 28, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 800},
+        {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 28, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 800},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'cu.m', 'unit_cost': 914},
         {'name': 'Sand Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'cu.m', 'unit_cost': 361},
@@ -387,9 +387,6 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     updated_layers = []
     
     # คำนวณพื้นที่ต่อ กม. 
-    # total_width = ความกว้างถนนรวมไหล่ทาง (เช่น 11 ม.)
-    # พื้นที่ = total_width × 1000 × 2 (คิด 2 ทิศทาง)
-    # ตามเอกสาร: 11 ม. × 1000 × 2 = 22,000 ตร.ม.
     area_per_km = total_width * 1000 * 2  # ตร.ม./กม. (2 ทิศทาง)
     
     # แยก layers เป็นกลุ่ม
@@ -411,44 +408,95 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     cols[2].markdown("ปริมาณ (auto)")
     cols[3].markdown("ราคา (บาท/ตร.ม.)")
     
+    # ตัวเลือกวัสดุ
+    wearing_options = ['AC Wearing Course', 'PMA Wearing Course']
+    binder_options = ['AC Binder Course']
+    base_options = ['AC Base Course']
+    concrete_options = ['JPCP', 'JRCP', 'CRCP']
+    
     for i, layer in enumerate(surface_layers):
         cols = st.columns([3, 1, 1.5, 1.5])
+        name_lower = layer['name'].lower()
+        
+        # กำหนดว่าเป็นชั้นไหน
+        is_wearing = 'wearing' in name_lower
+        is_binder = 'binder' in name_lower
+        is_ac_base = 'asphalt' in name_lower and 'base' in name_lower
+        is_concrete = 'concrete' in name_lower or 'ksc' in name_lower
         
         with cols[0]:
-            st.text(layer['name'])
+            if is_wearing:
+                # Dropdown เลือก PMA หรือ AC Wearing
+                default_idx = 1 if 'pma' in name_lower else 0
+                selected_material = st.selectbox(
+                    "วัสดุ", wearing_options, index=default_idx,
+                    key=f"{key_prefix}_mat_{i}", label_visibility="collapsed"
+                )
+            elif is_binder:
+                selected_material = st.selectbox(
+                    "วัสดุ", binder_options, index=0,
+                    key=f"{key_prefix}_mat_{i}", label_visibility="collapsed"
+                )
+            elif is_ac_base:
+                selected_material = st.selectbox(
+                    "วัสดุ", base_options, index=0,
+                    key=f"{key_prefix}_mat_{i}", label_visibility="collapsed"
+                )
+            elif is_concrete:
+                # Dropdown เลือก JPCP, JRCP, CRCP
+                if 'jrcp' in key_prefix:
+                    default_idx = 1  # JRCP
+                elif 'crcp' in key_prefix:
+                    default_idx = 2  # CRCP
+                else:
+                    default_idx = 0  # JPCP
+                selected_type = st.selectbox(
+                    "ชนิด", concrete_options, index=default_idx,
+                    key=f"{key_prefix}_ctype_{i}", label_visibility="collapsed"
+                )
+                selected_material = f"350 Ksc. Cubic Type Concrete ({selected_type})"
+            else:
+                st.text(layer['name'])
+                selected_material = layer['name']
+        
         with cols[1]:
             thick = st.number_input("หนา", value=float(layer['thickness']),
                 key=f"{key_prefix}_st_{i}", label_visibility="collapsed", min_value=0.0, step=1.0)
         
         # คำนวณปริมาณอัตโนมัติ (ตร.ม.)
-        # ทุกชั้นใช้พื้นที่เท่ากัน (ไม่คูณ thick)
         auto_qty = area_per_km * road_length
         
-        # ดึงราคาจาก Library (บาท/ตร.ม.) ตามความหนาที่เลือก
-        lib_price = get_price_from_library(layer['name'], thick)
-        
-        # ถ้าไม่มีราคาในความหนานั้น ให้หาความหนาที่ใกล้เคียงที่สุด
-        if lib_price is None and 'price_library' in st.session_state:
+        # ดึงราคาจาก Library (บาท/ตร.ม.) ตามวัสดุและความหนาที่เลือก
+        lib_price = None
+        if 'price_library' in st.session_state:
             lib = st.session_state['price_library']
-            name_lower = layer['name'].lower()
             
-            # หาประเภท AC
-            if 'pma' in name_lower and 'wearing' in name_lower:
-                prices = lib['ac_prices'].get('PMA Wearing Course', {})
-            elif 'wearing' in name_lower:
-                prices = lib['ac_prices'].get('AC Wearing Course', {})
-            elif 'binder' in name_lower:
+            if is_wearing:
+                prices = lib['ac_prices'].get(selected_material, {})
+                lib_price = prices.get(thick)
+                if lib_price is None and prices:
+                    closest = min(prices.keys(), key=lambda x: abs(x - thick))
+                    lib_price = prices.get(closest)
+            elif is_binder:
                 prices = lib['ac_prices'].get('AC Binder Course', {})
-            elif 'asphalt' in name_lower and 'base' in name_lower:
+                lib_price = prices.get(thick)
+                if lib_price is None and prices:
+                    closest = min(prices.keys(), key=lambda x: abs(x - thick))
+                    lib_price = prices.get(closest)
+            elif is_ac_base:
                 prices = lib['ac_prices'].get('AC Base Course', {})
-            else:
-                prices = {}
-            
-            # หาความหนาที่ใกล้เคียงที่สุด
-            if prices:
-                available_thick = list(prices.keys())
-                closest = min(available_thick, key=lambda x: abs(x - thick))
-                lib_price = prices.get(closest)
+                lib_price = prices.get(thick)
+                if lib_price is None and prices:
+                    closest = min(prices.keys(), key=lambda x: abs(x - thick))
+                    lib_price = prices.get(closest)
+            elif is_concrete:
+                # ดึงราคาคอนกรีตจาก Library
+                concrete_type = selected_type if 'selected_type' in dir() else 'JPCP'
+                prices = lib['concrete_prices'].get(concrete_type, {})
+                lib_price = prices.get(int(thick))
+                if lib_price is None and prices:
+                    closest = min(prices.keys(), key=lambda x: abs(x - thick))
+                    lib_price = prices.get(closest)
         
         # ใช้ราคาจาก Library หรือค่า default
         default_cost = lib_price if lib_price else layer['unit_cost']
@@ -456,13 +504,20 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
         with cols[2]:
             st.text(f"{auto_qty:,.0f}")
         with cols[3]:
-            # แสดงราคาจาก Library โดยตรง (read-only style)
             st.markdown(f"**{default_cost:,.2f}**")
         
+        # เก็บชื่อที่ถูกต้อง
+        if is_concrete:
+            final_name = selected_material
+        elif is_wearing or is_binder or is_ac_base:
+            final_name = selected_material
+        else:
+            final_name = layer['name']
+        
         updated_layers.append({
-            'name': layer['name'], 'thickness': thick, 'unit': layer['unit'],
+            'name': final_name, 'thickness': thick, 'unit': layer['unit'],
             'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': default_cost,
-            'cost_per_sqm': default_cost  # ราคาต่อ ตร.ม.
+            'cost_per_sqm': default_cost
         })
     
     # ===== ส่วนพื้นทาง/รองพื้นทาง =====
