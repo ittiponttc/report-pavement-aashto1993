@@ -322,7 +322,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     cols = st.columns([3, 1, 1.5, 1.5])
     cols[0].markdown("รายการ")
     cols[1].markdown("หนา")
-    cols[2].markdown("ปริมาณ (auto)")
+    cols[2].markdown("ปริมาณ (ตร.ม.)")
     cols[3].markdown("ราคา/หน่วย")
     
     for i, layer in enumerate(surface_layers):
@@ -377,7 +377,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     cols = st.columns([3, 1, 1.5, 1.5])
     cols[0].markdown("วัสดุ")
     cols[1].markdown("หนา (cm)")
-    cols[2].markdown("ปริมาณ (ตร.ม/ลบ.ม)")
+    cols[2].markdown("ปริมาณ (ลบ.ม.)")
     cols[3].markdown("ราคา/หน่วย")
     
     for i in range(int(num_base)):
