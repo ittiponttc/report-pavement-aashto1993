@@ -202,12 +202,16 @@ def calculate_quantity(thickness_cm, width_m, length_km, qty_unit):
 
 
 def calculate_layer_cost(layers, road_length_km=1.0):
-    """คำนวณค่าก่อสร้างจากชั้นโครงสร้าง"""
+    """คำนวณค่าก่อสร้างจากชั้นโครงสร้าง
+    ราคาทั้งหมดเป็น บาท/ตร.ม. × ปริมาณ (ตร.ม.)
+    """
     total = 0
     details = []
     
     for layer in layers:
-        qty = layer['quantity'] * road_length_km
+        # ปริมาณเป็น ตร.ม. แล้ว (ไม่ต้องคูณ road_length อีก เพราะคำนวณไว้แล้ว)
+        qty = layer['quantity']
+        # ราคาเป็น บาท/ตร.ม.
         cost = qty * layer['unit_cost']
         total += cost
         
@@ -215,7 +219,7 @@ def calculate_layer_cost(layers, road_length_km=1.0):
             'รายการ': layer['name'],
             'ความหนา': f"{layer['thickness']} {layer['unit']}",
             'ปริมาณ': qty,
-            'หน่วย': layer['qty_unit'],
+            'หน่วย': 'ตร.ม.',
             'ราคา/หน่วย': layer['unit_cost'],
             'มูลค่า (บาท)': cost
         })
@@ -377,7 +381,9 @@ def get_price_from_library(layer_name, thickness):
 
 
 def render_layer_editor(layers, key_prefix, total_width, road_length):
-    """แสดง UI สำหรับแก้ไขโครงสร้างชั้นทาง พร้อมคำนวณปริมาณอัตโนมัติ"""
+    """แสดง UI สำหรับแก้ไขโครงสร้างชั้นทาง พร้อมคำนวณปริมาณอัตโนมัติ
+    ราคาทั้งหมดแสดงเป็น บาท/ตร.ม.
+    """
     updated_layers = []
     
     # คำนวณพื้นที่ต่อ กม. 
@@ -401,9 +407,9 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     st.markdown("**ผิวทาง** (หน่วย: ตร.ม.)")
     cols = st.columns([3, 1, 1.5, 1.5])
     cols[0].markdown("รายการ")
-    cols[1].markdown("หนา")
+    cols[1].markdown("หนา (cm)")
     cols[2].markdown("ปริมาณ (auto)")
-    cols[3].markdown("ราคา/หน่วย")
+    cols[3].markdown("ราคา (บาท/ตร.ม.)")
     
     for i, layer in enumerate(surface_layers):
         cols = st.columns([3, 1, 1.5, 1.5])
@@ -420,7 +426,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
         else:
             auto_qty = area_per_km * road_length
         
-        # ดึงราคาจาก Library
+        # ดึงราคาจาก Library (บาท/ตร.ม.)
         lib_price = get_price_from_library(layer['name'], thick)
         default_cost = lib_price if lib_price else layer['unit_cost']
         
@@ -432,32 +438,34 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
         
         updated_layers.append({
             'name': layer['name'], 'thickness': thick, 'unit': layer['unit'],
-            'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': cost
+            'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': cost,
+            'cost_per_sqm': cost  # ราคาต่อ ตร.ม.
         })
     
     # ===== ส่วนพื้นทาง/รองพื้นทาง =====
     st.markdown("---")
-    st.markdown("**พื้นทาง/รองพื้นทาง** (หน่วย: ลบ.ม. - เลือกจาก Library)")
+    st.markdown("**พื้นทาง/รองพื้นทาง** (ราคาแสดงเป็น บาท/ตร.ม.)")
     
     # Library วัสดุพื้นทาง (ดึงจาก session_state หรือใช้ค่า default)
+    # ราคาใน Library เป็น บาท/ลบ.ม.
     if 'price_library' in st.session_state:
         base_lib = st.session_state['price_library']['base_prices']
         base_materials = {
-            'Crushed Rock Base Course': {'unit_cost': base_lib.get('Crushed Rock Base Course', 583), 'qty_unit': 'cu.m'},
-            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost': base_lib.get('Cement Modified Crushed Rock Base (UCS 24.5 ksc)', 864), 'qty_unit': 'cu.m'},
-            'Cement Treated Base (UCS 40 ksc)': {'unit_cost': base_lib.get('Cement Treated Base (UCS 40 ksc)', 1096), 'qty_unit': 'cu.m'},
-            'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost': base_lib.get('Soil Cement Subbase (UCS 7 ksc)', 854), 'qty_unit': 'cu.m'},
-            'Soil Aggregate Subbase': {'unit_cost': base_lib.get('Soil Aggregate Subbase', 375), 'qty_unit': 'cu.m'},
-            'Selected Material A': {'unit_cost': base_lib.get('Selected Material A', 375), 'qty_unit': 'cu.m'},
+            'Crushed Rock Base Course': {'unit_cost_cum': base_lib.get('Crushed Rock Base Course', 583)},
+            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost_cum': base_lib.get('Cement Modified Crushed Rock Base (UCS 24.5 ksc)', 864)},
+            'Cement Treated Base (UCS 40 ksc)': {'unit_cost_cum': base_lib.get('Cement Treated Base (UCS 40 ksc)', 1096)},
+            'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost_cum': base_lib.get('Soil Cement Subbase (UCS 7 ksc)', 854)},
+            'Soil Aggregate Subbase': {'unit_cost_cum': base_lib.get('Soil Aggregate Subbase', 375)},
+            'Selected Material A': {'unit_cost_cum': base_lib.get('Selected Material A', 375)},
         }
     else:
         base_materials = {
-            'Crushed Rock Base Course': {'unit_cost': 583, 'qty_unit': 'cu.m'},
-            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost': 864, 'qty_unit': 'cu.m'},
-            'Cement Treated Base (UCS 40 ksc)': {'unit_cost': 1096, 'qty_unit': 'cu.m'},
-            'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost': 854, 'qty_unit': 'cu.m'},
-            'Soil Aggregate Subbase': {'unit_cost': 375, 'qty_unit': 'cu.m'},
-            'Selected Material A': {'unit_cost': 375, 'qty_unit': 'cu.m'},
+            'Crushed Rock Base Course': {'unit_cost_cum': 583},
+            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost_cum': 864},
+            'Cement Treated Base (UCS 40 ksc)': {'unit_cost_cum': 1096},
+            'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost_cum': 854},
+            'Soil Aggregate Subbase': {'unit_cost_cum': 375},
+            'Selected Material A': {'unit_cost_cum': 375},
         }
     material_names = list(base_materials.keys())
     
@@ -468,8 +476,8 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     cols = st.columns([3, 1, 1.5, 1.5])
     cols[0].markdown("วัสดุ")
     cols[1].markdown("หนา (cm)")
-    cols[2].markdown("ปริมาณ (auto)")
-    cols[3].markdown("ราคา/หน่วย")
+    cols[2].markdown("ปริมาณ (ตร.ม.)")
+    cols[3].markdown("ราคา (บาท/ตร.ม.)")
     
     for i in range(int(num_base)):
         cols = st.columns([3, 1, 1.5, 1.5])
@@ -478,11 +486,9 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
         if i < len(base_layers):
             default_name = base_layers[i]['name']
             default_thick = base_layers[i]['thickness']
-            default_cost = base_layers[i]['unit_cost']
         else:
             default_name = material_names[0]
             default_thick = 20.0
-            default_cost = 714.0
         
         # หา index ของวัสดุ default
         try:
@@ -497,19 +503,25 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
             thick = st.number_input("หนา", value=float(default_thick),
                 key=f"{key_prefix}_bt_{i}", label_visibility="collapsed", min_value=0.0, step=5.0)
         
-        # คำนวณปริมาณอัตโนมัติ (ลบ.ม.) = พื้นที่ × ความหนา/100
-        auto_qty = area_per_km * road_length * thick / 100
+        # ปริมาณ = พื้นที่ (ตร.ม.) - ไม่ใช่ ลบ.ม. อีกต่อไป
+        auto_qty = area_per_km * road_length
+        
+        # แปลงราคา: บาท/ลบ.ม. → บาท/ตร.ม.
+        # ราคา บาท/ตร.ม. = ราคา บาท/ลบ.ม. × ความหนา (ม.) = ราคา × หนา/100
+        lib_cost_cum = base_materials[selected]['unit_cost_cum']  # บาท/ลบ.ม.
+        cost_per_sqm = lib_cost_cum * thick / 100  # บาท/ตร.ม.
         
         with cols[2]:
             st.text(f"{auto_qty:,.0f}")
         with cols[3]:
-            lib_cost = base_materials[selected]['unit_cost']
-            cost = st.number_input("ราคา", value=float(lib_cost),
+            cost = st.number_input("ราคา", value=float(cost_per_sqm),
                 key=f"{key_prefix}_bc_{i}", label_visibility="collapsed", min_value=0.0, step=10.0)
         
         updated_layers.append({
             'name': selected, 'thickness': thick, 'unit': 'cm',
-            'quantity': auto_qty, 'qty_unit': 'cu.m', 'unit_cost': cost
+            'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': cost,
+            'cost_per_sqm': cost,  # ราคาต่อ ตร.ม.
+            'cost_cum': lib_cost_cum  # เก็บราคา ลบ.ม. ไว้อ้างอิง
         })
     
     return updated_layers
@@ -1058,6 +1070,9 @@ def main():
         st.header("กำหนดโครงสร้างชั้นทาง")
         st.info("💡 แก้ไขชื่อ ความหนา และราคาต่อหน่วยได้ตามต้องการ | ✅ เลือกโครงสร้างที่ต้องการแสดงในรายงาน")
         
+        # คำนวณพื้นที่ต่อ กม.
+        area_per_km = total_width * 1000 * 2  # ตร.ม./กม. (2 ทิศทาง)
+        
         # ===== AC Pavement =====
         st.subheader("🔵 ผิวทางแอสฟัลต์คอนกรีต (AC)")
         col1, col2 = st.columns(2)
@@ -1069,7 +1084,9 @@ def main():
                 ac1_layers = render_layer_editor(get_default_ac1_layers(), "ac1", total_width, road_length)
                 ac1_cost, ac1_details = calculate_layer_cost(ac1_layers, road_length)
                 ac1_cost_per_km = ac1_cost / road_length / 1_000_000
+                ac1_cost_per_sqm = ac1_cost / (area_per_km * road_length)
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ac1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ac1_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
         
         with col2:
             ac2_show = st.checkbox("แสดงในรายงาน", value=True, key="ac2_show")
@@ -1078,7 +1095,9 @@ def main():
                 ac2_layers = render_layer_editor(get_default_ac2_layers(), "ac2", total_width, road_length)
                 ac2_cost, ac2_details = calculate_layer_cost(ac2_layers, road_length)
                 ac2_cost_per_km = ac2_cost / road_length / 1_000_000
+                ac2_cost_per_sqm = ac2_cost / (area_per_km * road_length)
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ac2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ac2_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
         
         # ===== JRCP/JPCP =====
         st.subheader("🟠 ผิวทางคอนกรีตเสริมเหล็ก (JRCP/JPCP)")
@@ -1094,8 +1113,10 @@ def main():
                 jrcp1_joint_cost, jrcp1_joint_details = calculate_joint_cost(jrcp1_joints, road_length)
                 jrcp1_total = jrcp1_layer_cost + jrcp1_joint_cost
                 jrcp1_cost_per_km = jrcp1_total / road_length / 1_000_000
+                jrcp1_cost_per_sqm = jrcp1_total / (area_per_km * road_length)
                 jrcp1_details = jrcp1_layer_details + jrcp1_joint_details
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp1_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
         
         with col4:
             jrcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp2_show")
@@ -1107,8 +1128,10 @@ def main():
                 jrcp2_joint_cost, jrcp2_joint_details = calculate_joint_cost(jrcp2_joints, road_length)
                 jrcp2_total = jrcp2_layer_cost + jrcp2_joint_cost
                 jrcp2_cost_per_km = jrcp2_total / road_length / 1_000_000
+                jrcp2_cost_per_sqm = jrcp2_total / (area_per_km * road_length)
                 jrcp2_details = jrcp2_layer_details + jrcp2_joint_details
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp2_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
         
         # ===== CRCP =====
         st.subheader("🔴 ผิวทางคอนกรีตเสริมเหล็กต่อเนื่อง (CRCP)")
@@ -1121,7 +1144,9 @@ def main():
                 crcp1_layers = render_layer_editor(get_default_crcp1_layers(), "crcp1", total_width, road_length)
                 crcp1_cost, crcp1_details = calculate_layer_cost(crcp1_layers, road_length)
                 crcp1_cost_per_km = crcp1_cost / road_length / 1_000_000
+                crcp1_cost_per_sqm = crcp1_cost / (area_per_km * road_length)
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
         
         with col6:
             crcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="crcp2_show")
@@ -1130,18 +1155,21 @@ def main():
                 crcp2_layers = render_layer_editor(get_default_crcp2_layers(), "crcp2", total_width, road_length)
                 crcp2_cost, crcp2_details = calculate_layer_cost(crcp2_layers, road_length)
                 crcp2_cost_per_km = crcp2_cost / road_length / 1_000_000
+                crcp2_cost_per_sqm = crcp2_cost / (area_per_km * road_length)
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
         
         # Store in session state
         st.session_state['construction'] = {
-            'AC1': {'name': ac1_name, 'cost': ac1_cost_per_km, 'details': ac1_details, 'layers': ac1_layers, 'joints': None, 'show': ac1_show},
-            'AC2': {'name': ac2_name, 'cost': ac2_cost_per_km, 'details': ac2_details, 'layers': ac2_layers, 'joints': None, 'show': ac2_show},
-            'JRCP1': {'name': jrcp1_name, 'cost': jrcp1_cost_per_km, 'details': jrcp1_details, 'layers': jrcp1_layers, 'joints': jrcp1_joints, 'show': jrcp1_show},
-            'JRCP2': {'name': jrcp2_name, 'cost': jrcp2_cost_per_km, 'details': jrcp2_details, 'layers': jrcp2_layers, 'joints': jrcp2_joints, 'show': jrcp2_show},
-            'CRCP1': {'name': crcp1_name, 'cost': crcp1_cost_per_km, 'details': crcp1_details, 'layers': crcp1_layers, 'joints': None, 'show': crcp1_show},
-            'CRCP2': {'name': crcp2_name, 'cost': crcp2_cost_per_km, 'details': crcp2_details, 'layers': crcp2_layers, 'joints': None, 'show': crcp2_show},
+            'AC1': {'name': ac1_name, 'cost': ac1_cost_per_km, 'cost_sqm': ac1_cost_per_sqm, 'details': ac1_details, 'layers': ac1_layers, 'joints': None, 'show': ac1_show},
+            'AC2': {'name': ac2_name, 'cost': ac2_cost_per_km, 'cost_sqm': ac2_cost_per_sqm, 'details': ac2_details, 'layers': ac2_layers, 'joints': None, 'show': ac2_show},
+            'JRCP1': {'name': jrcp1_name, 'cost': jrcp1_cost_per_km, 'cost_sqm': jrcp1_cost_per_sqm, 'details': jrcp1_details, 'layers': jrcp1_layers, 'joints': jrcp1_joints, 'show': jrcp1_show},
+            'JRCP2': {'name': jrcp2_name, 'cost': jrcp2_cost_per_km, 'cost_sqm': jrcp2_cost_per_sqm, 'details': jrcp2_details, 'layers': jrcp2_layers, 'joints': jrcp2_joints, 'show': jrcp2_show},
+            'CRCP1': {'name': crcp1_name, 'cost': crcp1_cost_per_km, 'cost_sqm': crcp1_cost_per_sqm, 'details': crcp1_details, 'layers': crcp1_layers, 'joints': None, 'show': crcp1_show},
+            'CRCP2': {'name': crcp2_name, 'cost': crcp2_cost_per_km, 'cost_sqm': crcp2_cost_per_sqm, 'details': crcp2_details, 'layers': crcp2_layers, 'joints': None, 'show': crcp2_show},
         }
         st.session_state['project_info'] = project_info
+        st.session_state['area_per_km'] = area_per_km
         
         # ===== Summary Tables =====
         st.divider()
@@ -1149,27 +1177,31 @@ def main():
         
         # ตารางสรุปรวม
         all_structures = [
-            ('AC1', ac1_name, ac1_cost_per_km, 20, ac1_show),
-            ('AC2', ac2_name, ac2_cost_per_km, 20, ac2_show),
-            ('JRCP1', jrcp1_name, jrcp1_cost_per_km, 25, jrcp1_show),
-            ('JRCP2', jrcp2_name, jrcp2_cost_per_km, 25, jrcp2_show),
-            ('CRCP1', crcp1_name, crcp1_cost_per_km, 30, crcp1_show),
-            ('CRCP2', crcp2_name, crcp2_cost_per_km, 30, crcp2_show),
+            ('AC1', ac1_name, ac1_cost_per_km, ac1_cost_per_sqm, 20, ac1_show),
+            ('AC2', ac2_name, ac2_cost_per_km, ac2_cost_per_sqm, 20, ac2_show),
+            ('JRCP1', jrcp1_name, jrcp1_cost_per_km, jrcp1_cost_per_sqm, 25, jrcp1_show),
+            ('JRCP2', jrcp2_name, jrcp2_cost_per_km, jrcp2_cost_per_sqm, 25, jrcp2_show),
+            ('CRCP1', crcp1_name, crcp1_cost_per_km, crcp1_cost_per_sqm, 30, crcp1_show),
+            ('CRCP2', crcp2_name, crcp2_cost_per_km, crcp2_cost_per_sqm, 30, crcp2_show),
         ]
         
         summary_data = []
-        for key, name, cost, life, show in all_structures:
+        for key, name, cost_km, cost_sqm, life, show in all_structures:
             summary_data.append({
                 'รหัส': key,
                 'ประเภท': name,
-                'ค่าก่อสร้าง (ล้านบาท/กม.)': cost,
+                'ค่าก่อสร้าง (ล้านบาท/กม.)': cost_km,
+                'ค่าก่อสร้าง (บาท/ตร.ม.)': cost_sqm,
                 'อายุออกแบบ (ปี)': life,
                 'แสดงในรายงาน': '✅' if show else '❌'
             })
         
         summary_df = pd.DataFrame(summary_data)
         st.dataframe(
-            summary_df.style.format({'ค่าก่อสร้าง (ล้านบาท/กม.)': '{:.2f}'}),
+            summary_df.style.format({
+                'ค่าก่อสร้าง (ล้านบาท/กม.)': '{:.2f}',
+                'ค่าก่อสร้าง (บาท/ตร.ม.)': '{:.2f}'
+            }),
             use_container_width=True,
             hide_index=True
         )
@@ -1203,9 +1235,8 @@ def main():
                     'ลำดับ': i + 1,
                     'รายการ': layer['name'],
                     'ความหนา': f"{layer['thickness']} {layer['unit']}",
-                    'ปริมาณ': f"{layer['quantity']:,.0f}",
-                    'หน่วย': layer['qty_unit'],
-                    'ราคา/หน่วย': f"{layer['unit_cost']:,.0f}",
+                    'ปริมาณ (ตร.ม.)': f"{layer['quantity']:,.0f}",
+                    'ราคา (บาท/ตร.ม.)': f"{layer['unit_cost']:,.2f}",
                     'มูลค่า (บาท)': f"{layer_cost:,.0f}"
                 })
             
@@ -1218,9 +1249,8 @@ def main():
                         'ลำดับ': len(layers) + j + 1,
                         'รายการ': joint['name'],
                         'ความหนา': '-',
-                        'ปริมาณ': f"{joint['quantity']:,.0f}",
-                        'หน่วย': joint['qty_unit'],
-                        'ราคา/หน่วย': f"{joint['unit_cost']:,.0f}",
+                        'ปริมาณ (ตร.ม.)': f"{joint['quantity']:,.0f}",
+                        'ราคา (บาท/ตร.ม.)': f"{joint['unit_cost']:,.2f}",
                         'มูลค่า (บาท)': f"{joint_cost:,.0f}"
                     })
             
@@ -1228,13 +1258,18 @@ def main():
             st.dataframe(detail_df, use_container_width=True, hide_index=True)
             
             # แสดงราคารวม
-            col_sum1, col_sum2, col_sum3 = st.columns(3)
+            area_km = st.session_state.get('area_per_km', 22000) * road_length
+            cost_per_sqm = total_cost / area_km if area_km > 0 else 0
+            
+            col_sum1, col_sum2, col_sum3, col_sum4 = st.columns(4)
             with col_sum1:
                 st.metric("💰 ราคารวม", f"{total_cost:,.0f} บาท")
             with col_sum2:
                 st.metric("📏 ราคาต่อ กม.", f"{total_cost/road_length:,.0f} บาท/กม.")
             with col_sum3:
-                st.metric("📊 ราคาต่อ กม. (ล้านบาท)", f"{total_cost/road_length/1_000_000:.2f} ล้านบาท/กม.")
+                st.metric("📊 ล้านบาท/กม.", f"{total_cost/road_length/1_000_000:.2f}")
+            with col_sum4:
+                st.metric("📐 บาท/ตร.ม.", f"{cost_per_sqm:.2f}")
     
     # ===== Tab 3: ค่าบำรุงรักษา =====
     with tab3:
