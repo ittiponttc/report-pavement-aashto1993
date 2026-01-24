@@ -50,7 +50,50 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ===== Library วัสดุ =====
+# ===== Library ราคาวัสดุ (Price Library) =====
+# ข้อมูลจากไฟล์ ราคาเปรียบเทียบโครงสร้างชั้นทาง
+
+# ตารางราคาผิวทาง AC (บาท/ตร.ม.) ตามความหนา
+AC_PRICE_TABLE = {
+    'PMA Wearing Course': {
+        2.5: 170, 3: 203, 4: 268, 5: 333, 6: 406, 7: 471, 8: 536, 9: 601, 10: 667
+    },
+    'AC Wearing Course': {
+        2.5: 128, 3: 152, 4: 202, 5: 250, 6: 306, 7: 355, 8: 403, 9: 452, 10: 502
+    },
+    'AC Binder Course': {
+        2.5: 129, 3: 154, 4: 202, 5: 251, 6: 308, 7: 356, 8: 405, 9: 454, 10: 503
+    },
+    'AC Base Course': {
+        2.5: 129, 3: 154, 4: 202, 5: 251, 6: 308, 7: 356, 8: 405, 9: 454, 10: 503
+    },
+}
+
+# ตารางราคาคอนกรีต (บาท/ตร.ม.) ตามความหนา
+CONCRETE_PRICE_TABLE = {
+    'JRCP': {25: 924, 28: 1002, 32: 1106, 35: 1184},
+    'JPCP': {25: 928, 28: 1000, 32: 1095, 35: 1167},
+    'CRCP': {25: 1245, 28: 1358, 32: 1509, 35: 1622},
+}
+
+# ราคาคอนกรีต (ไม่รวม Joint)
+CONCRETE_EXCL_JOINT = {
+    'JRCP': 830,
+    'JPCP': 764,
+    'CRCP': 1204,
+}
+
+# ราคาวัสดุพื้นทาง/รองพื้นทาง (บาท/ลบ.ม.)
+BASE_MATERIAL_PRICES = {
+    'Crushed Rock Base Course': 583,
+    'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': 864,
+    'Cement Treated Base (UCS 40 ksc)': 1096,
+    'Soil Aggregate Subbase': 375,
+    'Soil Cement Subbase (UCS 7 ksc)': 854,
+    'Selected Material A': 375,
+}
+
+# Library วัสดุ (สำหรับ UI)
 MATERIAL_LIBRARY = {
     'ผิวทาง': {
         'ผิวทางลาดยาง AC': {'unit_cost': 480, 'cost_unit': 'บาท/ตร.ม.'},
@@ -59,20 +102,14 @@ MATERIAL_LIBRARY = {
         'คอนกรีต 350 Ksc.': {'unit_cost': 850, 'cost_unit': 'บาท/ตร.ม.'},
     },
     'พื้นทาง': {
-        'พื้นทางซีเมนต์ CTB': {'unit_cost': 621, 'cost_unit': 'บาท/ลบ.ม.'},
-        'หินคลุกผสมซีเมนต์ UCS 24.5 ksc': {'unit_cost': 914, 'cost_unit': 'บาท/ลบ.ม.'},
-        'หินคลุก CBR 80%': {'unit_cost': 714, 'cost_unit': 'บาท/ลบ.ม.'},
-        'ดินซีเมนต์ UCS 17.5 ksc': {'unit_cost': 621, 'cost_unit': 'บาท/ลบ.ม.'},
-        'วัสดุหมุนเวียน (Recycling)': {'unit_cost': 500, 'cost_unit': 'บาท/ลบ.ม.'},
+        'Crushed Rock Base Course': {'unit_cost': 583, 'cost_unit': 'บาท/ลบ.ม.'},
+        'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost': 864, 'cost_unit': 'บาท/ลบ.ม.'},
+        'Cement Treated Base (UCS 40 ksc)': {'unit_cost': 1096, 'cost_unit': 'บาท/ลบ.ม.'},
+        'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost': 854, 'cost_unit': 'บาท/ลบ.ม.'},
     },
     'รองพื้นทาง': {
-        'รองพื้นทางวัสดุมวลรวม CBR 25%': {'unit_cost': 714, 'cost_unit': 'บาท/ลบ.ม.'},
-        'วัสดุคัดเลือก ก': {'unit_cost': 450, 'cost_unit': 'บาท/ลบ.ม.'},
-        'ดินถมคันทาง / ดินเดิม': {'unit_cost': 361, 'cost_unit': 'บาท/ลบ.ม.'},
-    },
-    'ชั้นคันทาง': {
-        'ทรายถมคันทาง': {'unit_cost': 361, 'cost_unit': 'บาท/ลบ.ม.'},
-        'ดินถมคันทาง': {'unit_cost': 280, 'cost_unit': 'บาท/ลบ.ม.'},
+        'Soil Aggregate Subbase': {'unit_cost': 375, 'cost_unit': 'บาท/ลบ.ม.'},
+        'Selected Material A': {'unit_cost': 375, 'cost_unit': 'บาท/ลบ.ม.'},
     },
     'วัสดุอื่นๆ': {
         'Tack Coat': {'unit_cost': 20, 'cost_unit': 'บาท/ตร.ม.'},
@@ -322,7 +359,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     cols = st.columns([3, 1, 1.5, 1.5])
     cols[0].markdown("รายการ")
     cols[1].markdown("หนา")
-    cols[2].markdown("ปริมาณ (ตร.ม.)")
+    cols[2].markdown("ปริมาณ (auto)")
     cols[3].markdown("ราคา/หน่วย")
     
     for i, layer in enumerate(surface_layers):
@@ -377,7 +414,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     cols = st.columns([3, 1, 1.5, 1.5])
     cols[0].markdown("วัสดุ")
     cols[1].markdown("หนา (cm)")
-    cols[2].markdown("ปริมาณ (ลบ.ม.)")
+    cols[2].markdown("ปริมาณ (auto)")
     cols[3].markdown("ราคา/หน่วย")
     
     for i in range(int(num_base)):
@@ -774,9 +811,196 @@ def main():
     area_per_km = total_width * 1000  # ตร.ม./กม.
     
     # Tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏗️ โครงสร้างชั้นทาง", "💰 ค่าบำรุงรักษา", "📈 ผลการวิเคราะห์", "📋 Cash Flow", "📄 รายงาน"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "📊 Library ราคา", 
+        "🏗️ โครงสร้างชั้นทาง", 
+        "💰 ค่าบำรุงรักษา", 
+        "📈 ผลการวิเคราะห์", 
+        "📋 Cash Flow", 
+        "📄 รายงาน"
+    ])
     
+    # ===== Tab 1: Library ราคา =====
     with tab1:
+        st.header("📊 ตารางราคาเปรียบเทียบโครงสร้างชั้นทาง")
+        st.info("💡 สามารถปรับเปลี่ยนราคาได้ตามต้องการ ราคาจะถูกใช้ในการคำนวณทุก Tab")
+        
+        # เก็บราคาใน session state
+        if 'price_library' not in st.session_state:
+            st.session_state['price_library'] = {
+                'ac_prices': dict(AC_PRICE_TABLE),
+                'concrete_prices': dict(CONCRETE_PRICE_TABLE),
+                'base_prices': dict(BASE_MATERIAL_PRICES),
+            }
+        
+        # ===== ส่วนผิวทาง AC =====
+        st.subheader("🔵 ผิวทาง Asphalt Concrete (บาท/ตร.ม.)")
+        
+        ac_cols = st.columns(4)
+        ac_types = ['PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course']
+        thicknesses = [2.5, 3, 4, 5, 6, 7, 8, 9, 10]
+        
+        for col_idx, ac_type in enumerate(ac_types):
+            with ac_cols[col_idx]:
+                st.markdown(f"**{ac_type}**")
+                for thk in thicknesses:
+                    default_price = AC_PRICE_TABLE[ac_type].get(thk, 0)
+                    price = st.number_input(
+                        f"{thk} cm", 
+                        value=float(default_price),
+                        key=f"ac_{ac_type}_{thk}",
+                        step=10.0,
+                        label_visibility="visible"
+                    )
+                    st.session_state['price_library']['ac_prices'][ac_type][thk] = price
+        
+        st.divider()
+        
+        # ===== ส่วนคอนกรีต =====
+        st.subheader("🟠 ผิวทางคอนกรีต (บาท/ตร.ม.)")
+        
+        conc_cols = st.columns(3)
+        conc_types = ['JRCP', 'JPCP', 'CRCP']
+        conc_thicknesses = [25, 28, 32, 35]
+        
+        for col_idx, conc_type in enumerate(conc_types):
+            with conc_cols[col_idx]:
+                st.markdown(f"**{conc_type}**")
+                for thk in conc_thicknesses:
+                    default_price = CONCRETE_PRICE_TABLE[conc_type].get(thk, 0)
+                    price = st.number_input(
+                        f"{thk} cm", 
+                        value=float(default_price),
+                        key=f"conc_{conc_type}_{thk}",
+                        step=10.0
+                    )
+                    st.session_state['price_library']['concrete_prices'][conc_type][thk] = price
+                
+                # ราคาไม่รวม Joint
+                st.markdown("---")
+                excl_price = st.number_input(
+                    f"{conc_type} (excl. Joint)",
+                    value=float(CONCRETE_EXCL_JOINT[conc_type]),
+                    key=f"conc_excl_{conc_type}",
+                    step=10.0
+                )
+        
+        st.divider()
+        
+        # ===== ส่วนวัสดุพื้นทาง/รองพื้นทาง =====
+        st.subheader("🟤 วัสดุพื้นทาง/รองพื้นทาง (บาท/ลบ.ม.)")
+        
+        base_cols = st.columns(3)
+        base_materials_list = list(BASE_MATERIAL_PRICES.keys())
+        
+        for i, mat in enumerate(base_materials_list):
+            with base_cols[i % 3]:
+                default_price = BASE_MATERIAL_PRICES[mat]
+                price = st.number_input(
+                    mat,
+                    value=float(default_price),
+                    key=f"base_{mat}",
+                    step=10.0
+                )
+                st.session_state['price_library']['base_prices'][mat] = price
+        
+        st.divider()
+        
+        # ===== ปุ่มดาวน์โหลด =====
+        st.subheader("📥 ดาวน์โหลดตารางราคา")
+        
+        col_dl1, col_dl2 = st.columns(2)
+        
+        with col_dl1:
+            if st.button("📊 สร้างไฟล์ Excel", key="btn_excel_price", use_container_width=True):
+                # สร้าง Excel
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    # Sheet 1: AC Prices
+                    ac_data = []
+                    for ac_type in ac_types:
+                        for thk in thicknesses:
+                            ac_data.append({
+                                'ประเภท': ac_type,
+                                'ความหนา (cm)': thk,
+                                'ราคา (บาท/ตร.ม.)': st.session_state['price_library']['ac_prices'][ac_type][thk]
+                            })
+                    pd.DataFrame(ac_data).to_excel(writer, sheet_name='AC Prices', index=False)
+                    
+                    # Sheet 2: Concrete Prices
+                    conc_data = []
+                    for conc_type in conc_types:
+                        for thk in conc_thicknesses:
+                            conc_data.append({
+                                'ประเภท': conc_type,
+                                'ความหนา (cm)': thk,
+                                'ราคา (บาท/ตร.ม.)': st.session_state['price_library']['concrete_prices'][conc_type][thk]
+                            })
+                    pd.DataFrame(conc_data).to_excel(writer, sheet_name='Concrete Prices', index=False)
+                    
+                    # Sheet 3: Base Material Prices
+                    base_data = [{'วัสดุ': k, 'ราคา (บาท/ลบ.ม.)': v} for k, v in st.session_state['price_library']['base_prices'].items()]
+                    pd.DataFrame(base_data).to_excel(writer, sheet_name='Base Materials', index=False)
+                
+                output.seek(0)
+                st.download_button(
+                    label="⬇️ Download Excel",
+                    data=output,
+                    file_name="ราคาเปรียบเทียบโครงสร้างชั้นทาง.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+        
+        with col_dl2:
+            if st.button("📄 สร้างไฟล์ Word", key="btn_word_price", use_container_width=True):
+                doc = Document()
+                doc.add_heading('ตารางราคาเปรียบเทียบโครงสร้างชั้นทาง', 0)
+                
+                # AC Table
+                doc.add_heading('1. ผิวทาง Asphalt Concrete (บาท/ตร.ม.)', level=1)
+                table = doc.add_table(rows=len(thicknesses)+1, cols=5)
+                table.style = 'Table Grid'
+                headers = ['ความหนา (cm)'] + ac_types
+                for j, h in enumerate(headers):
+                    table.rows[0].cells[j].text = h
+                for i, thk in enumerate(thicknesses):
+                    table.rows[i+1].cells[0].text = str(thk)
+                    for j, ac_type in enumerate(ac_types):
+                        table.rows[i+1].cells[j+1].text = f"{st.session_state['price_library']['ac_prices'][ac_type][thk]:,.0f}"
+                
+                # Concrete Table
+                doc.add_heading('2. ผิวทางคอนกรีต (บาท/ตร.ม.)', level=1)
+                table = doc.add_table(rows=len(conc_thicknesses)+1, cols=4)
+                table.style = 'Table Grid'
+                headers = ['ความหนา (cm)'] + conc_types
+                for j, h in enumerate(headers):
+                    table.rows[0].cells[j].text = h
+                for i, thk in enumerate(conc_thicknesses):
+                    table.rows[i+1].cells[0].text = str(thk)
+                    for j, conc_type in enumerate(conc_types):
+                        table.rows[i+1].cells[j+1].text = f"{st.session_state['price_library']['concrete_prices'][conc_type][thk]:,.0f}"
+                
+                # Base Material Table
+                doc.add_heading('3. วัสดุพื้นทาง/รองพื้นทาง (บาท/ลบ.ม.)', level=1)
+                table = doc.add_table(rows=len(base_materials_list)+1, cols=2)
+                table.style = 'Table Grid'
+                table.rows[0].cells[0].text = 'วัสดุ'
+                table.rows[0].cells[1].text = 'ราคา (บาท/ลบ.ม.)'
+                for i, mat in enumerate(base_materials_list):
+                    table.rows[i+1].cells[0].text = mat
+                    table.rows[i+1].cells[1].text = f"{st.session_state['price_library']['base_prices'][mat]:,.0f}"
+                
+                doc_output = io.BytesIO()
+                doc.save(doc_output)
+                doc_output.seek(0)
+                st.download_button(
+                    label="⬇️ Download Word",
+                    data=doc_output,
+                    file_name="ราคาเปรียบเทียบโครงสร้างชั้นทาง.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+    
+    # ===== Tab 2: โครงสร้างชั้นทาง =====
+    with tab2:
         st.header("กำหนดโครงสร้างชั้นทาง")
         st.info("💡 แก้ไขชื่อ ความหนา ปริมาณ และราคาต่อหน่วยได้ตามต้องการ")
         
@@ -869,7 +1093,8 @@ def main():
         })
         st.dataframe(summary_df.style.format({'ค่าก่อสร้าง (ล้านบาท/กม.)': '{:.2f}'}), use_container_width=True)
     
-    with tab2:
+    # ===== Tab 3: ค่าบำรุงรักษา =====
+    with tab3:
         st.header("กำหนดค่าบำรุงรักษา")
         
         col1, col2, col3 = st.columns(3)
@@ -894,7 +1119,8 @@ def main():
             'ac_seal': ac_seal, 'ac_overlay': ac_overlay, 'jrcp_joint': jrcp_joint, 'crcp_maint': crcp_maint
         }
     
-    with tab3:
+    # ===== Tab 4: ผลการวิเคราะห์ =====
+    with tab4:
         st.header("ผลการวิเคราะห์ NPV")
         
         if st.button("🔄 คำนวณ NPV", type="primary", use_container_width=True):
@@ -968,7 +1194,8 @@ def main():
             st.plotly_chart(create_timeline_chart(st.session_state['all_cf'], st.session_state['ptypes']),
                            use_container_width=True)
     
-    with tab4:
+    # ===== Tab 5: Cash Flow =====
+    with tab5:
         st.header("รายละเอียด Cash Flow")
         
         if 'all_cf' in st.session_state:
@@ -994,7 +1221,8 @@ def main():
         else:
             st.info("กรุณาคำนวณ NPV ก่อน")
     
-    with tab5:
+    # ===== Tab 6: รายงาน =====
+    with tab6:
         st.header("สร้างรายงาน")
         
         if 'results_df' in st.session_state:
