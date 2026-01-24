@@ -421,10 +421,8 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
                 key=f"{key_prefix}_st_{i}", label_visibility="collapsed", min_value=0.0, step=1.0)
         
         # คำนวณปริมาณอัตโนมัติ (ตร.ม.)
-        if 'tack' in layer['name'].lower():
-            auto_qty = area_per_km * road_length * thick
-        else:
-            auto_qty = area_per_km * road_length
+        # ทุกชั้นใช้พื้นที่เท่ากัน (ไม่คูณ thick)
+        auto_qty = area_per_km * road_length
         
         # ดึงราคาจาก Library (บาท/ตร.ม.) ตามความหนาที่เลือก
         lib_price = get_price_from_library(layer['name'], thick)
