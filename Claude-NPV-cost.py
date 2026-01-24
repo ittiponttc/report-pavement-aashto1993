@@ -955,13 +955,14 @@ def main():
     area_per_km = total_width * 1000  # ตร.ม./กม.
     
     # Tabs
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 Library ราคา", 
         "🏗️ โครงสร้างชั้นทาง", 
         "💰 ค่าบำรุงรักษา", 
         "📈 ผลการวิเคราะห์", 
         "📋 Cash Flow", 
-        "📄 รายงาน"
+        "📄 รายงาน",
+        "📷 วิเคราะห์จากรูปภาพ"
     ])
     
     # ===== Tab 1: Library ราคา =====
@@ -1547,6 +1548,317 @@ def main():
                                        mime="application/json")
         else:
             st.info("กรุณาคำนวณ NPV ก่อน")
+    
+    # ===== Tab 7: วิเคราะห์จากรูปภาพ =====
+    with tab7:
+        st.header("📷 วิเคราะห์โครงสร้างชั้นทางจากรูปภาพ")
+        st.info("💡 Upload รูปภาพโครงสร้างชั้นทาง แล้วระบบจะวิเคราะห์และคำนวณราคาให้อัตโนมัติ")
+        
+        # Upload รูปภาพ
+        uploaded_image = st.file_uploader(
+            "เลือกรูปภาพโครงสร้างชั้นทาง",
+            type=['png', 'jpg', 'jpeg'],
+            help="รองรับไฟล์ PNG, JPG, JPEG"
+        )
+        
+        if uploaded_image is not None:
+            col_img, col_result = st.columns([1, 1])
+            
+            with col_img:
+                st.subheader("🖼️ รูปภาพที่ Upload")
+                st.image(uploaded_image, use_container_width=True)
+            
+            with col_result:
+                st.subheader("📋 กรอกข้อมูลโครงสร้างชั้นทาง")
+                st.markdown("กรุณาตรวจสอบและแก้ไขข้อมูลที่อ่านจากรูปภาพ")
+                
+                # เลือกประเภทโครงสร้าง
+                structure_type = st.selectbox(
+                    "ประเภทโครงสร้าง",
+                    options=['AC Pavement', 'JPCP', 'JRCP', 'CRCP'],
+                    key="img_structure_type"
+                )
+                
+                # กำหนดจำนวนชั้น
+                num_layers = st.number_input(
+                    "จำนวนชั้นโครงสร้าง",
+                    min_value=1, max_value=10, value=6,
+                    key="img_num_layers"
+                )
+                
+                st.divider()
+                
+                # วัสดุที่เลือกได้
+                surface_materials = {
+                    'AC Pavement': ['AC Wearing Course', 'PMA Wearing Course', 'AC Binder Course', 'AC Base Course', 'Tack Coat', 'Prime Coat'],
+                    'JPCP': ['Concrete Slab (JPCP)', 'AC Interlayer', 'Non Woven Geotextile'],
+                    'JRCP': ['Concrete Slab (JRCP)', 'AC Interlayer', 'Non Woven Geotextile'],
+                    'CRCP': ['Concrete Slab (CRCP)', 'AC Interlayer', 'Steel Reinforcement', 'Non Woven Geotextile'],
+                }
+                
+                base_materials = [
+                    'Cement Treated Base (UCS 40 ksc)',
+                    'Cement Modified Crushed Rock Base (UCS 24.5 ksc)',
+                    'Crushed Rock Base Course',
+                    'Soil Cement Subbase (UCS 7 ksc)',
+                    'Soil Aggregate Subbase',
+                    'Selected Material A',
+                ]
+                
+                all_materials = surface_materials.get(structure_type, []) + base_materials
+                
+                # เก็บข้อมูลชั้น
+                if 'img_layers' not in st.session_state:
+                    st.session_state['img_layers'] = []
+                
+                img_layers = []
+                total_cost_sqm = 0
+                
+                st.markdown("**รายละเอียดแต่ละชั้น:**")
+                
+                # Header
+                cols_h = st.columns([3, 1.5, 2])
+                cols_h[0].markdown("**วัสดุ**")
+                cols_h[1].markdown("**ความหนา (cm)**")
+                cols_h[2].markdown("**ราคา (บาท/ตร.ม.)**")
+                
+                for i in range(int(num_layers)):
+                    cols = st.columns([3, 1.5, 2])
+                    
+                    with cols[0]:
+                        # Default values ตามลำดับ
+                        default_materials = {
+                            'AC Pavement': ['AC Wearing Course', 'AC Binder Course', 'AC Base Course', 'Cement Treated Base (UCS 40 ksc)', 'Soil Aggregate Subbase', 'Selected Material A'],
+                            'JPCP': ['Concrete Slab (JPCP)', 'AC Interlayer', 'Cement Treated Base (UCS 40 ksc)', 'Crushed Rock Base Course', 'Soil Aggregate Subbase', 'Selected Material A'],
+                            'JRCP': ['Concrete Slab (JRCP)', 'AC Interlayer', 'Cement Treated Base (UCS 40 ksc)', 'Crushed Rock Base Course', 'Soil Aggregate Subbase', 'Selected Material A'],
+                            'CRCP': ['Concrete Slab (CRCP)', 'AC Interlayer', 'Cement Treated Base (UCS 40 ksc)', 'Crushed Rock Base Course', 'Soil Aggregate Subbase', 'Selected Material A'],
+                        }
+                        default_list = default_materials.get(structure_type, all_materials)
+                        default_idx = i if i < len(default_list) else 0
+                        default_mat = default_list[default_idx] if default_idx < len(default_list) else all_materials[0]
+                        
+                        try:
+                            mat_idx = all_materials.index(default_mat)
+                        except:
+                            mat_idx = 0
+                        
+                        material = st.selectbox(
+                            f"วัสดุชั้น {i+1}",
+                            options=all_materials,
+                            index=mat_idx,
+                            key=f"img_mat_{i}",
+                            label_visibility="collapsed"
+                        )
+                    
+                    with cols[1]:
+                        # Default thickness
+                        default_thicknesses = {
+                            'AC Pavement': [5, 7, 8, 20, 25, 30],
+                            'JPCP': [30, 5, 20, 15, 25, 30],
+                            'JRCP': [30, 5, 20, 15, 25, 30],
+                            'CRCP': [30, 5, 20, 15, 25, 30],
+                        }
+                        default_thick_list = default_thicknesses.get(structure_type, [20]*10)
+                        default_thick = default_thick_list[i] if i < len(default_thick_list) else 20
+                        
+                        thickness = st.number_input(
+                            f"หนา {i+1}",
+                            min_value=0.0, max_value=100.0,
+                            value=float(default_thick),
+                            step=1.0,
+                            key=f"img_thick_{i}",
+                            label_visibility="collapsed"
+                        )
+                    
+                    # คำนวณราคา
+                    price_sqm = 0
+                    mat_lower = material.lower()
+                    
+                    if 'price_library' in st.session_state:
+                        lib = st.session_state['price_library']
+                        
+                        # ผิวทาง AC
+                        if 'ac wearing' in mat_lower:
+                            prices = lib['ac_prices'].get('AC Wearing Course', {})
+                            price_sqm = prices.get(thickness, 0)
+                            if price_sqm == 0 and prices:
+                                closest = min(prices.keys(), key=lambda x: abs(x - thickness))
+                                price_sqm = prices.get(closest, 0)
+                        elif 'pma' in mat_lower:
+                            prices = lib['ac_prices'].get('PMA Wearing Course', {})
+                            price_sqm = prices.get(thickness, 0)
+                            if price_sqm == 0 and prices:
+                                closest = min(prices.keys(), key=lambda x: abs(x - thickness))
+                                price_sqm = prices.get(closest, 0)
+                        elif 'binder' in mat_lower:
+                            prices = lib['ac_prices'].get('AC Binder Course', {})
+                            price_sqm = prices.get(thickness, 0)
+                            if price_sqm == 0 and prices:
+                                closest = min(prices.keys(), key=lambda x: abs(x - thickness))
+                                price_sqm = prices.get(closest, 0)
+                        elif 'ac base' in mat_lower or 'ac interlayer' in mat_lower:
+                            prices = lib['ac_prices'].get('AC Base Course', {})
+                            price_sqm = prices.get(thickness, 0)
+                            if price_sqm == 0 and prices:
+                                closest = min(prices.keys(), key=lambda x: abs(x - thickness))
+                                price_sqm = prices.get(closest, 0)
+                        elif 'tack' in mat_lower:
+                            price_sqm = 20
+                        elif 'prime' in mat_lower:
+                            price_sqm = 30
+                        elif 'geotextile' in mat_lower:
+                            price_sqm = 78
+                        elif 'steel' in mat_lower:
+                            price_sqm = 200
+                        # คอนกรีต
+                        elif 'concrete' in mat_lower or 'slab' in mat_lower:
+                            if 'jpcp' in mat_lower:
+                                prices = lib['concrete_prices'].get('JPCP', {})
+                            elif 'jrcp' in mat_lower:
+                                prices = lib['concrete_prices'].get('JRCP', {})
+                            elif 'crcp' in mat_lower:
+                                prices = lib['concrete_prices'].get('CRCP', {})
+                            else:
+                                prices = lib['concrete_prices'].get('JPCP', {})
+                            
+                            price_sqm = prices.get(int(thickness), 0)
+                            if price_sqm == 0 and prices:
+                                closest = min(prices.keys(), key=lambda x: abs(x - thickness))
+                                price_sqm = prices.get(closest, 0)
+                        # พื้นทาง (บาท/ลบ.ม. → บาท/ตร.ม.)
+                        elif 'cement treated' in mat_lower or 'ctb' in mat_lower:
+                            base_price = lib['base_prices'].get('Cement Treated Base (UCS 40 ksc)', 1096)
+                            price_sqm = base_price * thickness / 100
+                        elif 'cement modified' in mat_lower or 'cmcr' in mat_lower:
+                            base_price = lib['base_prices'].get('Cement Modified Crushed Rock Base (UCS 24.5 ksc)', 864)
+                            price_sqm = base_price * thickness / 100
+                        elif 'crushed rock' in mat_lower:
+                            base_price = lib['base_prices'].get('Crushed Rock Base Course', 583)
+                            price_sqm = base_price * thickness / 100
+                        elif 'soil cement' in mat_lower:
+                            base_price = lib['base_prices'].get('Soil Cement Subbase (UCS 7 ksc)', 854)
+                            price_sqm = base_price * thickness / 100
+                        elif 'soil aggregate' in mat_lower or 'aggregate subbase' in mat_lower:
+                            base_price = lib['base_prices'].get('Soil Aggregate Subbase', 375)
+                            price_sqm = base_price * thickness / 100
+                        elif 'selected' in mat_lower:
+                            base_price = lib['base_prices'].get('Selected Material A', 375)
+                            price_sqm = base_price * thickness / 100
+                    
+                    with cols[2]:
+                        st.markdown(f"**{price_sqm:,.2f}**")
+                    
+                    total_cost_sqm += price_sqm
+                    img_layers.append({
+                        'material': material,
+                        'thickness': thickness,
+                        'price_sqm': price_sqm
+                    })
+                
+                st.session_state['img_layers'] = img_layers
+        
+        # แสดงผลสรุป
+        if uploaded_image is not None and 'img_layers' in st.session_state and st.session_state['img_layers']:
+            st.divider()
+            st.subheader("📊 สรุปผลการวิเคราะห์")
+            
+            img_layers = st.session_state['img_layers']
+            total_cost_sqm = sum(layer['price_sqm'] for layer in img_layers)
+            
+            # แสดงตาราง
+            summary_data = []
+            for i, layer in enumerate(img_layers):
+                summary_data.append({
+                    'ลำดับ': i + 1,
+                    'วัสดุ': layer['material'],
+                    'ความหนา (cm)': layer['thickness'],
+                    'ราคา (บาท/ตร.ม.)': f"{layer['price_sqm']:,.2f}"
+                })
+            
+            summary_df = pd.DataFrame(summary_data)
+            st.dataframe(summary_df, use_container_width=True, hide_index=True)
+            
+            # Metrics
+            col_m1, col_m2, col_m3 = st.columns(3)
+            
+            with col_m1:
+                st.metric("💰 ราคารวม", f"{total_cost_sqm:,.2f} บาท/ตร.ม.")
+            
+            with col_m2:
+                # คำนวณต่อ กม. (สมมติ 22,000 ตร.ม./กม.)
+                area_km = st.session_state.get('area_per_km', 22000)
+                cost_per_km = total_cost_sqm * area_km / 1_000_000
+                st.metric("📏 ราคาต่อ กม.", f"{cost_per_km:,.2f} ล้านบาท/กม.")
+            
+            with col_m3:
+                structure_type = st.session_state.get('img_structure_type', 'JPCP')
+                if 'AC' in structure_type:
+                    design_life = 20
+                elif 'CRCP' in structure_type:
+                    design_life = 30
+                else:
+                    design_life = 25
+                st.metric("⏱️ อายุออกแบบ", f"{design_life} ปี")
+            
+            # NPV Analysis
+            st.divider()
+            st.subheader("📈 วิเคราะห์ NPV")
+            
+            col_npv1, col_npv2 = st.columns(2)
+            with col_npv1:
+                img_discount_rate = st.number_input(
+                    "อัตราคิดลด (%)",
+                    value=4.0, min_value=0.0, max_value=20.0,
+                    key="img_discount"
+                )
+            with col_npv2:
+                img_analysis_period = st.number_input(
+                    "ระยะเวลาวิเคราะห์ (ปี)",
+                    value=50, min_value=10, max_value=100,
+                    key="img_period"
+                )
+            
+            if st.button("🔄 คำนวณ NPV", key="img_calc_npv", type="primary"):
+                r = img_discount_rate / 100
+                
+                # คำนวณ NPV ตามประเภท
+                structure_type = st.session_state.get('img_structure_type', 'JPCP')
+                
+                if 'AC' in structure_type:
+                    # AC: Seal ปี 3,6,12,15 | Overlay ปี 9,18 | สร้างใหม่ ปี 20,40
+                    npv, cf = calculate_npv_ac(cost_per_km, 1.76, 8.80, 20, img_analysis_period, r)
+                elif 'CRCP' in structure_type:
+                    # CRCP: บำรุงทุก 5 ปี | สร้างใหม่ ปี 30
+                    npv, cf = calculate_npv_crcp(cost_per_km, 0.50, 30, img_analysis_period, r)
+                else:
+                    # JPCP/JRCP: Joint seal ทุก 3 ปี | สร้างใหม่ ปี 25,50
+                    npv, cf = calculate_npv_jrcp(cost_per_km, 1.426, 25, img_analysis_period, r)
+                
+                st.success(f"✅ NPV = **{npv:,.2f} ล้านบาท/กม.** (ระยะ {img_analysis_period} ปี)")
+                
+                # แสดง Cash Flow
+                with st.expander("📋 ดู Cash Flow รายปี"):
+                    cf_df = pd.DataFrame({
+                        'ปี': list(range(len(cf))),
+                        'ค่าใช้จ่าย (ล้านบาท/กม.)': cf
+                    })
+                    st.dataframe(cf_df, use_container_width=True)
+                
+                # กราฟ
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=list(range(len(cf))),
+                    y=cf,
+                    marker_color='#2E86AB',
+                    name='ค่าใช้จ่าย'
+                ))
+                fig.update_layout(
+                    title=f'Cash Flow - {structure_type}',
+                    xaxis_title='ปี',
+                    yaxis_title='ค่าใช้จ่าย (ล้านบาท/กม.)',
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
 
 if __name__ == "__main__":
