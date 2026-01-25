@@ -8,3 +8,5 @@ python-docx
 openpyxl
 xlrd
 reportlab
+python-docx>=0.8.11
+docxcompose>=1.4.0
