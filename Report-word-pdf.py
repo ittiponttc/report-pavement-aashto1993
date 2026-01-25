@@ -64,12 +64,13 @@ st.markdown("""
         border-left: 3px solid #A0AEC0;
     }
     .section-header {
-        background-color: #E2E8F0;
+        background-color: #C6F6D5;
         padding: 10px 15px;
         border-radius: 8px;
         margin: 15px 0 10px 0;
         font-weight: bold;
-        color: #2D3748;
+        color: #276749;
+        border-left: 4px solid #38A169;
     }
     .success-box {
         background-color: #C6F6D5;
