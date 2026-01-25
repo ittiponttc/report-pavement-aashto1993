@@ -11,12 +11,12 @@ import streamlit as st
 import os
 import tempfile
 from datetime import datetime
-from copy import deepcopy
 from docx import Document
 from docx.shared import Pt, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.section import WD_ORIENT
 from docx.oxml.ns import qn
+from docxcompose.composer import Composer
 import io
 
 # ตั้งค่าหน้าเว็บ
@@ -149,8 +149,9 @@ def copy_table(source_table, target_doc):
 
 
 def merge_documents(uploaded_files, section_titles, project_name, report_date):
-    """รวมเอกสารทั้งหมดเป็นไฟล์เดียว (รองรับรูปภาพ)"""
+    """รวมเอกสารทั้งหมดเป็นไฟล์เดียว (รองรับรูปภาพ ตาราง)"""
     
+    # สร้างเอกสารหลัก
     merged_doc = Document()
     section = merged_doc.sections[0]
     set_page_margins(section)
@@ -204,6 +205,15 @@ def merge_documents(uploaded_files, section_titles, project_name, report_date):
     
     merged_doc.add_page_break()
     
+    # บันทึกเอกสารหลักชั่วคราว
+    temp_main = io.BytesIO()
+    merged_doc.save(temp_main)
+    temp_main.seek(0)
+    
+    # โหลดเอกสารหลักใหม่สำหรับ Composer
+    master_doc = Document(temp_main)
+    composer = Composer(master_doc)
+    
     # รวมเนื้อหาจากแต่ละไฟล์
     section_num = 1
     for key, file in uploaded_files.items():
@@ -211,52 +221,33 @@ def merge_documents(uploaded_files, section_titles, project_name, report_date):
             file_bytes = file.read()
             file.seek(0)
             
-            source_doc = Document(io.BytesIO(file_bytes))
+            # สร้างเอกสารหัวข้อ
+            header_doc = Document()
             
             # หัวข้อส่วน
-            section_title = merged_doc.add_paragraph()
+            section_title = header_doc.add_paragraph()
             section_title.alignment = WD_ALIGN_PARAGRAPH.LEFT
             section_run = section_title.add_run(f"{section_num}. {section_titles[key]}")
             set_thai_font(section_run, font_size=18)
             section_run.font.bold = True
             
-            merged_doc.add_paragraph()
+            header_doc.add_paragraph()
             
-            # คัดลอก relationships สำหรับรูปภาพ
-            source_part = source_doc.part
-            target_part = merged_doc.part
+            # บันทึกหัวข้อชั่วคราว
+            temp_header = io.BytesIO()
+            header_doc.save(temp_header)
+            temp_header.seek(0)
             
-            # สร้าง mapping สำหรับ relationship IDs
-            rid_map = {}
+            # เพิ่มหัวข้อ
+            composer.append(Document(temp_header))
             
-            for rel in source_part.rels.values():
-                if "image" in rel.reltype:
-                    # คัดลอกรูปภาพไปยังเอกสารใหม่
-                    image_part = rel.target_part
-                    new_rid = target_part.relate_to(image_part, rel.reltype)
-                    rid_map[rel.rId] = new_rid
+            # เพิ่มเนื้อหาจากไฟล์ต้นฉบับ
+            source_doc = Document(io.BytesIO(file_bytes))
+            composer.append(source_doc)
             
-            # คัดลอกเนื้อหาจาก body ของเอกสารต้นทาง
-            for element in source_doc.element.body:
-                # คัดลอก element
-                new_element = deepcopy(element)
-                
-                # อัพเดท relationship IDs ในรูปภาพ
-                for embed in new_element.iter():
-                    # ตรวจหา r:embed attribute
-                    for attr_name in list(embed.attrib.keys()):
-                        if attr_name.endswith('}embed') or attr_name.endswith('}id'):
-                            old_rid = embed.attrib[attr_name]
-                            if old_rid in rid_map:
-                                embed.attrib[attr_name] = rid_map[old_rid]
-                
-                # เพิ่ม element ลงในเอกสารใหม่
-                merged_doc.element.body.append(new_element)
-            
-            merged_doc.add_page_break()
             section_num += 1
     
-    return merged_doc
+    return composer.doc
 
 
 def main():
