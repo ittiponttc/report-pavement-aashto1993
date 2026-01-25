@@ -114,7 +114,7 @@ def draw_arrow_fixed(draw, start, end, color, width=4, arrow_size=15):
 def create_pavement_structure_figure(layers_data, concrete_thickness_cm=None):
     THAI_TO_ENG = {
         "รองผิวทางคอนกรีตด้วย AC": "AC Interlayer", "รองผิวทางคอนกรีตด้วย PMA(AC)": "PMA Interlayer",
-        "พื้นทางซีเมนต์ CTB": "Cement Treated Base", "หินคลุกผสมซีเมนต์ UCS 24.5 ksc": "Soil Cement",
+        "พื้นทางซีเมนต์ CTB": "Cement Treated Base", "หินคลุกผสมซีเมนต์ UCS 24.5 ksc": "Mod.Crushed Rock ",
         "หินคลุก CBR 80%": "Crushed Rock Base", "ดินซีเมนต์ UCS 17.5 ksc": "Soil Cement",
         "วัสดุหมุนเวียน (Recycling)": "Recycled Material", "รองพื้นทางวัสดุมวลรวม CBR 25%": "Aggregate Subbase",
         "วัสดุคัดเลือก ก": "Selected Material", "ดินถมคันทาง / ดินเดิม": "Subgrade",
