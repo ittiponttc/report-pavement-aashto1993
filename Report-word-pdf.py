@@ -10,17 +10,14 @@ Version 2.0
 import streamlit as st
 import os
 import tempfile
-import shutil
 from datetime import datetime
+from copy import deepcopy
 from docx import Document
-from docx.shared import Pt, Cm, Inches
+from docx.shared import Pt, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.section import WD_ORIENT
 from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
-import subprocess
 import io
-import zipfile
 
 # ตั้งค่าหน้าเว็บ
 st.set_page_config(
@@ -152,7 +149,7 @@ def copy_table(source_table, target_doc):
 
 
 def merge_documents(uploaded_files, section_titles, project_name, report_date):
-    """รวมเอกสารทั้งหมดเป็นไฟล์เดียว"""
+    """รวมเอกสารทั้งหมดเป็นไฟล์เดียว (รองรับรูปภาพ)"""
     
     merged_doc = Document()
     section = merged_doc.sections[0]
@@ -225,67 +222,41 @@ def merge_documents(uploaded_files, section_titles, project_name, report_date):
             
             merged_doc.add_paragraph()
             
-            # คัดลอกเนื้อหา
-            for para in source_doc.paragraphs:
-                if para.text.strip():
-                    new_para = merged_doc.add_paragraph()
-                    new_para.alignment = para.alignment
-                    
-                    for run in para.runs:
-                        new_run = new_para.add_run(run.text)
-                        if run.font.bold:
-                            new_run.font.bold = run.font.bold
-                        if run.font.italic:
-                            new_run.font.italic = run.font.italic
-                        if run.font.underline:
-                            new_run.font.underline = run.font.underline
-                        if run.font.size:
-                            new_run.font.size = run.font.size
-                        else:
-                            new_run.font.size = Pt(15)
-                        
-                        font_name = run.font.name if run.font.name else "TH Sarabun New"
-                        new_run.font.name = font_name
-                        r = new_run._r
-                        rPr = r.get_or_add_rPr()
-                        rFonts = rPr.get_or_add_rFonts()
-                        rFonts.set(qn('w:ascii'), font_name)
-                        rFonts.set(qn('w:hAnsi'), font_name)
-                        rFonts.set(qn('w:cs'), font_name)
+            # คัดลอก relationships สำหรับรูปภาพ
+            source_part = source_doc.part
+            target_part = merged_doc.part
             
-            # คัดลอกตาราง
-            for table in source_doc.tables:
-                merged_doc.add_paragraph()
-                copy_table(table, merged_doc)
-                merged_doc.add_paragraph()
+            # สร้าง mapping สำหรับ relationship IDs
+            rid_map = {}
+            
+            for rel in source_part.rels.values():
+                if "image" in rel.reltype:
+                    # คัดลอกรูปภาพไปยังเอกสารใหม่
+                    image_part = rel.target_part
+                    new_rid = target_part.relate_to(image_part, rel.reltype)
+                    rid_map[rel.rId] = new_rid
+            
+            # คัดลอกเนื้อหาจาก body ของเอกสารต้นทาง
+            for element in source_doc.element.body:
+                # คัดลอก element
+                new_element = deepcopy(element)
+                
+                # อัพเดท relationship IDs ในรูปภาพ
+                for embed in new_element.iter():
+                    # ตรวจหา r:embed attribute
+                    for attr_name in list(embed.attrib.keys()):
+                        if attr_name.endswith('}embed') or attr_name.endswith('}id'):
+                            old_rid = embed.attrib[attr_name]
+                            if old_rid in rid_map:
+                                embed.attrib[attr_name] = rid_map[old_rid]
+                
+                # เพิ่ม element ลงในเอกสารใหม่
+                merged_doc.element.body.append(new_element)
             
             merged_doc.add_page_break()
             section_num += 1
     
     return merged_doc
-
-
-def convert_to_pdf(docx_path, output_path):
-    """แปลงไฟล์ Word เป็น PDF โดยใช้ LibreOffice"""
-    try:
-        cmd = [
-            'soffice',
-            '--headless',
-            '--convert-to', 'pdf',
-            '--outdir', os.path.dirname(output_path),
-            docx_path
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        
-        expected_pdf = os.path.splitext(docx_path)[0] + '.pdf'
-        if os.path.exists(expected_pdf):
-            if expected_pdf != output_path:
-                shutil.move(expected_pdf, output_path)
-            return True
-        return False
-    except Exception as e:
-        st.error(f"เกิดข้อผิดพลาดในการแปลง PDF: {str(e)}")
-        return False
 
 
 def main():
@@ -527,11 +498,8 @@ def main():
                             base_filename = f"รายงานออกแบบ_{project_name.replace(' ', '_')}"
                         
                         docx_path = os.path.join(temp_dir, f"{base_filename}.docx")
-                        pdf_path = os.path.join(temp_dir, f"{base_filename}.pdf")
                         
                         merged_doc.save(docx_path)
-                        
-                        pdf_success = convert_to_pdf(docx_path, pdf_path)
                         
                         st.markdown('<div class="success-box">', unsafe_allow_html=True)
                         st.success(f"✅ รวมไฟล์เรียบร้อยแล้ว! ({file_count} ไฟล์)")
@@ -539,32 +507,15 @@ def main():
                         
                         st.markdown("### 📥 ดาวน์โหลดรายงาน")
                         
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            with open(docx_path, 'rb') as f:
-                                docx_data = f.read()
-                            st.download_button(
-                                label="📄 ดาวน์โหลดไฟล์ Word (.docx)",
-                                data=docx_data,
-                                file_name=f"{base_filename}.docx",
-                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                use_container_width=True
-                            )
-                        
-                        with col2:
-                            if pdf_success and os.path.exists(pdf_path):
-                                with open(pdf_path, 'rb') as f:
-                                    pdf_data = f.read()
-                                st.download_button(
-                                    label="📕 ดาวน์โหลดไฟล์ PDF",
-                                    data=pdf_data,
-                                    file_name=f"{base_filename}.pdf",
-                                    mime="application/pdf",
-                                    use_container_width=True
-                                )
-                            else:
-                                st.warning("⚠️ ไม่สามารถแปลงเป็น PDF ได้ กรุณาดาวน์โหลดไฟล์ Word แล้วแปลงด้วยตนเอง")
+                        with open(docx_path, 'rb') as f:
+                            docx_data = f.read()
+                        st.download_button(
+                            label="📄 ดาวน์โหลดไฟล์ Word (.docx)",
+                            data=docx_data,
+                            file_name=f"{base_filename}.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            use_container_width=True
+                        )
                 
                 except Exception as e:
                     st.error(f"❌ เกิดข้อผิดพลาด: {str(e)}")
