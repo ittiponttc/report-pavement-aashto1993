@@ -84,8 +84,8 @@ MATERIALS = {
         "mr_mpa": 850,
         "layer_type": "base",
         "color": "#607D8B",  # สีเทาเข้ม
-        "short_name": "SCAB",
-        "english_name": "Soil Cement Aggregate Base"
+        "short_name": "MOD.CRB",
+        "english_name": "Mod.Crushed Rock Base"
     },
     "พื้นทางหินคลุก CBR 80%": {
         "layer_coeff": 0.13,
