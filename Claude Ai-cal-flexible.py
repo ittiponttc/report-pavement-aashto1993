@@ -371,6 +371,7 @@ def plot_pavement_section(layers_result: list, subgrade_mr: float = None,
                           subgrade_cbr: float = None) -> plt.Figure:
     """
     Draw vertical pavement section diagram - รูปแบบเดียวกับ Rigid Pavement
+    (ขนาดคงที่ สัดส่วนพอดี)
     
     Layout:
     - ซ้าย: ชื่อวัสดุ (Material name)
@@ -388,152 +389,96 @@ def plot_pavement_section(layers_result: list, subgrade_mr: float = None,
         ax.axis('off')
         return fig
     
+    # กรองเฉพาะชั้นที่มีความหนา > 0
+    valid_layers = [l for l in layers_result if l.get('design_thickness_cm', 0) > 0]
+    if not valid_layers:
+        fig, ax = plt.subplots(figsize=(12, 8))
+        ax.text(0.5, 0.5, 'No valid layers', ha='center', va='center', fontsize=14)
+        ax.axis('off')
+        return fig
+    
     # คำนวณความหนารวม
-    total_thickness = sum([l['design_thickness_cm'] for l in layers_result])
-    num_layers = len(layers_result)
+    total_thickness = sum([l['design_thickness_cm'] for l in valid_layers])
     
-    # สร้าง figure
-    fig_height = max(8, total_thickness * 0.12 + 3)
-    fig, ax = plt.subplots(figsize=(12, fig_height))
+    # ========== สร้าง figure ขนาดคงที่ (เหมือน Rigid Pavement) ==========
+    fig, ax = plt.subplots(figsize=(12, 8))
     
-    # Scale factor - ปรับให้ความสูงสัมพันธ์กับความหนาจริง
-    # กำหนด minimum height เพื่อให้อ่านข้อความได้
-    min_layer_height = 0.8
-    scale = 0.08
+    # พารามิเตอร์การวาด (เหมือน Rigid Pavement)
+    width = 3
+    x_center = 6
+    x_start = x_center - width / 2
     
-    # คำนวณความสูงแต่ละชั้น (สัมพันธ์กับความหนาจริง)
-    layer_heights = []
-    for layer in layers_result:
-        h = max(layer['design_thickness_cm'] * scale, min_layer_height)
-        layer_heights.append(h)
-    total_height = sum(layer_heights)
+    # ========== คำนวณความสูงแสดงผล (minimum height เพื่อให้อ่านได้) ==========
+    min_display_height = 8
+    display_heights = [max(l['design_thickness_cm'], min_display_height) for l in valid_layers]
+    total_display = sum(display_heights)
     
-    # ตำแหน่ง x
-    layer_x_start = 3.5
-    layer_width = 2.5
-    layer_x_end = layer_x_start + layer_width
+    # ชั้นที่ต้องใช้ข้อความสีขาว (พื้นหลังเข้ม)
+    dark_colors = ['#1C1C1C', '#2C2C2C', '#78909C', '#607D8B', '#795548', 
+                   '#8D6E63', '#5D4037', '#6D4C41', '#455A64']
     
     # วาดแต่ละชั้น
-    current_y = total_height
+    y_current = total_display
     
-    for i, layer in enumerate(layers_result):
-        thickness_cm = layer['design_thickness_cm']
-        layer_height = layer_heights[i]
-        color = layer.get('color', '#888888')
-        english_name = layer.get('english_name', layer['short_name'])
-        mr_mpa = layer.get('mr_mpa', 0)
+    for i, layer in enumerate(valid_layers):
+        thickness = layer['design_thickness_cm']
+        display_h = display_heights[i]
+        color = layer.get('color', '#CCCCCC')
+        english_name = layer.get('english_name', layer.get('short_name', f'Layer {i+1}'))
+        e_mpa = layer.get('mr_mpa', 0)
         
         # วาดสี่เหลี่ยม
+        y_bottom = y_current - display_h
         rect = mpatches.Rectangle(
-            (layer_x_start, current_y - layer_height),
-            layer_width, layer_height,
-            facecolor=color,
+            (x_start, y_bottom), width, display_h,
+            linewidth=2,
             edgecolor='black',
-            linewidth=1.5
+            facecolor=color
         )
         ax.add_patch(rect)
         
-        # กำหนดสีข้อความ
-        dark_colors = ['#1C1C1C', '#2C2C2C', '#78909C', '#607D8B', '#795548', 
-                       '#8D6E63', '#5D4037', '#6D4C41', '#455A64']
+        # ตำแหน่งกลางชั้น
+        y_center_pos = y_bottom + display_h / 2
+        
+        # กำหนดสีข้อความ (ขาวสำหรับพื้นเข้ม)
         text_color = 'white' if color in dark_colors else 'black'
         
-        # ตำแหน่งกลางชั้น
-        layer_center_y = current_y - layer_height / 2
+        # ข้อความกลาง: ความหนา
+        ax.text(x_center, y_center_pos, f'{thickness:.0f} cm',
+                ha='center', va='center', fontsize=16, fontweight='bold', color=text_color)
         
-        # ข้อความกลางชั้น: ความหนา
-        ax.text(
-            layer_x_start + layer_width / 2,
-            layer_center_y,
-            f'{thickness_cm:.0f} cm',
-            ha='center', va='center',
-            fontsize=15, fontweight='bold',
-            color=text_color
-        )
-        
-        # ซ้าย: ชื่อวัสดุ
-        ax.text(
-            layer_x_start - 0.2,
-            layer_center_y,
-            english_name,
-            ha='right', va='center',
-            fontsize=12, fontweight='bold',
-            color='#1565C0'
-        )
+        # ซ้าย: ชื่อวัสดุ (English)
+        ax.text(x_start - 0.5, y_center_pos, english_name,
+                ha='right', va='center', fontsize=14, fontweight='bold', color='black')
         
         # ขวา: E = xxx MPa
-        ax.text(
-            layer_x_end + 0.2,
-            layer_center_y,
-            f'E = {mr_mpa:,} MPa',
-            ha='left', va='center',
-            fontsize=10,
-            color='#546E7A'
-        )
+        if e_mpa and e_mpa > 0:
+            ax.text(x_start + width + 0.5, y_center_pos, f'E = {e_mpa:,.0f} MPa',
+                    ha='left', va='center', fontsize=12, color='#0066CC')
         
-        current_y -= layer_height
+        y_current = y_bottom
     
-    # เส้นแสดงความหนารวม (ขวาสุด)
-    arrow_x = layer_x_end + 1.8
-    top_y = total_height
-    bottom_y = 0
-    
-    ax.annotate(
-        '', 
-        xy=(arrow_x, bottom_y), 
-        xytext=(arrow_x, top_y),
-        arrowprops=dict(
-            arrowstyle='<->',
-            color='#E65100',
-            lw=2,
-            shrinkA=0,
-            shrinkB=0
-        )
-    )
+    # ========== เส้นแสดงความหนารวม (ลูกศรสองหัว) ==========
+    ax.annotate('', xy=(x_start + width + 3.5, total_display), xytext=(x_start + width + 3.5, 0),
+                arrowprops=dict(arrowstyle='<->', color='red', lw=2))
     
     # ข้อความ Total
-    ax.text(
-        arrow_x + 0.15,
-        (top_y + bottom_y) / 2,
-        f'Total\n{total_thickness:.0f} cm',
-        ha='left', va='center',
-        fontsize=11, fontweight='bold',
-        color='#E65100'
-    )
+    ax.text(x_start + width + 4, total_display / 2, f'Total\n{total_thickness:.0f} cm',
+            ha='left', va='center', fontsize=14, color='red', fontweight='bold')
     
-    # กรอบ Total Pavement Thickness (ล่าง)
-    box_text = f'Total Pavement Thickness: {total_thickness:.0f} cm'
-    box_y = -0.6
-    
-    ax.text(
-        layer_x_start + layer_width / 2,
-        box_y,
-        box_text,
-        ha='center', va='center',
-        fontsize=11, fontweight='bold',
-        color='#1565C0',
-        bbox=dict(
-            boxstyle='round,pad=0.4',
-            facecolor='#FFF9C4',
-            edgecolor='#FFC107',
-            linewidth=2
-        )
-    )
+    # ========== ตั้งค่าขอบเขต (คงที่เหมือน Rigid Pavement) ==========
+    margin = 10
+    ax.set_xlim(0, 14)
+    ax.set_ylim(-margin, total_display + margin)
+    ax.axis('off')
     
     # Title
-    ax.text(
-        layer_x_start + layer_width / 2,
-        total_height + 0.5,
-        'Pavement Structure',
-        ha='center', va='center',
-        fontsize=14, fontweight='bold',
-        color='#37474F'
-    )
+    ax.set_title('Pavement Structure', fontsize=20, fontweight='bold', pad=20)
     
-    # ตั้งค่าแกน
-    ax.set_xlim(0, arrow_x + 1.5)
-    ax.set_ylim(box_y - 0.5, total_height + 0.8)
-    ax.axis('off')
+    # กรอบ Total Pavement Thickness (ล่าง)
+    ax.text(x_center, -margin + 4, f'Total Pavement Thickness: {total_thickness:.0f} cm',
+            ha='center', va='center', fontsize=15, fontweight='bold',
+            bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.9, edgecolor='orange'))
     
     plt.tight_layout()
     return fig
@@ -543,6 +488,7 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
                                 subgrade_cbr: float = None) -> plt.Figure:
     """
     Draw vertical pavement section diagram - รูปแบบภาษาไทย
+    (ขนาดคงที่ สัดส่วนพอดี เหมือน Rigid Pavement)
     
     Layout:
     - ซ้าย: ชื่อวัสดุ (ภาษาไทย)
@@ -554,12 +500,18 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
     
     # ตั้งค่า Thai font
     thai_font_path = '/usr/share/fonts/truetype/tlwg/Garuda.ttf'
+    thai_font_bold_path = '/usr/share/fonts/truetype/tlwg/Garuda-Bold.ttf'
     try:
         thai_font = fm.FontProperties(fname=thai_font_path)
-        thai_font_bold = fm.FontProperties(fname=thai_font_path, weight='bold')
+        thai_font_bold = fm.FontProperties(fname=thai_font_bold_path)
     except:
-        thai_font = fm.FontProperties()
-        thai_font_bold = fm.FontProperties(weight='bold')
+        try:
+            # Fallback to .otf fonts
+            thai_font = fm.FontProperties(fname='/usr/share/fonts/opentype/tlwg/Loma.otf')
+            thai_font_bold = fm.FontProperties(fname='/usr/share/fonts/opentype/tlwg/Loma-Bold.otf')
+        except:
+            thai_font = fm.FontProperties()
+            thai_font_bold = fm.FontProperties(weight='bold')
     
     plt.rcParams['font.family'] = 'DejaVu Sans'
     
@@ -570,155 +522,101 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
         ax.axis('off')
         return fig
     
+    # กรองเฉพาะชั้นที่มีความหนา > 0
+    valid_layers = [l for l in layers_result if l.get('design_thickness_cm', 0) > 0]
+    if not valid_layers:
+        fig, ax = plt.subplots(figsize=(12, 8))
+        ax.text(0.5, 0.5, 'ไม่มีชั้นทางที่ถูกต้อง', ha='center', va='center', 
+                fontsize=14, fontproperties=thai_font)
+        ax.axis('off')
+        return fig
+    
     # คำนวณความหนารวม
-    total_thickness = sum([l['design_thickness_cm'] for l in layers_result])
-    num_layers = len(layers_result)
+    total_thickness = sum([l['design_thickness_cm'] for l in valid_layers])
     
-    # สร้าง figure
-    fig_height = max(8, total_thickness * 0.12 + 3)
-    fig, ax = plt.subplots(figsize=(14, fig_height))
+    # ========== สร้าง figure ขนาดคงที่ (เหมือน Rigid Pavement) ==========
+    fig, ax = plt.subplots(figsize=(12, 8))
     
-    # Scale factor - ปรับให้ความสูงสัมพันธ์กับความหนาจริง
-    min_layer_height = 0.8
-    scale = 0.08
+    # พารามิเตอร์การวาด - เลื่อนขวาเล็กน้อยเพื่อเว้นที่สำหรับชื่อไทย
+    width = 3
+    x_center = 7
+    x_start = x_center - width / 2
     
-    # คำนวณความสูงแต่ละชั้น
-    layer_heights = []
-    for layer in layers_result:
-        h = max(layer['design_thickness_cm'] * scale, min_layer_height)
-        layer_heights.append(h)
-    total_height = sum(layer_heights)
+    # ========== คำนวณความสูงแสดงผล (minimum height เพื่อให้อ่านได้) ==========
+    min_display_height = 8
+    display_heights = [max(l['design_thickness_cm'], min_display_height) for l in valid_layers]
+    total_display = sum(display_heights)
     
-    # ตำแหน่ง x - เลื่อนขวาเพื่อเว้นที่สำหรับชื่อภาษาไทย
-    layer_x_start = 5.0
-    layer_width = 2.5
-    layer_x_end = layer_x_start + layer_width
+    # ชั้นที่ต้องใช้ข้อความสีขาว (พื้นหลังเข้ม)
+    dark_colors = ['#1C1C1C', '#2C2C2C', '#78909C', '#607D8B', '#795548', 
+                   '#8D6E63', '#5D4037', '#6D4C41', '#455A64']
     
     # วาดแต่ละชั้น
-    current_y = total_height
+    y_current = total_display
     
-    for i, layer in enumerate(layers_result):
-        thickness_cm = layer['design_thickness_cm']
-        layer_height = layer_heights[i]
-        color = layer.get('color', '#888888')
-        thai_name = layer.get('material', layer['short_name'])
-        mr_mpa = layer.get('mr_mpa', 0)
+    for i, layer in enumerate(valid_layers):
+        thickness = layer['design_thickness_cm']
+        display_h = display_heights[i]
+        color = layer.get('color', '#CCCCCC')
+        thai_name = layer.get('material', layer.get('short_name', f'ชั้นที่ {i+1}'))
+        e_mpa = layer.get('mr_mpa', 0)
         
         # วาดสี่เหลี่ยม
+        y_bottom = y_current - display_h
         rect = mpatches.Rectangle(
-            (layer_x_start, current_y - layer_height),
-            layer_width, layer_height,
-            facecolor=color,
+            (x_start, y_bottom), width, display_h,
+            linewidth=2,
             edgecolor='black',
-            linewidth=3.5
+            facecolor=color
         )
         ax.add_patch(rect)
         
+        # ตำแหน่งกลางชั้น
+        y_center_pos = y_bottom + display_h / 2
+        
         # กำหนดสีข้อความ
-        dark_colors = ['#1C1C1C', '#2C2C2C', '#78909C', '#607D8B', '#795548', 
-                       '#8D6E63', '#5D4037', '#6D4C41', '#455A64']
         text_color = 'white' if color in dark_colors else 'black'
         
-        # ตำแหน่งกลางชั้น
-        layer_center_y = current_y - layer_height / 2
+        # ข้อความกลาง: ความหนา
+        ax.text(x_center, y_center_pos, f'{thickness:.0f} cm',
+                ha='center', va='center', fontsize=16, fontweight='bold', color=text_color)
         
-        # ข้อความกลางชั้น: ความหนา
-        ax.text(
-            layer_x_start + layer_width / 2,
-            layer_center_y,
-            f'{thickness_cm:.0f} cm',
-            ha='center', va='center',
-            fontsize=25, fontweight='bold',
-            color=text_color
-        )
-        
-        # ซ้าย: ชื่อวัสดุภาษาไทย
-        ax.text(
-            layer_x_start - 0.2,
-            layer_center_y,
-            thai_name,
-            ha='right', va='center',
-            fontsize=25,
-            fontproperties=thai_font_bold,
-            color='#1565C0'
-        )
+        # ซ้าย: ชื่อวัสดุ (Thai)
+        ax.text(x_start - 0.5, y_center_pos, thai_name,
+                ha='right', va='center', fontsize=14, fontweight='bold',
+                fontproperties=thai_font_bold, color='black')
         
         # ขวา: E = xxx MPa
-        ax.text(
-            layer_x_end + 0.2,
-            layer_center_y,
-            f'E = {mr_mpa:,} MPa',
-            ha='left', va='center',
-            fontsize=10,
-            color='#546E7A'
-        )
+        if e_mpa and e_mpa > 0:
+            ax.text(x_start + width + 0.5, y_center_pos, f'E = {e_mpa:,.0f} MPa',
+                    ha='left', va='center', fontsize=12, color='#0066CC')
         
-        current_y -= layer_height
+        y_current = y_bottom
     
-    # เส้นแสดงความหนารวม (ขวาสุด)
-    arrow_x = layer_x_end + 1.8
-    top_y = total_height
-    bottom_y = 0
+    # ========== เส้นแสดงความหนารวม (ลูกศรสองหัว) ==========
+    ax.annotate('', xy=(x_start + width + 3.5, total_display), xytext=(x_start + width + 3.5, 0),
+                arrowprops=dict(arrowstyle='<->', color='red', lw=2))
     
-    ax.annotate(
-        '', 
-        xy=(arrow_x, bottom_y), 
-        xytext=(arrow_x, top_y),
-        arrowprops=dict(
-            arrowstyle='<->',
-            color='#E65100',
-            lw=2,
-            shrinkA=0,
-            shrinkB=0
-        )
-    )
+    # ข้อความ Total (ภาษาไทย)
+    ax.text(x_start + width + 4, total_display / 2, f'รวม\n{total_thickness:.0f} cm',
+            ha='left', va='center', fontsize=14, color='red', fontweight='bold',
+            fontproperties=thai_font_bold)
     
-    # ข้อความ Total
-    ax.text(
-        arrow_x + 0.15,
-        (top_y + bottom_y) / 2,
-        f'รวม\n{total_thickness:.0f} cm',
-        ha='left', va='center',
-        fontsize=11, fontweight='bold',
-        fontproperties=thai_font_bold,
-        color='#E65100'
-    )
+    # ========== ตั้งค่าขอบเขต (คงที่เหมือน Rigid Pavement) ==========
+    margin = 10
+    ax.set_xlim(0, 15)
+    ax.set_ylim(-margin, total_display + margin)
+    ax.axis('off')
+    
+    # Title (ภาษาไทย)
+    ax.set_title('รูปตัดโครงสร้างชั้นทาง', fontsize=20, fontweight='bold', pad=20,
+                 fontproperties=thai_font_bold)
     
     # กรอบ Total Pavement Thickness (ล่าง)
-    box_text = f'ความหนารวมโครงสร้างชั้นทาง: {total_thickness:.0f} cm'
-    box_y = -0.6
-    
-    ax.text(
-        layer_x_start + layer_width / 2,
-        box_y,
-        box_text,
-        ha='center', va='center',
-        fontsize=11, fontweight='bold',
-        fontproperties=thai_font_bold,
-        color='#1565C0',
-        bbox=dict(
-            boxstyle='round,pad=0.4',
-            facecolor='#FFF9C4',
-            edgecolor='#FFC107',
-            linewidth=2
-        )
-    )
-    
-    # Title
-    ax.text(
-        layer_x_start + layer_width / 2,
-        total_height + 0.5,
-        'รูปตัดโครงสร้างชั้นทาง',
-        ha='center', va='center',
-        fontsize=14, fontweight='bold',
-        fontproperties=thai_font_bold,
-        color='#37474F'
-    )
-    
-    # ตั้งค่าแกน
-    ax.set_xlim(0, arrow_x + 1.5)
-    ax.set_ylim(box_y - 0.5, total_height + 0.8)
-    ax.axis('off')
+    ax.text(x_center, -margin + 4, f'ความหนารวมโครงสร้างชั้นทาง: {total_thickness:.0f} cm',
+            ha='center', va='center', fontsize=15, fontweight='bold',
+            fontproperties=thai_font_bold,
+            bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.9, edgecolor='orange'))
     
     plt.tight_layout()
     return fig
