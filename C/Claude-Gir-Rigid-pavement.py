@@ -434,7 +434,7 @@ def main():
     st.markdown("**โปรแกรมออกแบบความหนาถนนคอนกรีต และหาค่า k-value พร้อมปรับแก้ Loss of Support**")
     
     # Initialize Session State
-    for key, val in [('k_inf_result', 500), ('img1_bytes', None), ('img2_bytes', None), ('loaded_data', None)]:
+    for key, val in [('k_inf_result', 500), ('img1_bytes', None), ('img2_bytes', None), ('last_uploaded_file', None)]:
         if key not in st.session_state:
             st.session_state[key] = val
     
@@ -443,21 +443,76 @@ def main():
         st.header("📁 จัดการโปรเจกต์")
         st.subheader("📂 โหลดไฟล์โปรเจกต์")
         uploaded_json = st.file_uploader("อัปโหลดไฟล์ .json", type=['json'], key='json_uploader')
+        
         if uploaded_json is not None:
-            if st.button("📥 โหลดข้อมูล", type="primary"):
-                loaded = load_project_from_json(uploaded_json)
-                if loaded:
-                    st.session_state.loaded_data = loaded
-                    st.success("โหลดข้อมูลสำเร็จ!")
-                    st.rerun()
-        if st.session_state.loaded_data:
-            st.info(f"📌 โปรเจกต์: {st.session_state.loaded_data.get('project_info', {}).get('project_name', 'ไม่ระบุ')}")
+            try:
+                # ตรวจสอบว่าเป็นไฟล์ใหม่หรือไม่
+                file_id = f"{uploaded_json.name}_{uploaded_json.size}"
+                if st.session_state.get('last_uploaded_file') != file_id:
+                    st.session_state['last_uploaded_file'] = file_id
+                    
+                    # โหลดข้อมูลจาก JSON
+                    loaded = load_project_from_json(uploaded_json)
+                    if loaded:
+                        # อัพเดท session_state สำหรับทุก input field
+                        
+                        # Project Info
+                        st.session_state['calc_project_name'] = loaded.get('project_info', {}).get('project_name', '')
+                        st.session_state['calc_pave_type'] = loaded.get('project_info', {}).get('pavement_type', 'JPCP')
+                        
+                        # Layers
+                        st.session_state['calc_num_layers'] = loaded.get('layers', {}).get('num_layers', 5)
+                        layers_data = loaded.get('layers', {}).get('layers_data', [])
+                        for i, layer in enumerate(layers_data):
+                            st.session_state[f'calc_layer_name_{i}'] = layer.get('name', '')
+                            st.session_state[f'calc_layer_thick_{i}'] = layer.get('thickness_cm', 0)
+                            layer_name = layer.get('name', '')
+                            st.session_state[f'calc_layer_E_{i}_{layer_name}'] = layer.get('E_MPa', 100)
+                        
+                        # Design Parameters
+                        dp = loaded.get('design_parameters', {})
+                        st.session_state['calc_w18'] = dp.get('w18_design', 500000)
+                        st.session_state['calc_pt'] = dp.get('pt', 2.0)
+                        st.session_state['calc_reliability'] = dp.get('reliability', 90)
+                        st.session_state['calc_so'] = dp.get('so', 0.35)
+                        st.session_state['calc_k_eff'] = dp.get('k_eff', 200)
+                        st.session_state['calc_ls'] = dp.get('ls_value', 1.0)
+                        st.session_state['calc_fc'] = dp.get('fc_cube', 350)
+                        st.session_state['calc_sc'] = dp.get('sc', 600)
+                        st.session_state['calc_j'] = dp.get('j_value', 2.8)
+                        st.session_state['calc_cd'] = dp.get('cd', 1.0)
+                        st.session_state['calc_d'] = dp.get('d_cm_selected', 30)
+                        
+                        # Subgrade
+                        st.session_state['calc_cbr'] = loaded.get('subgrade', {}).get('cbr_value', 4.0)
+                        
+                        # Nomograph
+                        nomo = loaded.get('nomograph', {})
+                        st.session_state['nomo_mr'] = nomo.get('mr_val', 7000)
+                        st.session_state['nomo_esb'] = nomo.get('esb_val', 50000)
+                        st.session_state['nomo_dsb'] = nomo.get('dsb_val', 6.0)
+                        st.session_state['nomo_k_inf'] = nomo.get('k_inf_val', 400)
+                        st.session_state['k_inf_result'] = nomo.get('k_inf_val', 400)
+                        st.session_state['ls_select_box'] = nomo.get('ls_select', 1.0)
+                        st.session_state['k_corr_input'] = nomo.get('k_corrected', 300)
+                        
+                        st.success("✅ โหลดข้อมูลสำเร็จ!")
+                        st.rerun()
+            except Exception as e:
+                st.error(f"❌ ไม่สามารถอ่านไฟล์ได้: {e}")
+        
+        # แสดงสถานะโปรเจกต์ที่โหลด
+        if st.session_state.get('calc_project_name'):
+            st.info(f"📌 โปรเจกต์: {st.session_state.get('calc_project_name', 'ไม่ระบุ')}")
             if st.button("🗑️ ล้างข้อมูลที่โหลด"):
-                st.session_state.loaded_data = None
+                # ล้าง session_state ทั้งหมด
+                keys_to_clear = [key for key in st.session_state.keys() if key.startswith(('calc_', 'nomo_', 'ls_select', 'k_corr', 'k_inf'))]
+                for key in keys_to_clear:
+                    del st.session_state[key]
+                st.session_state['last_uploaded_file'] = None
                 st.rerun()
         st.markdown("---")
     
-    ld = st.session_state.loaded_data
     
     # Define Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -474,17 +529,18 @@ def main():
         
         with col1:
             st.subheader("📥 ข้อมูลนำเข้า (Input)")
-            project_name = st.text_input("🏗️ ชื่อโครงการ", value=ld['project_info']['project_name'] if ld else "", key="calc_project_name")
+            project_name = st.text_input("🏗️ ชื่อโครงการ", value=st.session_state.get('calc_project_name', ''), key="calc_project_name")
             st.markdown("---")
             
             pave_options = list(J_VALUES.keys())
-            default_pave_idx = pave_options.index(ld['project_info']['pavement_type']) if ld and ld['project_info']['pavement_type'] in pave_options else 1
+            current_pave_type = st.session_state.get('calc_pave_type', 'JPCP')
+            default_pave_idx = pave_options.index(current_pave_type) if current_pave_type in pave_options else 1
             pavement_type = st.selectbox("ประเภทผิวทางคอนกรีต", pave_options, index=default_pave_idx, key="calc_pave_type")
             st.markdown("---")
             
             st.subheader("🔶 ชั้นโครงสร้างทาง")
             material_options = list(MATERIAL_MODULUS.keys())
-            num_layers = st.slider("จำนวนชั้นวัสดุ", 1, 6, ld['layers']['num_layers'] if ld else 5, key="calc_num_layers")
+            num_layers = st.slider("จำนวนชั้นวัสดุ", 1, 6, st.session_state.get('calc_num_layers', 5), key="calc_num_layers")
             
             default_layers = [
                 {"name": "รองผิวทางคอนกรีตด้วย AC", "thickness_cm": 5},
@@ -499,13 +555,10 @@ def main():
             for i in range(num_layers):
                 st.markdown(f"**ชั้นที่ {i+1}**")
                 col_a, col_b, col_c = st.columns([2, 1, 1])
-                if ld and i < len(ld['layers']['layers_data']):
-                    layer_def = ld['layers']['layers_data'][i]
-                    def_name = layer_def.get('name', default_layers[i]["name"] if i < len(default_layers) else "กำหนดเอง...")
-                    def_thick = layer_def.get('thickness_cm', default_layers[i]["thickness_cm"] if i < len(default_layers) else 20)
-                else:
-                    def_name = default_layers[i]["name"] if i < len(default_layers) else "กำหนดเอง..."
-                    def_thick = default_layers[i]["thickness_cm"] if i < len(default_layers) else 20
+                
+                # ใช้ค่าจาก session_state หรือ default
+                def_name = st.session_state.get(f'calc_layer_name_{i}', default_layers[i]["name"] if i < len(default_layers) else "กำหนดเอง...")
+                def_thick = st.session_state.get(f'calc_layer_thick_{i}', default_layers[i]["thickness_cm"] if i < len(default_layers) else 20)
                 def_idx = material_options.index(def_name) if def_name in material_options else len(material_options) - 1
                 
                 with col_a:
@@ -513,8 +566,9 @@ def main():
                 with col_b:
                     layer_thickness = st.number_input("ความหนา (ซม.)", 0, 100, def_thick, key=f"calc_layer_thick_{i}")
                 rec_mod = MATERIAL_MODULUS.get(layer_name, 100)
+                def_E = st.session_state.get(f'calc_layer_E_{i}_{layer_name}', rec_mod)
                 with col_c:
-                    layer_modulus = st.number_input("E (MPa)", 10, 10000, rec_mod, key=f"calc_layer_E_{i}_{layer_name}")
+                    layer_modulus = st.number_input("E (MPa)", 10, 10000, def_E, key=f"calc_layer_E_{i}_{layer_name}")
                 layers_data.append({"name": layer_name, "thickness_cm": layer_thickness, "E_MPa": layer_modulus})
             
             total_layer_cm = sum(l['thickness_cm'] for l in layers_data)
@@ -540,41 +594,41 @@ def main():
                 | ทางหลวงแผ่นดินสายรอง | 5-30 |
                 | ถนนในเมือง | 1-10 |
                 """)
-            w18_design = st.number_input("ESAL ที่ต้องการรองรับ (W₁₈)", 10000, 500000000, ld['design_parameters']['w18_design'] if ld else 500000, 100000, key="calc_w18")
+            w18_design = st.number_input("ESAL ที่ต้องการรองรับ (W₁₈)", 10000, 500000000, st.session_state.get('calc_w18', 500000), 100000, key="calc_w18")
             esal_million = w18_design / 1_000_000
             st.info(f"**{esal_million:.2f} ล้าน ESALs**")
             st.markdown("---")
             
             st.subheader("2️⃣ Serviceability")
-            pt = st.slider("Terminal Serviceability (Pt)", 1.5, 3.0, ld['design_parameters']['pt'] if ld else 2.0, 0.1, key="calc_pt")
+            pt = st.slider("Terminal Serviceability (Pt)", 1.5, 3.0, st.session_state.get('calc_pt', 2.0), 0.1, key="calc_pt")
             delta_psi = 4.5 - pt
             st.info(f"ΔPSI = 4.5 - {pt:.1f} = **{delta_psi:.1f}**")
             st.markdown("---")
             
             st.subheader("3️⃣ ความเชื่อมั่น")
-            reliability = st.select_slider("Reliability (R)", [80, 85, 90, 95], ld['design_parameters']['reliability'] if ld else 90, key="calc_reliability")
+            reliability = st.select_slider("Reliability (R)", [80, 85, 90, 95], st.session_state.get('calc_reliability', 90), key="calc_reliability")
             zr = get_zr_value(reliability)
             st.info(f"ZR = **{zr:.3f}**")
-            so = st.number_input("Standard Deviation (So)", 0.30, 0.45, ld['design_parameters']['so'] if ld else 0.35, 0.01, "%.2f", key="calc_so")
+            so = st.number_input("Standard Deviation (So)", 0.30, 0.45, st.session_state.get('calc_so', 0.35), 0.01, "%.2f", key="calc_so")
             st.markdown("---")
             
             st.subheader("4️⃣ คุณสมบัติดินฐานราก")
-            cbr_value = st.number_input("ค่า CBR (%)", 1.0, 100.0, ld['subgrade']['cbr_value'] if ld else 4.0, 0.5, key="calc_cbr")
+            cbr_value = st.number_input("ค่า CBR (%)", 1.0, 100.0, st.session_state.get('calc_cbr', 4.0), 0.5, key="calc_cbr")
             mr_subgrade_psi = 1500 * cbr_value if cbr_value < 10 else 1000 + 555 * cbr_value
             mr_subgrade_mpa = mr_subgrade_psi / 145.038
             st.info(f"M_R = {mr_subgrade_psi:,.0f} psi ({mr_subgrade_mpa:.0f} MPa)")
             
-            k_eff = st.number_input("Effective k (pci)", 50, 1000, ld['design_parameters']['k_eff'] if ld else 200, 25, key="calc_k_eff")
-            ls_value = st.number_input("Loss of Support (LS)", 0.0, 3.0, ld['design_parameters']['ls_value'] if ld else 1.0, 0.5, "%.1f", key="calc_ls")
+            k_eff = st.number_input("Effective k (pci)", 50, 1000, st.session_state.get('calc_k_eff', 200), 25, key="calc_k_eff")
+            ls_value = st.number_input("Loss of Support (LS)", 0.0, 3.0, st.session_state.get('calc_ls', 1.0), 0.5, "%.1f", key="calc_ls")
             st.markdown("---")
             
             st.subheader("5️⃣ คุณสมบัติคอนกรีต")
-            fc_cube = st.number_input("กำลังอัด Cube (ksc)", 200, 600, ld['design_parameters']['fc_cube'] if ld else 350, 10, key="calc_fc")
+            fc_cube = st.number_input("กำลังอัด Cube (ksc)", 200, 600, st.session_state.get('calc_fc', 350), 10, key="calc_fc")
             fc_cylinder = convert_cube_to_cylinder(fc_cube)
             ec = calculate_concrete_modulus(fc_cylinder)
             st.info(f"f'c (Cyl) = **{fc_cylinder:.0f} ksc** | Ec = **{ec:,.0f} psi**")
             sc_auto = estimate_modulus_of_rupture(fc_cylinder)
-            sc = st.number_input("Modulus of Rupture (Sc) psi", 400, 1000, ld['design_parameters']['sc'] if ld else int(sc_auto), 10, key="calc_sc")
+            sc = st.number_input("Modulus of Rupture (Sc) psi", 400, 1000, st.session_state.get('calc_sc', int(sc_auto)), 10, key="calc_sc")
             st.markdown("---")
             
             st.subheader("6️⃣ Load Transfer และ Drainage")
@@ -594,13 +648,13 @@ def main():
                 - ไม่มี Dowel Bar: เพิ่มขึ้น 0.5-1.0
                 """)
             j_auto = J_VALUES[pavement_type]
-            j_value = st.number_input("Load Transfer (J)", 2.0, 4.5, ld['design_parameters']['j_value'] if ld else j_auto, 0.1, "%.1f", key="calc_j")
-            cd = st.number_input("Drainage (Cd)", 0.7, 1.3, ld['design_parameters']['cd'] if ld else 1.0, 0.05, "%.2f", key="calc_cd")
+            j_value = st.number_input("Load Transfer (J)", 2.0, 4.5, st.session_state.get('calc_j', j_auto), 0.1, "%.1f", key="calc_j")
+            cd = st.number_input("Drainage (Cd)", 0.7, 1.3, st.session_state.get('calc_cd', 1.0), 0.05, "%.2f", key="calc_cd")
             st.markdown("---")
             
             st.subheader("7️⃣ ความหนาที่ตรวจสอบ")
             st.caption("ความหนา D (ซม.)")
-            d_cm_selected = st.slider("", 20, 40, ld['design_parameters']['d_cm_selected'] if ld else 30, 1, key="calc_d", label_visibility="collapsed")
+            d_cm_selected = st.slider("", 20, 40, st.session_state.get('calc_d', 30), 1, key="calc_d", label_visibility="collapsed")
             d_inch_selected = round(d_cm_selected / 2.54)
             st.success(f"**D = {d_cm_selected} ซม. ≈ {d_inch_selected} นิ้ว**")
         
@@ -710,10 +764,10 @@ def main():
                 
                 st.markdown("---")
                 st.subheader("📝 บันทึกค่าที่อ่านได้")
-                mr_val = st.number_input("MR (psi)", value=ld['nomograph']['mr_val'] if ld else 7000, step=500, key="nomo_mr")
-                esb_val = st.number_input("ESB (psi)", value=ld['nomograph']['esb_val'] if ld else 50000, step=1000, key="nomo_esb")
-                dsb_val = st.number_input("DSB (inches)", value=ld['nomograph']['dsb_val'] if ld else 6.0, step=0.5, key="nomo_dsb")
-                k_inf_val = st.number_input("ค่า k∞ ที่อ่านได้ (pci)", value=ld['nomograph']['k_inf_val'] if ld else 400, step=10, key="nomo_k_inf")
+                mr_val = st.number_input("MR (psi)", value=st.session_state.get('nomo_mr', 7000), step=500, key="nomo_mr")
+                esb_val = st.number_input("ESB (psi)", value=st.session_state.get('nomo_esb', 50000), step=1000, key="nomo_esb")
+                dsb_val = st.number_input("DSB (inches)", value=st.session_state.get('nomo_dsb', 6.0), step=0.5, key="nomo_dsb")
+                k_inf_val = st.number_input("ค่า k∞ ที่อ่านได้ (pci)", value=st.session_state.get('nomo_k_inf', 400), step=10, key="nomo_k_inf")
                 st.session_state.k_inf_result = k_inf_val
                 
                 buf = io.BytesIO()
@@ -742,7 +796,8 @@ def main():
                 st.subheader("⚙️ กำหนดเส้นกราฟ")
                 st.write("#### 1. เลือกค่า LS (เส้นแดง)")
                 ls_options = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0]
-                default_ls_idx = ls_options.index(ld['nomograph']['ls_select']) if ld and ld['nomograph']['ls_select'] in ls_options else 2
+                current_ls = st.session_state.get('ls_select_box', 1.0)
+                default_ls_idx = ls_options.index(current_ls) if current_ls in ls_options else 2
                 ls_select = st.selectbox("เลือกค่า LS", ls_options, index=default_ls_idx, key="ls_select_box")
                 
                 if 'last_ls_select' not in st.session_state or st.session_state.last_ls_select != ls_select:
@@ -780,7 +835,7 @@ def main():
                 
                 st.markdown("---")
                 st.subheader("📝 บันทึกผลลัพธ์")
-                k_corrected = st.number_input("Corrected k (pci)", value=ld['nomograph']['k_corrected'] if ld else st.session_state.k_inf_result - 100, step=10, key="k_corr_input")
+                k_corrected = st.number_input("Corrected k (pci)", value=st.session_state.get('k_corr_input', st.session_state.k_inf_result - 100), step=10, key="k_corr_input")
                 
                 buf2 = io.BytesIO()
                 img2_draw.save(buf2, format='PNG')
