@@ -1371,7 +1371,7 @@ def main():
     st.markdown("""
     <div style='text-align: center; color: gray;'>
     <p>AASHTO 1993 Flexible Pavement Design Application v3.0</p>
-    <p>พัฒนาตามมาตรฐานกรมทางหลวง (DOH Thailand)</p>
+    <p>พัฒนาโดย : รศ.ดร.อิทธิพล มีผล // ภาควิชาครุศาสตร์โยธา มจพ.</p>
     </div>
     """, unsafe_allow_html=True)
 
