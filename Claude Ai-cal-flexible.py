@@ -18,6 +18,7 @@ Version: 3.0
 
 import streamlit as st
 import numpy as np
+import json
 from scipy.optimize import brentq
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -633,6 +634,38 @@ def get_figure_as_bytes(fig: plt.Figure) -> BytesIO:
 # WORD EXPORT FUNCTION
 # ================================================================================
 
+def set_thai_font(run, size_pt=15, bold=False):
+    """Set TH Sarabun New font for Thai text"""
+    run.font.name = 'TH Sarabun New'
+    run.font.size = Pt(size_pt)
+    run.bold = bold
+    # Set East Asian font
+    run._element.rPr.rFonts.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}cs', 'TH Sarabun New')
+
+def set_equation_font(run, size_pt=11, bold=False, italic=True):
+    """Set Times New Roman font for equations"""
+    run.font.name = 'Times New Roman'
+    run.font.size = Pt(size_pt)
+    run.bold = bold
+    run.italic = italic
+
+def add_thai_paragraph(doc, text, size_pt=15, bold=False, alignment=None):
+    """Add paragraph with Thai font"""
+    para = doc.add_paragraph()
+    if alignment:
+        para.alignment = alignment
+    run = para.add_run(text)
+    set_thai_font(run, size_pt, bold)
+    return para
+
+def add_equation_paragraph(doc, text, size_pt=11, bold=False, italic=True):
+    """Add paragraph with equation font (Times New Roman)"""
+    para = doc.add_paragraph()
+    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = para.add_run(text)
+    set_equation_font(run, size_pt, bold, italic)
+    return para
+
 def create_word_report(project_title: str, inputs: dict, calc_results: dict,
                        design_check: dict, fig: plt.Figure) -> BytesIO:
     """Create Word document report with step-by-step calculations"""
@@ -644,33 +677,39 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
     # ========================================
     title = doc.add_heading('รายงานการออกแบบ Flexible Pavement', level=0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # Set Thai font for title
+    for run in title.runs:
+        set_thai_font(run, size_pt=24, bold=True)
     
-    doc.add_heading(f'โครงการ: {project_title}', level=1)
-    doc.add_paragraph(f'วันที่ออกแบบ: {datetime.now().strftime("%d/%m/%Y %H:%M")}')
+    heading1 = doc.add_heading(f'โครงการ: {project_title}', level=1)
+    for run in heading1.runs:
+        set_thai_font(run, size_pt=18, bold=True)
+    
+    add_thai_paragraph(doc, f'วันที่ออกแบบ: {datetime.now().strftime("%d/%m/%Y %H:%M")}', size_pt=15)
     
     # ========================================
     # SECTION 1: Design Method
     # ========================================
-    doc.add_heading('1. วิธีการออกแบบ', level=2)
-    doc.add_paragraph(
-        'การออกแบบโครงสร้างถนนใช้วิธี AASHTO 1993 Guide for Design of Pavement Structures '
-        'ตามมาตรฐานกรมทางหลวง โดยใช้สมการหลักดังนี้:'
-    )
+    heading2 = doc.add_heading('1. วิธีการออกแบบ', level=2)
+    for run in heading2.runs:
+        set_thai_font(run, size_pt=16, bold=True)
     
-    # Main equation
-    eq_para = doc.add_paragraph()
-    eq_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    eq_run = eq_para.add_run(
+    add_thai_paragraph(doc, 
+        'การออกแบบโครงสร้างถนนใช้วิธี AASHTO 1993 Guide for Design of Pavement Structures '
+        'ตามมาตรฐานกรมทางหลวง โดยใช้สมการหลักดังนี้:', size_pt=15)
+    
+    # Main equation - Times New Roman 11pt
+    add_equation_paragraph(doc,
         'log₁₀(W₁₈) = Zᵣ·Sₒ + 9.36·log₁₀(SN+1) - 0.20 + '
-        'log₁₀(ΔPSI/2.7) / [0.4 + 1094/(SN+1)⁵·¹⁹] + 2.32·log₁₀(Mᵣ) - 8.07'
-    )
-    eq_run.italic = True
-    eq_run.font.size = Pt(11)
+        'log₁₀(ΔPSI/2.7) / [0.4 + 1094/(SN+1)⁵·¹⁹] + 2.32·log₁₀(Mᵣ) - 8.07',
+        size_pt=11, italic=True)
     
     # ========================================
     # SECTION 2: Input Parameters
     # ========================================
-    doc.add_heading('2. ข้อมูลนำเข้า (Design Inputs)', level=2)
+    heading2_2 = doc.add_heading('2. ข้อมูลนำเข้า (Design Inputs)', level=2)
+    for run in heading2_2.runs:
+        set_thai_font(run, size_pt=16, bold=True)
     
     input_table = doc.add_table(rows=1, cols=3)
     input_table.style = 'Table Grid'
@@ -681,7 +720,7 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
         cell.text = header
         for paragraph in cell.paragraphs:
             for run in paragraph.runs:
-                run.bold = True
+                set_thai_font(run, size_pt=15, bold=True)
     
     input_data = [
         ('Design ESALs (W₁₈)', f'{inputs["W18"]:,.0f}', '18-kip ESAL'),
@@ -700,11 +739,18 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
         row.cells[0].text = param
         row.cells[1].text = value
         row.cells[2].text = unit
+        # Set Thai font for table cells
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    set_thai_font(run, size_pt=15)
     
     # ========================================
     # SECTION 3: Material Properties
     # ========================================
-    doc.add_heading('3. คุณสมบัติวัสดุชั้นทาง', level=2)
+    heading2_3 = doc.add_heading('3. คุณสมบัติวัสดุชั้นทาง', level=2)
+    for run in heading2_3.runs:
+        set_thai_font(run, size_pt=16, bold=True)
     
     mat_table = doc.add_table(rows=1, cols=6)
     mat_table.style = 'Table Grid'
@@ -715,7 +761,7 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
         cell.text = header
         for paragraph in cell.paragraphs:
             for run in paragraph.runs:
-                run.bold = True
+                set_thai_font(run, size_pt=15, bold=True)
     
     for layer in calc_results['layers']:
         row = mat_table.add_row()
@@ -725,87 +771,97 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
         row.cells[3].text = f'{layer["m_i"]:.2f}'
         row.cells[4].text = f'{layer["mr_psi"]:,}'
         row.cells[5].text = f'{layer["mr_mpa"]:,}'
+        # Set Thai font for table cells
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    set_thai_font(run, size_pt=15)
     
     # ========================================
     # SECTION 4: Step-by-Step Calculation
     # ========================================
-    doc.add_heading('4. ขั้นตอนการคำนวณความหนาชั้นทาง', level=2)
+    heading2_4 = doc.add_heading('4. ขั้นตอนการคำนวณความหนาชั้นทาง', level=2)
+    for run in heading2_4.runs:
+        set_thai_font(run, size_pt=16, bold=True)
     
-    doc.add_paragraph(
+    add_thai_paragraph(doc,
         'การคำนวณความหนาขั้นต่ำของแต่ละชั้น ใช้หลักการว่า Structural Number (SN) '
-        'ที่จุดใดๆ ต้องมากกว่าหรือเท่ากับ SN ที่ต้องการ โดยคำนวณจากค่า Mᵣ ของชั้นถัดไป'
-    )
+        'ที่จุดใดๆ ต้องมากกว่าหรือเท่ากับ SN ที่ต้องการ โดยคำนวณจากค่า Mᵣ ของชั้นถัดไป',
+        size_pt=15)
     
     for layer in calc_results['layers']:
         # Layer header
-        doc.add_heading(f'ชั้นที่ {layer["layer_no"]}: {layer["material"]}', level=3)
+        layer_heading = doc.add_heading(f'ชั้นที่ {layer["layer_no"]}: {layer["material"]}', level=3)
+        for run in layer_heading.runs:
+            set_thai_font(run, size_pt=15, bold=True)
         
         # Material properties
-        doc.add_paragraph(f'ข้อมูลวัสดุ:')
+        add_thai_paragraph(doc, 'ข้อมูลวัสดุ:', size_pt=15, bold=True)
         props_para = doc.add_paragraph()
-        props_para.add_run(f'    • Mᵣ = {layer["mr_psi"]:,} psi = {layer["mr_mpa"]:,} MPa\n')
-        props_para.add_run(f'    • Layer Coefficient (a{layer["layer_no"]}) = {layer["a_i"]:.2f}\n')
-        props_para.add_run(f'    • Drainage Coefficient (m{layer["layer_no"]}) = {layer["m_i"]:.2f}')
+        run1 = props_para.add_run(f'    • Mᵣ = {layer["mr_psi"]:,} psi = {layer["mr_mpa"]:,} MPa\n')
+        set_thai_font(run1, size_pt=15)
+        run2 = props_para.add_run(f'    • Layer Coefficient (a{layer["layer_no"]}) = {layer["a_i"]:.2f}\n')
+        set_thai_font(run2, size_pt=15)
+        run3 = props_para.add_run(f'    • Drainage Coefficient (m{layer["layer_no"]}) = {layer["m_i"]:.2f}')
+        set_thai_font(run3, size_pt=15)
         
         # SN calculation
-        doc.add_paragraph(f'การคำนวณ SN:')
+        add_thai_paragraph(doc, 'การคำนวณ SN:', size_pt=15, bold=True)
         sn_para = doc.add_paragraph()
         sn_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         sn_run = sn_para.add_run(f'จากสมการ AASHTO 1993:  SN{layer["layer_no"]} = {layer["sn_required_at_layer"]:.2f}')
-        sn_run.bold = True
+        set_equation_font(sn_run, size_pt=11, bold=True, italic=False)
         
         # Thickness calculation
-        doc.add_paragraph(f'การคำนวณความหนาขั้นต่ำ:')
+        add_thai_paragraph(doc, 'การคำนวณความหนาขั้นต่ำ:', size_pt=15, bold=True)
         
         if layer['layer_no'] == 1:
-            formula_para = doc.add_paragraph()
-            formula_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             formula_text = f'D₁ ≥ SN₁ / (a₁ × m₁) = {layer["sn_required_at_layer"]:.2f} / ({layer["a_i"]:.2f} × {layer["m_i"]:.2f})'
-            formula_para.add_run(formula_text).italic = True
+            add_equation_paragraph(doc, formula_text, size_pt=11, italic=True)
         else:
             prev_sn = calc_results['layers'][layer['layer_no']-2]['cumulative_sn']
-            
-            formula_para = doc.add_paragraph()
-            formula_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
             formula_text = f'D{layer["layer_no"]} ≥ (SN{layer["layer_no"]} - SNₚᵣₑᵥ) / (a{layer["layer_no"]} × m{layer["layer_no"]}) = ({layer["sn_required_at_layer"]:.2f} - {prev_sn:.2f}) / ({layer["a_i"]:.2f} × {layer["m_i"]:.2f})'
-            formula_para.add_run(formula_text).italic = True
+            add_equation_paragraph(doc, formula_text, size_pt=11, italic=True)
         
         # Results
         result_para = doc.add_paragraph()
         result_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        result_para.add_run(f'D{layer["layer_no"]}(min) = {layer["min_thickness_inch"]:.2f} นิ้ว = {layer["min_thickness_cm"]:.1f} ซม.').bold = True
+        result_run = result_para.add_run(f'D{layer["layer_no"]}(min) = {layer["min_thickness_inch"]:.2f} นิ้ว = {layer["min_thickness_cm"]:.1f} ซม.')
+        set_equation_font(result_run, size_pt=11, bold=True, italic=False)
         
         # Design thickness selection
-        doc.add_paragraph(f'เลือกใช้ความหนา:')
+        add_thai_paragraph(doc, 'เลือกใช้ความหนา:', size_pt=15, bold=True)
         design_para = doc.add_paragraph()
         design_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        design_para.add_run(f'D{layer["layer_no"]}(design) = {layer["design_thickness_cm"]:.0f} ซม. ({layer["design_thickness_inch"]:.2f} นิ้ว)').bold = True
+        design_run = design_para.add_run(f'D{layer["layer_no"]}(design) = {layer["design_thickness_cm"]:.0f} ซม. ({layer["design_thickness_inch"]:.2f} นิ้ว)')
+        set_equation_font(design_run, size_pt=11, bold=True, italic=False)
         
         # SN contribution
-        doc.add_paragraph(f'SN contribution:')
-        contrib_para = doc.add_paragraph()
-        contrib_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        add_thai_paragraph(doc, 'SN contribution:', size_pt=15, bold=True)
         contrib_text = f'ΔSN{layer["layer_no"]} = a{layer["layer_no"]} × D{layer["layer_no"]} × m{layer["layer_no"]} = {layer["a_i"]:.2f} × {layer["design_thickness_inch"]:.2f} × {layer["m_i"]:.2f} = {layer["sn_contribution"]:.3f}'
-        contrib_para.add_run(contrib_text)
+        add_equation_paragraph(doc, contrib_text, size_pt=11, italic=False)
         
         # Cumulative SN
         cum_para = doc.add_paragraph()
         cum_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        cum_para.add_run(f'ΣSN = {layer["cumulative_sn"]:.2f}').bold = True
+        cum_run = cum_para.add_run(f'ΣSN = {layer["cumulative_sn"]:.2f}')
+        set_equation_font(cum_run, size_pt=11, bold=True, italic=False)
         
         # Check status
         status_text = '✓ OK' if layer['is_ok'] else '✗ NG - ต้องเพิ่มความหนา'
         status_para = doc.add_paragraph()
         status_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
         status_run = status_para.add_run(f'สถานะ: {status_text}')
-        status_run.bold = True
+        set_thai_font(status_run, size_pt=15, bold=True)
         
         doc.add_paragraph()  # Spacing
     
     # ========================================
     # SECTION 5: SN Summary Table
     # ========================================
-    doc.add_heading('5. ตารางสรุปการคำนวณ Structural Number', level=2)
+    heading2_5 = doc.add_heading('5. ตารางสรุปการคำนวณ Structural Number', level=2)
+    for run in heading2_5.runs:
+        set_thai_font(run, size_pt=16, bold=True)
     
     sn_table = doc.add_table(rows=1, cols=8)
     sn_table.style = 'Table Grid'
@@ -816,7 +872,7 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
         cell.text = header
         for paragraph in cell.paragraphs:
             for run in paragraph.runs:
-                run.bold = True
+                set_thai_font(run, size_pt=15, bold=True)
     
     for layer in calc_results['layers']:
         row = sn_table.add_row()
@@ -828,17 +884,22 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
         row.cells[5].text = f'{layer["design_thickness_cm"]:.0f}'
         row.cells[6].text = f'{layer["sn_contribution"]:.3f}'
         row.cells[7].text = f'{layer["cumulative_sn"]:.2f}'
+        # Set Thai font for table cells
+        for cell in row.cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    set_thai_font(run, size_pt=15)
     
     # Formula
     doc.add_paragraph()
-    formula_p = doc.add_paragraph()
-    formula_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    formula_p.add_run('สูตร: SN = Σ(aᵢ × Dᵢ × mᵢ)').italic = True
+    add_equation_paragraph(doc, 'สูตร: SN = Σ(aᵢ × Dᵢ × mᵢ)', size_pt=11, italic=True)
     
     # ========================================
     # SECTION 6: Design Verification
     # ========================================
-    doc.add_heading('6. ผลการตรวจสอบการออกแบบ', level=2)
+    heading2_6 = doc.add_heading('6. ผลการตรวจสอบการออกแบบ', level=2)
+    for run in heading2_6.runs:
+        set_thai_font(run, size_pt=16, bold=True)
     
     result_table = doc.add_table(rows=4, cols=2)
     result_table.style = 'Table Grid'
@@ -853,25 +914,29 @@ def create_word_report(project_title: str, inputs: dict, calc_results: dict,
     for i, (param, value) in enumerate(result_data):
         result_table.rows[i].cells[0].text = param
         result_table.rows[i].cells[1].text = value
+        # Set Thai font for table cells
+        for cell in result_table.rows[i].cells:
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    set_thai_font(run, size_pt=15)
     
     # Conclusion
     doc.add_paragraph()
     if design_check['passed']:
-        conclusion = doc.add_paragraph()
-        conclusion.add_run(
-            f'สรุป: การออกแบบผ่านเกณฑ์ เนื่องจาก SN_provided ({calc_results["total_sn_provided"]:.2f}) ≥ '
-            f'SN_required ({calc_results["total_sn_required"]:.2f})'
-        ).bold = True
+        conclusion_text = (f'สรุป: การออกแบบผ่านเกณฑ์ เนื่องจาก SN_provided ({calc_results["total_sn_provided"]:.2f}) ≥ '
+            f'SN_required ({calc_results["total_sn_required"]:.2f})')
+        add_thai_paragraph(doc, conclusion_text, size_pt=15, bold=True)
     else:
-        conclusion = doc.add_paragraph()
-        conclusion.add_run(
-            f'สรุป: การออกแบบไม่ผ่านเกณฑ์ กรุณาปรับเพิ่มความหนาชั้นทาง'
-        ).bold = True
+        conclusion_text = 'สรุป: การออกแบบไม่ผ่านเกณฑ์ กรุณาปรับเพิ่มความหนาชั้นทาง'
+        add_thai_paragraph(doc, conclusion_text, size_pt=15, bold=True)
     
     # ========================================
     # SECTION 7: Figure
     # ========================================
-    doc.add_heading('7. ภาพตัดขวางโครงสร้างถนน', level=2)
+    heading2_7 = doc.add_heading('7. ภาพตัดขวางโครงสร้างถนน', level=2)
+    for run in heading2_7.runs:
+        set_thai_font(run, size_pt=16, bold=True)
+    
     fig_bytes = get_figure_as_bytes(fig)
     doc.add_picture(fig_bytes, width=Inches(6))
     doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -912,6 +977,28 @@ def main():
         
         st.markdown("---")
         
+        # ========================================
+        # UPLOAD/DOWNLOAD JSON
+        # ========================================
+        st.header("💾 บันทึก/โหลดข้อมูล")
+        
+        uploaded_json = st.file_uploader(
+            "📂 โหลดข้อมูลจากไฟล์ JSON",
+            type=['json'],
+            help="อัปโหลดไฟล์ JSON ที่บันทึกไว้ก่อนหน้า"
+        )
+        
+        # ประมวลผลไฟล์ JSON ที่อัปโหลด
+        if uploaded_json is not None:
+            try:
+                loaded_data = json.load(uploaded_json)
+                st.session_state['loaded_json'] = loaded_data
+                st.success("✅ โหลดข้อมูลสำเร็จ!")
+            except Exception as e:
+                st.error(f"❌ ไม่สามารถอ่านไฟล์ได้: {e}")
+        
+        st.markdown("---")
+        
         # ตัวเลือกภาษาสำหรับรูปภาพ
         st.header("🖼️ ตั้งค่ารูปภาพ")
         figure_language = st.radio(
@@ -944,6 +1031,9 @@ def main():
     with col1:
         st.header("📝 Design Inputs")
         
+        # ดึงค่าจาก loaded JSON (ถ้ามี)
+        loaded = st.session_state.get('loaded_json', {})
+        
         # Traffic
         st.subheader("1️⃣ Traffic & Reliability")
         
@@ -951,7 +1041,7 @@ def main():
             "Design ESALs (W₁₈)",
             min_value=100000,
             max_value=250000000,
-            value=5000000,
+            value=loaded.get('W18', 5000000),
             step=100000,
             format="%d",
             help="จำนวน 18-kip ESAL ตลอดอายุการใช้งาน (สูงสุด 250 ล้าน)"
@@ -961,10 +1051,14 @@ def main():
         esal_million = W18 / 1000000
         st.caption(f"💡 W₁₈ = **{esal_million:,.2f} ล้าน** ESALs")
         
+        # หา index ของ reliability จาก loaded data
+        reliability_options = list(RELIABILITY_ZR.keys())
+        default_reliability_idx = reliability_options.index(loaded.get('reliability', 90)) if loaded.get('reliability', 90) in reliability_options else reliability_options.index(90)
+        
         reliability = st.selectbox(
             "Reliability Level (R)",
-            options=list(RELIABILITY_ZR.keys()),
-            index=list(RELIABILITY_ZR.keys()).index(90),
+            options=reliability_options,
+            index=default_reliability_idx,
         )
         Zr = RELIABILITY_ZR[reliability]
         st.info(f"Zᵣ = {Zr:.3f}")
@@ -973,7 +1067,7 @@ def main():
             "Overall Standard Deviation (Sₒ)",
             min_value=0.30,
             max_value=0.60,
-            value=0.45,
+            value=loaded.get('So', 0.45),
             step=0.01,
             format="%.2f"
         )
@@ -983,9 +1077,9 @@ def main():
         
         col1a, col1b = st.columns(2)
         with col1a:
-            P0 = st.number_input("P₀ (Initial)", min_value=3.0, max_value=5.0, value=4.2, step=0.1)
+            P0 = st.number_input("P₀ (Initial)", min_value=3.0, max_value=5.0, value=loaded.get('P0', 4.2), step=0.1)
         with col1b:
-            Pt = st.number_input("Pₜ (Terminal)", min_value=1.5, max_value=3.5, value=2.5, step=0.1)
+            Pt = st.number_input("Pₜ (Terminal)", min_value=1.5, max_value=3.5, value=loaded.get('Pt', 2.5), step=0.1)
         
         delta_psi = P0 - Pt
         st.success(f"**ΔPSI = {delta_psi:.1f}**")
@@ -997,7 +1091,7 @@ def main():
             "CBR (%)",
             min_value=1.0,
             max_value=30.0,
-            value=5.0,
+            value=loaded.get('CBR', 5.0),
             step=0.5,
             help="ค่า CBR ของดินเดิมหรือดินถมคันทาง"
         )
@@ -1012,12 +1106,15 @@ def main():
     with col2:
         st.header("🏗️ Layer Configuration")
         
+        # ดึงข้อมูล layers จาก loaded JSON
+        loaded_layers = loaded.get('layers', [])
+        
         # จำนวนชั้นทาง
         num_layers = st.slider(
             "จำนวนชั้นทาง",
             min_value=2,
             max_value=6,
-            value=4,
+            value=loaded.get('num_layers', 4),
             help="เลือกจำนวนชั้นทาง (2-6 ชั้น)"
         )
         
@@ -1038,22 +1135,29 @@ def main():
         
         surface_materials = [m for m, p in MATERIALS.items() if p['layer_type'] == 'surface']
         
+        # ดึงค่า default จาก loaded JSON สำหรับ Layer 1
+        layer1_loaded = loaded_layers[0] if len(loaded_layers) > 0 else {}
+        layer1_mat_default = layer1_loaded.get('material', surface_materials[0])
+        layer1_mat_idx = surface_materials.index(layer1_mat_default) if layer1_mat_default in surface_materials else 0
+        
         layer1_mat = st.selectbox(
             "เลือกวัสดุ",
             options=surface_materials,
-            index=0,
+            index=layer1_mat_idx,
             key="layer1_mat"
         )
         
         col_a, col_b = st.columns(2)
         with col_a:
             layer1_thick = st.number_input(
-                "ความหนา (cm)", min_value=1.0, max_value=30.0, value=5.0, step=1.0,
+                "ความหนา (cm)", min_value=1.0, max_value=30.0, 
+                value=layer1_loaded.get('thickness_cm', 5.0), step=1.0,
                 key="layer1_thick"
             )
         with col_b:
             layer1_m = st.number_input(
-                "m₁", min_value=0.5, max_value=1.5, value=1.0, step=0.05,
+                "m₁", min_value=0.5, max_value=1.5, 
+                value=layer1_loaded.get('drainage_coeff', 1.0), step=0.05,
                 key="layer1_m"
             )
         
@@ -1084,8 +1188,15 @@ def main():
             layer_icons = ['5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣']
             st.subheader(f"{layer_icons[i-2]} ชั้นที่ {i}")
             
-            # Default index
-            default_idx = all_materials.index(default_materials[i-2]) if default_materials[i-2] in all_materials else 0
+            # ดึงค่า default จาก loaded JSON สำหรับ Layer i
+            layer_i_loaded = loaded_layers[i-1] if len(loaded_layers) > i-1 else {}
+            layer_i_mat_default = layer_i_loaded.get('material', default_materials[i-2])
+            
+            # หา index ของวัสดุ
+            if layer_i_mat_default in all_materials:
+                default_idx = all_materials.index(layer_i_mat_default)
+            else:
+                default_idx = all_materials.index(default_materials[i-2]) if default_materials[i-2] in all_materials else 0
             
             layer_mat = st.selectbox(
                 f"เลือกวัสดุชั้นที่ {i}",
@@ -1098,13 +1209,17 @@ def main():
             with col_c:
                 layer_thick = st.number_input(
                     "ความหนา (cm)",
-                    min_value=1.0, max_value=150.0, value=default_thickness[i-2], step=5.0,
+                    min_value=1.0, max_value=150.0, 
+                    value=layer_i_loaded.get('thickness_cm', default_thickness[i-2]), 
+                    step=5.0,
                     key=f"layer{i}_thick"
                 )
             with col_d:
                 layer_m = st.number_input(
                     f"m{i}",
-                    min_value=0.5, max_value=1.5, value=1.0, step=0.05,
+                    min_value=0.5, max_value=1.5, 
+                    value=layer_i_loaded.get('drainage_coeff', 1.0), 
+                    step=0.05,
                     key=f"layer{i}_m"
                 )
             
@@ -1339,7 +1454,7 @@ def main():
     # ========================================
     st.subheader("📄 Export Report")
     
-    col_exp1, col_exp2 = st.columns(2)
+    col_exp1, col_exp2, col_exp3 = st.columns(3)
     
     with col_exp1:
         if st.button("📝 Generate Word Report", type="primary"):
@@ -1366,12 +1481,34 @@ def main():
             mime="image/png"
         )
     
+    with col_exp3:
+        # สร้างข้อมูล JSON สำหรับ export
+        export_data = {
+            'project_title': project_title,
+            'W18': W18,
+            'reliability': reliability,
+            'So': So,
+            'P0': P0,
+            'Pt': Pt,
+            'CBR': CBR,
+            'num_layers': num_layers,
+            'layers': layer_data
+        }
+        json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
+        
+        st.download_button(
+            label="💾 Download Input (JSON)",
+            data=json_str,
+            file_name=f"Flexible_Input_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            mime="application/json"
+        )
+    
     # Footer
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: gray;'>
     <p>AASHTO 1993 Flexible Pavement Design Application v3.0</p>
-    <p>พัฒนาโดย : รศ.ดร.อิทธิพล มีผล // ภาควิชาครุศาสตร์โยธา มจพ.</p>
+    <p>พัฒนาตามมาตรฐานกรมทางหลวง (DOH Thailand)</p>
     </div>
     """, unsafe_allow_html=True)
 
