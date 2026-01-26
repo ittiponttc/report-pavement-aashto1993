@@ -973,7 +973,6 @@ def main():
     # ========================================
     with st.sidebar:
         st.header("📋 ข้อมูลโครงการ")
-        project_title = st.text_input("ชื่อโครงการ", value="โครงการออกแบบถนน")
         
         st.markdown("---")
         
@@ -992,10 +991,43 @@ def main():
         if uploaded_json is not None:
             try:
                 loaded_data = json.load(uploaded_json)
-                st.session_state['loaded_json'] = loaded_data
-                st.success("✅ โหลดข้อมูลสำเร็จ!")
+                
+                # ตรวจสอบว่าเป็นไฟล์ใหม่หรือไม่
+                file_id = f"{uploaded_json.name}_{uploaded_json.size}"
+                if st.session_state.get('last_uploaded_file') != file_id:
+                    st.session_state['last_uploaded_file'] = file_id
+                    st.session_state['loaded_json'] = loaded_data
+                    
+                    # อัพเดท session_state สำหรับทุก widget
+                    # Design Inputs
+                    st.session_state['input_W18'] = loaded_data.get('W18', 5000000)
+                    st.session_state['input_reliability'] = loaded_data.get('reliability', 90)
+                    st.session_state['input_So'] = loaded_data.get('So', 0.45)
+                    st.session_state['input_P0'] = loaded_data.get('P0', 4.2)
+                    st.session_state['input_Pt'] = loaded_data.get('Pt', 2.5)
+                    st.session_state['input_CBR'] = loaded_data.get('CBR', 5.0)
+                    st.session_state['input_num_layers'] = loaded_data.get('num_layers', 4)
+                    st.session_state['input_project_title'] = loaded_data.get('project_title', 'โครงการออกแบบถนน')
+                    
+                    # Layer data
+                    layers = loaded_data.get('layers', [])
+                    for i, layer in enumerate(layers):
+                        st.session_state[f'layer{i+1}_mat'] = layer.get('material', '')
+                        st.session_state[f'layer{i+1}_thick'] = layer.get('thickness_cm', 5.0 if i == 0 else 15.0)
+                        st.session_state[f'layer{i+1}_m'] = layer.get('drainage_coeff', 1.0)
+                    
+                    st.success("✅ โหลดข้อมูลสำเร็จ!")
+                    st.rerun()
+                    
             except Exception as e:
                 st.error(f"❌ ไม่สามารถอ่านไฟล์ได้: {e}")
+        
+        # ชื่อโครงการ
+        project_title = st.text_input(
+            "ชื่อโครงการ", 
+            value=st.session_state.get('input_project_title', "โครงการออกแบบถนน"),
+            key="project_title_input"
+        )
         
         st.markdown("---")
         
@@ -1031,9 +1063,6 @@ def main():
     with col1:
         st.header("📝 Design Inputs")
         
-        # ดึงค่าจาก loaded JSON (ถ้ามี)
-        loaded = st.session_state.get('loaded_json', {})
-        
         # Traffic
         st.subheader("1️⃣ Traffic & Reliability")
         
@@ -1041,24 +1070,27 @@ def main():
             "Design ESALs (W₁₈)",
             min_value=100000,
             max_value=250000000,
-            value=loaded.get('W18', 5000000),
+            value=st.session_state.get('input_W18', 5000000),
             step=100000,
             format="%d",
-            help="จำนวน 18-kip ESAL ตลอดอายุการใช้งาน (สูงสุด 250 ล้าน)"
+            help="จำนวน 18-kip ESAL ตลอดอายุการใช้งาน (สูงสุด 250 ล้าน)",
+            key="input_W18"
         )
         
         # แสดงค่า ESAL เป็นล้าน (ภาษาไทย)
         esal_million = W18 / 1000000
         st.caption(f"💡 W₁₈ = **{esal_million:,.2f} ล้าน** ESALs")
         
-        # หา index ของ reliability จาก loaded data
+        # หา index ของ reliability จาก session_state
         reliability_options = list(RELIABILITY_ZR.keys())
-        default_reliability_idx = reliability_options.index(loaded.get('reliability', 90)) if loaded.get('reliability', 90) in reliability_options else reliability_options.index(90)
+        current_reliability = st.session_state.get('input_reliability', 90)
+        default_reliability_idx = reliability_options.index(current_reliability) if current_reliability in reliability_options else reliability_options.index(90)
         
         reliability = st.selectbox(
             "Reliability Level (R)",
             options=reliability_options,
             index=default_reliability_idx,
+            key="input_reliability"
         )
         Zr = RELIABILITY_ZR[reliability]
         st.info(f"Zᵣ = {Zr:.3f}")
@@ -1067,9 +1099,10 @@ def main():
             "Overall Standard Deviation (Sₒ)",
             min_value=0.30,
             max_value=0.60,
-            value=loaded.get('So', 0.45),
+            value=st.session_state.get('input_So', 0.45),
             step=0.01,
-            format="%.2f"
+            format="%.2f",
+            key="input_So"
         )
         
         # Serviceability
@@ -1077,9 +1110,21 @@ def main():
         
         col1a, col1b = st.columns(2)
         with col1a:
-            P0 = st.number_input("P₀ (Initial)", min_value=3.0, max_value=5.0, value=loaded.get('P0', 4.2), step=0.1)
+            P0 = st.number_input(
+                "P₀ (Initial)", 
+                min_value=3.0, max_value=5.0, 
+                value=st.session_state.get('input_P0', 4.2), 
+                step=0.1,
+                key="input_P0"
+            )
         with col1b:
-            Pt = st.number_input("Pₜ (Terminal)", min_value=1.5, max_value=3.5, value=loaded.get('Pt', 2.5), step=0.1)
+            Pt = st.number_input(
+                "Pₜ (Terminal)", 
+                min_value=1.5, max_value=3.5, 
+                value=st.session_state.get('input_Pt', 2.5), 
+                step=0.1,
+                key="input_Pt"
+            )
         
         delta_psi = P0 - Pt
         st.success(f"**ΔPSI = {delta_psi:.1f}**")
@@ -1091,9 +1136,10 @@ def main():
             "CBR (%)",
             min_value=1.0,
             max_value=30.0,
-            value=loaded.get('CBR', 5.0),
+            value=st.session_state.get('input_CBR', 5.0),
             step=0.5,
-            help="ค่า CBR ของดินเดิมหรือดินถมคันทาง"
+            help="ค่า CBR ของดินเดิมหรือดินถมคันทาง",
+            key="input_CBR"
         )
         
         # Mr = 1500 × CBR (ตามมาตรฐาน ทล.)
@@ -1106,16 +1152,14 @@ def main():
     with col2:
         st.header("🏗️ Layer Configuration")
         
-        # ดึงข้อมูล layers จาก loaded JSON
-        loaded_layers = loaded.get('layers', [])
-        
         # จำนวนชั้นทาง
         num_layers = st.slider(
             "จำนวนชั้นทาง",
             min_value=2,
             max_value=6,
-            value=loaded.get('num_layers', 4),
-            help="เลือกจำนวนชั้นทาง (2-6 ชั้น)"
+            value=st.session_state.get('input_num_layers', 4),
+            help="เลือกจำนวนชั้นทาง (2-6 ชั้น)",
+            key="input_num_layers"
         )
         
         # สร้าง list วัสดุทั้งหมด (ยกเว้น "ไม่ใช้")
@@ -1135,9 +1179,8 @@ def main():
         
         surface_materials = [m for m, p in MATERIALS.items() if p['layer_type'] == 'surface']
         
-        # ดึงค่า default จาก loaded JSON สำหรับ Layer 1
-        layer1_loaded = loaded_layers[0] if len(loaded_layers) > 0 else {}
-        layer1_mat_default = layer1_loaded.get('material', surface_materials[0])
+        # ดึงค่า default จาก session_state สำหรับ Layer 1
+        layer1_mat_default = st.session_state.get('layer1_mat', surface_materials[0])
         layer1_mat_idx = surface_materials.index(layer1_mat_default) if layer1_mat_default in surface_materials else 0
         
         layer1_mat = st.selectbox(
@@ -1151,13 +1194,13 @@ def main():
         with col_a:
             layer1_thick = st.number_input(
                 "ความหนา (cm)", min_value=1.0, max_value=30.0, 
-                value=layer1_loaded.get('thickness_cm', 5.0), step=1.0,
+                value=st.session_state.get('layer1_thick', 5.0), step=1.0,
                 key="layer1_thick"
             )
         with col_b:
             layer1_m = st.number_input(
                 "m₁", min_value=0.5, max_value=1.5, 
-                value=layer1_loaded.get('drainage_coeff', 1.0), step=0.05,
+                value=st.session_state.get('layer1_m', 1.0), step=0.05,
                 key="layer1_m"
             )
         
@@ -1188,9 +1231,8 @@ def main():
             layer_icons = ['5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣']
             st.subheader(f"{layer_icons[i-2]} ชั้นที่ {i}")
             
-            # ดึงค่า default จาก loaded JSON สำหรับ Layer i
-            layer_i_loaded = loaded_layers[i-1] if len(loaded_layers) > i-1 else {}
-            layer_i_mat_default = layer_i_loaded.get('material', default_materials[i-2])
+            # ดึงค่า default จาก session_state สำหรับ Layer i
+            layer_i_mat_default = st.session_state.get(f'layer{i}_mat', default_materials[i-2])
             
             # หา index ของวัสดุ
             if layer_i_mat_default in all_materials:
@@ -1210,7 +1252,7 @@ def main():
                 layer_thick = st.number_input(
                     "ความหนา (cm)",
                     min_value=1.0, max_value=150.0, 
-                    value=layer_i_loaded.get('thickness_cm', default_thickness[i-2]), 
+                    value=st.session_state.get(f'layer{i}_thick', default_thickness[i-2]), 
                     step=5.0,
                     key=f"layer{i}_thick"
                 )
@@ -1218,7 +1260,7 @@ def main():
                 layer_m = st.number_input(
                     f"m{i}",
                     min_value=0.5, max_value=1.5, 
-                    value=layer_i_loaded.get('drainage_coeff', 1.0), 
+                    value=st.session_state.get(f'layer{i}_m', 1.0), 
                     step=0.05,
                     key=f"layer{i}_m"
                 )
