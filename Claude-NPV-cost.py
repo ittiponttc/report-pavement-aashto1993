@@ -146,7 +146,7 @@ def get_default_ac2_layers():
     ]
 
 def get_default_jrcp1_layers():
-    """JRCP1: คอนกรีตบนดินซีเมนต์ (ตารางที่ 5.3-22)"""
+    """JPCP/JRCP (1): คอนกรีตบนดินซีเมนต์ (ตารางที่ 5.3-22)"""
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 28, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 800},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
@@ -162,7 +162,7 @@ def get_default_jrcp1_joints():
     ]
 
 def get_default_jrcp2_layers():
-    """JRCP2: คอนกรีตบนหินคลุกผสมซีเมนต์ (ตารางที่ 5.3-24)"""
+    """JPCP/JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์ (ตารางที่ 5.3-24)"""
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 28, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 800},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
@@ -640,20 +640,28 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     return updated_layers
 
 
-def render_joint_editor(joints, key_prefix):
-    """แสดง UI สำหรับแก้ไขรอยต่อ"""
+def render_joint_editor(joints, key_prefix, area_per_km, road_length):
+    """แสดง UI สำหรับแก้ไขรอยต่อ พร้อมแสดงราคา บาท/ตร.ม."""
     st.markdown("---")
-    st.markdown("**รอยต่อ (Joints)**")
     
-    cols = st.columns([3, 1.5, 1.5])
+    # Checkbox เลือกรวม/ไม่รวม Joints
+    col_header = st.columns([3, 1])
+    with col_header[0]:
+        st.markdown("**รอยต่อ (Joints)**")
+    with col_header[1]:
+        include_joints = st.checkbox("รวมราคา Joints", value=True, key=f"{key_prefix}_include_joints")
+    
+    cols = st.columns([3, 1.5, 1.5, 1.5])
     cols[0].markdown("รายการ")
     cols[1].markdown("ปริมาณ (m)")
     cols[2].markdown("ราคา/หน่วย")
+    cols[3].markdown("ราคา (บาท/ตร.ม.)")
     
     updated_joints = []
+    total_area = area_per_km * road_length
     
     for i, joint in enumerate(joints):
-        cols = st.columns([3, 1.5, 1.5])
+        cols = st.columns([3, 1.5, 1.5, 1.5])
         
         with cols[0]:
             st.text(joint['name'])
@@ -672,14 +680,22 @@ def render_joint_editor(joints, key_prefix):
                 min_value=0.0, step=10.0
             )
         
+        # คำนวณราคา บาท/ตร.ม.
+        joint_total = qty * cost
+        cost_per_sqm = joint_total / total_area if total_area > 0 else 0
+        
+        with cols[3]:
+            st.markdown(f"**{cost_per_sqm:.2f}**")
+        
         updated_joints.append({
             'name': joint['name'],
             'quantity': qty,
             'qty_unit': joint['qty_unit'],
-            'unit_cost': cost
+            'unit_cost': cost,
+            'cost_per_sqm': cost_per_sqm
         })
     
-    return updated_joints
+    return updated_joints, include_joints
 
 
 def create_comparison_chart(results_df):
@@ -949,15 +965,55 @@ def main():
     # Sidebar
     with st.sidebar:
         st.header("📋 ข้อมูลโครงการ")
-        project_name = st.text_input("ชื่อโครงการ", value="โครงการก่อสร้างทางหลวง")
-        road_length = st.number_input("ความยาวถนน (กม.)", value=1.0, min_value=0.1, step=0.1)
+        
+        # ===== Upload JSON =====
+        st.subheader("📂 โหลดโครงการ")
+        uploaded_json = st.file_uploader(
+            "เลือกไฟล์ JSON",
+            type=['json'],
+            help="อัพโหลดไฟล์โครงการที่บันทึกไว้",
+            key="upload_json"
+        )
+        
+        if uploaded_json is not None:
+            try:
+                loaded_data = json.loads(uploaded_json.read().decode('utf-8'))
+                st.success("✅ โหลดไฟล์สำเร็จ!")
+                
+                # แสดงข้อมูลที่โหลด
+                if 'project_info' in loaded_data:
+                    st.info(f"📌 โครงการ: {loaded_data['project_info'].get('name', '-')}")
+                    st.info(f"📅 บันทึกเมื่อ: {loaded_data.get('saved_at', '-')}")
+                
+                # เก็บข้อมูลใน session_state
+                if st.button("📥 นำเข้าข้อมูล", key="import_json"):
+                    if 'project_info' in loaded_data:
+                        st.session_state['loaded_project'] = loaded_data
+                        st.rerun()
+            except Exception as e:
+                st.error(f"❌ ไม่สามารถอ่านไฟล์ได้: {e}")
+        
+        st.divider()
+        
+        # ตรวจสอบว่ามีข้อมูลที่โหลดมาหรือไม่
+        loaded_project = st.session_state.get('loaded_project', {})
+        loaded_info = loaded_project.get('project_info', {})
+        
+        project_name = st.text_input("ชื่อโครงการ", value=loaded_info.get('name', "โครงการก่อสร้างทางหลวง"))
+        road_length = st.number_input("ความยาวถนน (กม.)", value=loaded_info.get('length', 1.0), min_value=0.1, step=0.1)
         
         st.divider()
         st.header("📐 ขนาดถนน")
-        lane_width = st.number_input("ความกว้างช่องจราจร (ม.)", value=3.5, min_value=2.5, max_value=4.0, step=0.25)
-        num_lanes = st.selectbox("จำนวนช่องจราจร (รวม 2 ทิศทาง)", options=[2, 4, 6], index=0)
-        shoulder_left = st.number_input("ไหล่ทางซ้าย (ม.)", value=2.5, min_value=0.0, max_value=3.5, step=0.25)
-        shoulder_right = st.number_input("ไหล่ทางขวา (ม.)", value=1.5, min_value=0.0, max_value=3.5, step=0.25)
+        lane_width = st.number_input("ความกว้างช่องจราจร (ม.)", value=loaded_info.get('lane_width', 3.5), min_value=2.5, max_value=4.0, step=0.25)
+        
+        # หา index สำหรับ num_lanes
+        default_lanes = loaded_info.get('num_lanes', 2)
+        lanes_options = [2, 4, 6]
+        lanes_idx = lanes_options.index(default_lanes) if default_lanes in lanes_options else 0
+        num_lanes = st.selectbox("จำนวนช่องจราจร (รวม 2 ทิศทาง)", options=lanes_options, index=lanes_idx)
+        
+        shoulder_left = st.number_input("ไหล่ทางซ้าย (ม.)", value=loaded_info.get('shoulder_left', 2.5), min_value=0.0, max_value=3.5, step=0.25)
+        shoulder_right = st.number_input("ไหล่ทางขวา (ม.)", value=loaded_info.get('shoulder_right', 1.5), min_value=0.0, max_value=3.5, step=0.25)
         
         # คำนวณความกว้างรวม
         # ความกว้างผิวจราจร = ช่องจราจร × จำนวนช่อง
@@ -968,9 +1024,9 @@ def main():
         
         st.divider()
         st.header("⚙️ พารามิเตอร์")
-        cbr = st.selectbox("ค่า CBR ดินเดิม (%)", options=[2, 3, 4, 5, 6], index=0)
-        discount_rate = st.number_input("Discount Rate (%)", value=5.0, min_value=1.0, max_value=15.0, step=0.5)
-        analysis_period = st.number_input("ระยะเวลาวิเคราะห์ (ปี)", value=100, min_value=20, max_value=200, step=5)
+        
+        discount_rate = st.number_input("Discount Rate (%)", value=loaded_info.get('discount_rate', 5.0), min_value=1.0, max_value=15.0, step=0.5)
+        analysis_period = st.number_input("ระยะเวลาวิเคราะห์ (ปี)", value=loaded_info.get('analysis_period', 100), min_value=20, max_value=200, step=5)
     
     # เก็บข้อมูลโครงการ
     project_info = {
@@ -981,7 +1037,6 @@ def main():
         'shoulder_right': shoulder_right,
         'num_lanes': num_lanes,
         'total_width': total_width,
-        'cbr': cbr,
         'discount_rate': discount_rate,
         'analysis_period': analysis_period
     }
@@ -1219,33 +1274,53 @@ def main():
         
         with col3:
             jrcp1_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp1_show")
-            jrcp1_name = st.text_input("ชื่อโครงสร้าง JRCP1", value="JRCP1: คอนกรีตบนดินซีเมนต์", key="jrcp1_name")
+            jrcp1_name = st.text_input("ชื่อโครงสร้าง JPCP/JRCP (1)", value="JPCP/JRCP (1): คอนกรีตบนดินซีเมนต์", key="jrcp1_name")
             with st.expander(f"● {jrcp1_name}", expanded=True):
                 jrcp1_layers = render_layer_editor(get_default_jrcp1_layers(), "jrcp1", total_width, road_length)
                 jrcp1_layer_cost, jrcp1_layer_details = calculate_layer_cost(jrcp1_layers, road_length)
-                jrcp1_joints = render_joint_editor(get_default_jrcp1_joints(), "jrcp1")
+                jrcp1_joints, jrcp1_include_joints = render_joint_editor(get_default_jrcp1_joints(), "jrcp1", area_per_km, road_length)
                 jrcp1_joint_cost, jrcp1_joint_details = calculate_joint_cost(jrcp1_joints, road_length)
-                jrcp1_total = jrcp1_layer_cost + jrcp1_joint_cost
+                
+                # คำนวณ บาท/ตร.ม. ตาม checkbox
+                jrcp1_joints_sqm = sum(j.get('cost_per_sqm', 0) for j in jrcp1_joints)
+                if jrcp1_include_joints:
+                    jrcp1_total = jrcp1_layer_cost + jrcp1_joint_cost
+                    jrcp1_cost_per_sqm = jrcp1_layer_cost / (area_per_km * road_length) + jrcp1_joints_sqm
+                    joints_note = "(รวม Joints)"
+                else:
+                    jrcp1_total = jrcp1_layer_cost + jrcp1_joint_cost  # ล้านบาท/กม. ยังรวม Joints
+                    jrcp1_cost_per_sqm = jrcp1_layer_cost / (area_per_km * road_length)
+                    joints_note = "(ไม่รวม Joints)"
+                
                 jrcp1_cost_per_km = jrcp1_total / road_length / 1_000_000
-                jrcp1_cost_per_sqm = jrcp1_total / (area_per_km * road_length)
                 jrcp1_details = jrcp1_layer_details + jrcp1_joint_details
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp1_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp1_cost_per_sqm:.2f} บาท/ตร.ม. {joints_note}</div>', unsafe_allow_html=True)
         
         with col4:
             jrcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp2_show")
-            jrcp2_name = st.text_input("ชื่อโครงสร้าง JRCP2", value="JRCP2: คอนกรีตบนหินคลุกผสมซีเมนต์", key="jrcp2_name")
+            jrcp2_name = st.text_input("ชื่อโครงสร้าง JPCP/JRCP (2)", value="JPCP/JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์", key="jrcp2_name")
             with st.expander(f"● {jrcp2_name}", expanded=True):
                 jrcp2_layers = render_layer_editor(get_default_jrcp2_layers(), "jrcp2", total_width, road_length)
                 jrcp2_layer_cost, jrcp2_layer_details = calculate_layer_cost(jrcp2_layers, road_length)
-                jrcp2_joints = render_joint_editor(get_default_jrcp1_joints(), "jrcp2")
+                jrcp2_joints, jrcp2_include_joints = render_joint_editor(get_default_jrcp1_joints(), "jrcp2", area_per_km, road_length)
                 jrcp2_joint_cost, jrcp2_joint_details = calculate_joint_cost(jrcp2_joints, road_length)
-                jrcp2_total = jrcp2_layer_cost + jrcp2_joint_cost
+                
+                # คำนวณ บาท/ตร.ม. ตาม checkbox
+                jrcp2_joints_sqm = sum(j.get('cost_per_sqm', 0) for j in jrcp2_joints)
+                if jrcp2_include_joints:
+                    jrcp2_total = jrcp2_layer_cost + jrcp2_joint_cost
+                    jrcp2_cost_per_sqm = jrcp2_layer_cost / (area_per_km * road_length) + jrcp2_joints_sqm
+                    joints_note2 = "(รวม Joints)"
+                else:
+                    jrcp2_total = jrcp2_layer_cost + jrcp2_joint_cost
+                    jrcp2_cost_per_sqm = jrcp2_layer_cost / (area_per_km * road_length)
+                    joints_note2 = "(ไม่รวม Joints)"
+                
                 jrcp2_cost_per_km = jrcp2_total / road_length / 1_000_000
-                jrcp2_cost_per_sqm = jrcp2_total / (area_per_km * road_length)
                 jrcp2_details = jrcp2_layer_details + jrcp2_joint_details
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp2_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp2_cost_per_sqm:.2f} บาท/ตร.ม. {joints_note2}</div>', unsafe_allow_html=True)
         
         # ===== CRCP =====
         st.subheader("🔴 ผิวทางคอนกรีตเสริมเหล็กต่อเนื่อง (CRCP)")
