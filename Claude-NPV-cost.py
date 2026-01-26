@@ -524,27 +524,44 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     st.markdown("---")
     st.markdown("**พื้นทาง/รองพื้นทาง** (ราคาแสดงเป็น บาท/ตร.ม.)")
     
+    # ตรวจสอบว่าเป็น JRCP หรือ CRCP หรือไม่ (เพื่อเพิ่ม AC Interlayer)
+    is_concrete_pavement = any(x in key_prefix.lower() for x in ['jrcp', 'crcp'])
+    
     # Library วัสดุพื้นทาง (ดึงจาก session_state หรือใช้ค่า default)
-    # ราคาใน Library เป็น บาท/ลบ.ม.
+    # ราคาใน Library เป็น บาท/ลบ.ม. ยกเว้น AC Interlayer เป็น บาท/ตร.ม.
     if 'price_library' in st.session_state:
         base_lib = st.session_state['price_library']['base_prices']
-        base_materials = {
-            'Crushed Rock Base Course': {'unit_cost_cum': base_lib.get('Crushed Rock Base Course', 583)},
-            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost_cum': base_lib.get('Cement Modified Crushed Rock Base (UCS 24.5 ksc)', 864)},
-            'Cement Treated Base (UCS 40 ksc)': {'unit_cost_cum': base_lib.get('Cement Treated Base (UCS 40 ksc)', 1096)},
-            'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost_cum': base_lib.get('Soil Cement Subbase (UCS 7 ksc)', 854)},
-            'Soil Aggregate Subbase': {'unit_cost_cum': base_lib.get('Soil Aggregate Subbase', 375)},
-            'Selected Material A': {'unit_cost_cum': base_lib.get('Selected Material A', 375)},
-        }
+        ac_lib = st.session_state['price_library']['ac_prices']
+        
+        base_materials = {}
+        
+        # เพิ่ม AC Interlayer เฉพาะ JRCP และ CRCP
+        if is_concrete_pavement:
+            base_materials['AC Interlayer (5 cm)'] = {'unit_cost_cum': ac_lib.get('AC Base Course', {}).get(5, 251), 'is_ac': True, 'default_thick': 5}
+        
+        # วัสดุพื้นทางปกติ
+        base_materials.update({
+            'Crushed Rock Base Course': {'unit_cost_cum': base_lib.get('Crushed Rock Base Course', 583), 'is_ac': False},
+            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost_cum': base_lib.get('Cement Modified Crushed Rock Base (UCS 24.5 ksc)', 864), 'is_ac': False},
+            'Cement Treated Base (UCS 40 ksc)': {'unit_cost_cum': base_lib.get('Cement Treated Base (UCS 40 ksc)', 1096), 'is_ac': False},
+            'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost_cum': base_lib.get('Soil Cement Subbase (UCS 7 ksc)', 854), 'is_ac': False},
+            'Soil Aggregate Subbase': {'unit_cost_cum': base_lib.get('Soil Aggregate Subbase', 375), 'is_ac': False},
+            'Selected Material A': {'unit_cost_cum': base_lib.get('Selected Material A', 375), 'is_ac': False},
+        })
     else:
-        base_materials = {
-            'Crushed Rock Base Course': {'unit_cost_cum': 583},
-            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost_cum': 864},
-            'Cement Treated Base (UCS 40 ksc)': {'unit_cost_cum': 1096},
-            'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost_cum': 854},
-            'Soil Aggregate Subbase': {'unit_cost_cum': 375},
-            'Selected Material A': {'unit_cost_cum': 375},
-        }
+        base_materials = {}
+        
+        if is_concrete_pavement:
+            base_materials['AC Interlayer (5 cm)'] = {'unit_cost_cum': 251, 'is_ac': True, 'default_thick': 5}
+        
+        base_materials.update({
+            'Crushed Rock Base Course': {'unit_cost_cum': 583, 'is_ac': False},
+            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost_cum': 864, 'is_ac': False},
+            'Cement Treated Base (UCS 40 ksc)': {'unit_cost_cum': 1096, 'is_ac': False},
+            'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost_cum': 854, 'is_ac': False},
+            'Soil Aggregate Subbase': {'unit_cost_cum': 375, 'is_ac': False},
+            'Selected Material A': {'unit_cost_cum': 375, 'is_ac': False},
+        })
     material_names = list(base_materials.keys())
     
     # จำนวนชั้นพื้นทาง (สูงสุด 5 ชั้น)
@@ -578,16 +595,34 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
             selected = st.selectbox("วัสดุ", material_names, index=default_idx,
                 key=f"{key_prefix}_bm_{i}", label_visibility="collapsed")
         with cols[1]:
-            thick = st.number_input("หนา", value=float(default_thick),
-                key=f"{key_prefix}_bt_{i}", label_visibility="collapsed", min_value=0.0, step=5.0)
+            # AC Interlayer ใช้ความหนาคงที่จาก Library
+            if base_materials[selected].get('is_ac', False):
+                default_thick_val = base_materials[selected].get('default_thick', 5)
+                thick = st.number_input("หนา", value=float(default_thick_val),
+                    key=f"{key_prefix}_bt_{i}", label_visibility="collapsed", min_value=0.0, step=1.0)
+            else:
+                thick = st.number_input("หนา", value=float(default_thick),
+                    key=f"{key_prefix}_bt_{i}", label_visibility="collapsed", min_value=0.0, step=5.0)
         
         # ปริมาณ = พื้นที่ (ตร.ม.) - ไม่ใช่ ลบ.ม. อีกต่อไป
         auto_qty = area_per_km * road_length
         
-        # แปลงราคา: บาท/ลบ.ม. → บาท/ตร.ม.
-        # ราคา บาท/ตร.ม. = ราคา บาท/ลบ.ม. × ความหนา (ม.) = ราคา × หนา/100
-        lib_cost_cum = base_materials[selected]['unit_cost_cum']  # บาท/ลบ.ม.
-        cost_per_sqm = lib_cost_cum * thick / 100  # บาท/ตร.ม.
+        # คำนวณราคา
+        if base_materials[selected].get('is_ac', False):
+            # AC Interlayer: ราคาเป็น บาท/ตร.ม. อยู่แล้ว (ดึงจาก AC Library ตามความหนา)
+            if 'price_library' in st.session_state:
+                ac_prices = st.session_state['price_library']['ac_prices'].get('AC Base Course', {})
+                cost_per_sqm = ac_prices.get(thick, 0)
+                if cost_per_sqm == 0 and ac_prices:
+                    closest = min(ac_prices.keys(), key=lambda x: abs(x - thick))
+                    cost_per_sqm = ac_prices.get(closest, 251)
+            else:
+                cost_per_sqm = 251  # default 5cm
+            lib_cost_cum = cost_per_sqm  # สำหรับ AC เก็บราคาตรง ไม่ใช่ ลบ.ม.
+        else:
+            # วัสดุพื้นทางปกติ: แปลงราคา บาท/ลบ.ม. → บาท/ตร.ม.
+            lib_cost_cum = base_materials[selected]['unit_cost_cum']  # บาท/ลบ.ม.
+            cost_per_sqm = lib_cost_cum * thick / 100  # บาท/ตร.ม.
         
         with cols[2]:
             st.text(f"{auto_qty:,.0f}")
