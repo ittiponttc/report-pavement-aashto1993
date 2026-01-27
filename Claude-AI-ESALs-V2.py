@@ -30,8 +30,8 @@ TRUCKS = {
     'HB': {'desc': 'Heavy Bus (รถโดยสารขนาดใหญ่)', 'axles': [{'name': 'เพลาหน้า', 'load_ton': 5.0, 'type': 'Single'}, {'name': 'เพลาหลัง', 'load_ton': 20.0, 'type': 'Tandem'}]},
     'MT': {'desc': 'Medium Truck (รถบรรทุกขนาดกลาง)', 'axles': [{'name': 'เพลาหน้า', 'load_ton': 4.0, 'type': 'Single'}, {'name': 'เพลาหลัง', 'load_ton': 11.0, 'type': 'Single'}]},
     'HT': {'desc': 'Heavy Truck (รถบรรทุกขนาดใหญ่)', 'axles': [{'name': 'เพลาหน้า', 'load_ton': 5.0, 'type': 'Single'}, {'name': 'เพลาหลัง', 'load_ton': 20.0, 'type': 'Tandem'}]},
-    'STR': {'desc': 'Semi-Trailer (รถกึ่งพ่วง)', 'axles': [{'name': 'เพลาหน้า', 'load_ton': 5.0, 'type': 'Single'}, {'name': 'เพลาหลัง', 'load_ton': 20.0, 'type': 'Tandem'}, {'name': 'เพลาพ่วงหลัง', 'load_ton': 20.0, 'type': 'Tandem'}]},
-    'TR': {'desc': 'Full Trailer (รถพ่วง)', 'axles': [{'name': 'เพลาหน้า', 'load_ton': 5.0, 'type': 'Single'}, {'name': 'เพลาหลัง', 'load_ton': 20, 'type': 'Tandem'}, {'name': 'เพลาพ่วงหน้า', 'load_ton': 11, 'type': 'Single'}, {'name': 'เพลาพ่วงหลัง', 'load_ton': 11, 'type': 'Single'}]}
+    'TR': {'desc': 'Full Trailer (รถพ่วง)', 'axles': [{'name': 'เพลาหน้า', 'load_ton': 5.0, 'type': 'Single'}, {'name': 'เพลาหลัง', 'load_ton': 20, 'type': 'Tandem'}, {'name': 'เพลาพ่วงหน้า', 'load_ton': 11, 'type': 'Single'}, {'name': 'เพลาพ่วงหลัง', 'load_ton': 11, 'type': 'Single'}]},
+    'STR': {'desc': 'Semi-Trailer (รถกึ่งพ่วง)', 'axles': [{'name': 'เพลาหน้า', 'load_ton': 5.0, 'type': 'Single'}, {'name': 'เพลาหลัง', 'load_ton': 20.0, 'type': 'Tandem'}, {'name': 'เพลาพ่วงหลัง', 'load_ton': 20.0, 'type': 'Tandem'}]}
 }
 
 # ============================================================
@@ -44,8 +44,8 @@ TRUCK_FACTORS_RIGID_PT20 = {
     'HB':  {10: 6.125043, 11: 6.204343, 12: 6.247170, 13: 6.269632, 14: 6.281529, 15: 6.287867, 16: 6.291257},
     'MT':  {10: 3.718199, 11: 3.742581, 12: 3.754803, 13: 3.760977, 14: 3.764184, 15: 3.765855, 16: 3.766727},
     'HT':  {10: 6.125043, 11: 6.204343, 12: 6.247170, 13: 6.269632, 14: 6.281529, 15: 6.287867, 16: 6.291257},
-    'STR': {10: 12.128867, 11: 12.287718, 12: 12.373488, 13: 12.418469, 14: 12.442292, 15: 12.454956, 16: 12.461738},
-    'TR':  {10: 13.466316, 11: 13.594592, 12: 13.661961, 13: 13.696817, 14: 13.715152, 15: 13.724934, 16: 13.730167}
+    'TR':  {10: 13.466316, 11: 13.594592, 12: 13.661961, 13: 13.696817, 14: 13.715152, 15: 13.724934, 16: 13.730167},
+    'STR': {10: 12.128867, 11: 12.287718, 12: 12.373488, 13: 12.418469, 14: 12.442292, 15: 12.454956, 16: 12.461738}
 }
 
 # Rigid Pavement - pt = 2.5
@@ -54,8 +54,8 @@ TRUCK_FACTORS_RIGID_PT25 = {
     'HB':  {10: 5.921064, 11: 6.092776, 12: 6.186668, 13: 6.236237, 14: 6.262582, 15: 6.276617, 16: 6.284134},
     'MT':  {10: 3.657799, 11: 3.711341, 12: 3.738346, 13: 3.752027, 14: 3.759145, 15: 3.762869, 16: 3.764817},
     'HT':  {10: 5.921064, 11: 6.092776, 12: 6.186668, 13: 6.236237, 14: 6.262582, 15: 6.276617, 16: 6.284134},
-    'STR': {10: 11.720309, 11: 12.064293, 12: 12.252335, 13: 12.351598, 14: 12.404353, 15: 12.432524, 16: 12.447620},
-    'TR':  {10: 13.141034, 11: 13.420301, 12: 13.568419, 13: 13.645455, 14: 13.686091, 15: 13.707787, 16: 13.719438}
+    'TR':  {10: 13.141034, 11: 13.420301, 12: 13.568419, 13: 13.645455, 14: 13.686091, 15: 13.707787, 16: 13.719438},
+    'STR': {10: 11.720309, 11: 12.064293, 12: 12.252335, 13: 12.351598, 14: 12.404353, 15: 12.432524, 16: 12.447620}
 }
 
 # Rigid Pavement - pt = 3.0
@@ -64,8 +64,8 @@ TRUCK_FACTORS_RIGID_PT30 = {
     'HB':  {10: 5.668347, 11: 5.951971, 12: 6.109552, 13: 6.193451, 14: 6.238241, 15: 6.262146, 16: 6.274979},
     'MT':  {10: 3.581408, 11: 3.671458, 12: 3.717236, 13: 3.740520, 14: 3.752660, 15: 3.759033, 16: 3.762385},
     'HT':  {10: 5.668347, 11: 5.951971, 12: 6.109552, 13: 6.193451, 14: 6.238241, 15: 6.262146, 16: 6.274979},
-    'STR': {10: 11.214096, 11: 11.782308, 12: 12.097912, 13: 12.265925, 14: 12.355613, 15: 12.403556, 16: 12.429280},
-    'TR':  {10: 12.734883, 11: 13.199416, 12: 13.448924, 13: 13.579571, 14: 13.648731, 15: 13.685766, 16: 13.705646}
+    'TR':  {10: 12.734883, 11: 13.199416, 12: 13.448924, 13: 13.579571, 14: 13.648731, 15: 13.685766, 16: 13.705646},
+    'STR': {10: 11.214096, 11: 11.782308, 12: 12.097912, 13: 12.265925, 14: 12.355613, 15: 12.403556, 16: 12.429280}
 }
 
 # Flexible Pavement - pt = 2.0
@@ -74,8 +74,8 @@ TRUCK_FACTORS_FLEX_PT20 = {
     'HB':  {4: 3.332846, 5: 3.384895, 6: 3.458092, 7: 3.508785, 8: 3.541983, 9: 3.562854},
     'MT':  {4: 3.529011, 5: 3.598168, 6: 3.719257, 7: 3.810681, 8: 3.874256, 9: 3.916863},
     'HT':  {4: 3.332846, 5: 3.384895, 6: 3.458092, 7: 3.508785, 8: 3.541983, 9: 3.562854},
-    'STR': {4: 6.537851, 5: 6.649420, 6: 6.800056, 7: 6.903531, 8: 6.971366, 9: 7.014261},
-    'TR':  {4: 10.291092, 5: 10.488813, 6: 10.808050, 7: 11.043444, 8: 11.203523, 9: 11.310117}
+    'TR':  {4: 10.291092, 5: 10.488813, 6: 10.808050, 7: 11.043444, 8: 11.203523, 9: 11.310117},
+    'STR': {4: 6.537851, 5: 6.649420, 6: 6.800056, 7: 6.903531, 8: 6.971366, 9: 7.014261}
 }
 
 # Flexible Pavement - pt = 2.5
@@ -84,8 +84,8 @@ TRUCK_FACTORS_FLEX_PT25 = {
     'HB':  {4: 3.053625, 5: 3.157524, 6: 3.311765, 7: 3.421800, 8: 3.494667, 9: 3.541837},
     'MT':  {4: 3.069453, 5: 3.203842, 6: 3.451114, 7: 3.645241, 8: 3.779066, 9: 3.869188},
     'HT':  {4: 3.053625, 5: 3.157524, 6: 3.311765, 7: 3.421800, 8: 3.494667, 9: 3.541837},
-    'STR': {4: 5.955718, 5: 6.182789, 6: 6.501567, 7: 6.726542, 8: 6.874756, 9: 6.970223},
-    'TR':  {4: 9.069826, 5: 9.462000, 6: 10.120276, 7: 10.622935, 8: 10.967259, 9: 11.196528}
+    'TR':  {4: 9.069826, 5: 9.462000, 6: 10.120276, 7: 10.622935, 8: 10.967259, 9: 11.196528},
+    'STR': {4: 5.955718, 5: 6.182789, 6: 6.501567, 7: 6.726542, 8: 6.874756, 9: 6.970223}
 }
 
 # Flexible Pavement - pt = 3.0
@@ -94,8 +94,8 @@ TRUCK_FACTORS_FLEX_PT30 = {
     'HB':  {4: 2.728486, 5: 2.879854, 6: 3.125499, 7: 3.308196, 8: 3.432738, 9: 3.513580},
     'MT':  {4: 2.552540, 5: 2.742623, 6: 3.120508, 7: 3.433469, 8: 3.657896, 9: 3.812063},
     'HT':  {4: 2.728486, 5: 2.879854, 6: 3.125499, 7: 3.308196, 8: 3.432738, 9: 3.513580},
-    'STR': {4: 5.266321, 5: 5.609502, 6: 6.120685, 7: 6.495126, 8: 6.750547, 9: 6.915832},
-    'TR':  {4: 7.671306, 5: 8.245291, 6: 9.265343, 7: 10.082089, 8: 10.658949, 9: 11.046207}
+    'TR':  {4: 7.671306, 5: 8.245291, 6: 9.265343, 7: 10.082089, 8: 10.658949, 9: 11.046207},
+    'STR': {4: 5.266321, 5: 5.609502, 6: 6.120685, 7: 6.495126, 8: 6.750547, 9: 6.915832}
 }
 
 
@@ -156,7 +156,7 @@ def calculate_esal_with_acc(traffic_df, truck_factors, lane_factor=0.5, directio
 
 def create_template():
     """สร้าง Template Excel สำหรับอัพโหลดข้อมูล"""
-    base = {'MB': 120, 'HB': 60, 'MT': 250, 'HT': 180, 'STR': 120, 'TR': 100}
+    base = {'MB': 120, 'HB': 60, 'MT': 250, 'HT': 180, 'TR': 100, 'STR': 120}
     growth_rate = 1.045
     
     data = {'Year': list(range(1, 21))}
@@ -250,7 +250,7 @@ def create_excel_report(results_df, pavement_type, pt, param, lane_factor, direc
     ws[f'I{start_row-1}'] = 'แสดงปริมาณสะสม'
     ws[f'I{start_row-1}'].font = Font(italic=True, size=9)
     
-    headers = ['Year', 'MB', 'HB', 'MT', 'HT', 'STR', 'TR', 'AADT', 'ESAL', 'ACC. ESAL']
+    headers = ['Year', 'MB', 'HB', 'MT', 'HT', 'TR', 'STR', 'AADT', 'ESAL', 'ACC. ESAL']
     for col_idx, header in enumerate(headers, 1):
         cell = ws.cell(row=start_row, column=col_idx, value=header)
         cell.fill = header_fill
@@ -386,7 +386,7 @@ def create_word_report(results_df, pavement_type, pt, param, lane_factor, direct
     doc.add_paragraph()
     
     # ESAL Table
-    headers = ['Year', 'MB', 'HB', 'MT', 'HT', 'STR', 'TR', 'AADT', 'ESAL', 'ACC. ESAL']
+    headers = ['Year', 'MB', 'HB', 'MT', 'HT', 'TR', 'STR', 'AADT', 'ESAL', 'ACC. ESAL']
     esal_table = doc.add_table(rows=len(results_df) + 1, cols=len(headers))
     esal_table.style = 'Table Grid'
     
@@ -519,76 +519,111 @@ def main():
         st.subheader("📁 Project")
         
         uploaded_project = st.file_uploader("📥 โหลด Project", type=['json'], key='load_project')
-        if uploaded_project:
-            project = load_project(uploaded_project.read().decode('utf-8'))
-            if project:
-                st.session_state['loaded_project'] = project
-                st.success("✅ โหลด Project สำเร็จ!")
+        if uploaded_project is not None:
+            try:
+                # ตรวจสอบว่าเป็นไฟล์ใหม่
+                file_id = f"{uploaded_project.name}_{uploaded_project.size}"
+                if st.session_state.get('last_uploaded_file') != file_id:
+                    st.session_state['last_uploaded_file'] = file_id
+                    
+                    project = load_project(uploaded_project.read().decode('utf-8'))
+                    if project:
+                        # อัพเดท session_state สำหรับทุก field
+                        st.session_state['input_pavement_type'] = project.get('pavement_type', 'rigid')
+                        st.session_state['input_pt'] = project.get('pt', 2.5)
+                        st.session_state['input_param'] = project.get('param', 12)
+                        st.session_state['input_lane_factor'] = project.get('lane_factor', 0.5)
+                        st.session_state['input_direction_factor'] = project.get('direction_factor', 0.9)
+                        st.session_state['loaded_tf'] = project.get('truck_factors', {})
+                        
+                        loaded_traffic = project.get('traffic_data', None)
+                        if loaded_traffic:
+                            st.session_state['traffic_df'] = pd.DataFrame(loaded_traffic)
+                        
+                        st.success("✅ โหลด Project สำเร็จ!")
+                        st.rerun()
+                    else:
+                        st.error("❌ ไม่สามารถอ่านไฟล์ได้")
+            except Exception as e:
+                st.error(f"❌ เกิดข้อผิดพลาด: {e}")
         
-        # Apply loaded project
-        if 'loaded_project' in st.session_state and st.session_state['loaded_project']:
-            project = st.session_state['loaded_project']
-            default_pavement = project.get('pavement_type', 'rigid')
-            default_pt = project.get('pt', 2.5)
-            default_param = project.get('param', 12 if default_pavement == 'rigid' else 7)
-            default_lane = project.get('lane_factor', 0.5)
-            default_dir = project.get('direction_factor', 0.9)
-            loaded_tf = project.get('truck_factors', {})
-            loaded_traffic = project.get('traffic_data', None)
-            if loaded_traffic:
-                st.session_state['traffic_df'] = pd.DataFrame(loaded_traffic)
-        else:
-            default_pavement = 'rigid'
-            default_pt = 2.5
-            default_param = 12
-            default_lane = 0.5
-            default_dir = 0.9
-            loaded_tf = {}
-            loaded_traffic = None
+        # กำหนดค่า default จาก session_state
+        default_pavement = st.session_state.get('input_pavement_type', 'rigid')
+        default_pt = st.session_state.get('input_pt', 2.5)
+        default_param = st.session_state.get('input_param', 12 if default_pavement == 'rigid' else 7)
+        default_lane = st.session_state.get('input_lane_factor', 0.5)
+        default_dir = st.session_state.get('input_direction_factor', 0.9)
+        loaded_tf = st.session_state.get('loaded_tf', {})
         
         st.divider()
         
+        # Pavement Type
+        pavement_options = ['rigid', 'flexible']
+        pavement_idx = pavement_options.index(default_pavement) if default_pavement in pavement_options else 0
         pavement_type = st.selectbox(
             "ประเภทผิวทาง",
-            options=['rigid', 'flexible'],
-            index=0 if default_pavement == 'rigid' else 1,
-            format_func=lambda x: '🧱 Rigid Pavement (คอนกรีต)' if x == 'rigid' else '🛤️ Flexible Pavement (ลาดยาง)'
+            options=pavement_options,
+            index=pavement_idx,
+            format_func=lambda x: '🧱 Rigid Pavement (คอนกรีต)' if x == 'rigid' else '🛤️ Flexible Pavement (ลาดยาง)',
+            key="input_pavement_type"
         )
         
         pt_options = [2.0, 2.5, 3.0]
+        pt_idx = pt_options.index(default_pt) if default_pt in pt_options else 1
         pt = st.selectbox(
             "Terminal Serviceability (pt)",
             options=pt_options,
-            index=pt_options.index(default_pt) if default_pt in pt_options else 1,
-            format_func=lambda x: f"pt = {x}"
+            index=pt_idx,
+            format_func=lambda x: f"pt = {x}",
+            key="input_pt"
         )
         
         if pavement_type == 'rigid':
             param_options = [10, 11, 12, 13, 14, 15, 16]
+            # ถ้า param จาก session_state ไม่อยู่ใน options ให้ใช้ default
+            if default_param not in param_options:
+                default_param = 12
             default_idx = param_options.index(default_param) if default_param in param_options else 2
             param = st.selectbox(
                 "ความหนาพื้นคอนกรีต (D)",
                 options=param_options,
                 index=default_idx,
-                format_func=lambda x: f"D = {x} นิ้ว"
+                format_func=lambda x: f"D = {x} นิ้ว",
+                key="input_param_rigid"
             )
             param_label = f"D = {param} นิ้ว"
         else:
             param_options = [4, 5, 6, 7, 8, 9]
+            # ถ้า param จาก session_state ไม่อยู่ใน options ให้ใช้ default
+            if default_param not in param_options:
+                default_param = 7
             default_idx = param_options.index(default_param) if default_param in param_options else 3
             param = st.selectbox(
                 "Structural Number (SN)",
                 options=param_options,
                 index=default_idx,
-                format_func=lambda x: f"SN = {x}"
+                format_func=lambda x: f"SN = {x}",
+                key="input_param_flex"
             )
             param_label = f"SN = {param}"
         
         st.divider()
         
         st.subheader("🚗 ค่าสัดส่วน")
-        lane_factor = st.slider("Lane Distribution Factor", 0.1, 1.0, default_lane, 0.05)
-        direction_factor = st.slider("Directional Factor", 0.5, 1.0, default_dir, 0.1)
+        lane_factor = st.slider(
+            "Lane Distribution Factor", 
+            0.1, 1.0, 
+            value=st.session_state.get('input_lane_factor', default_lane), 
+            step=0.05,
+            key="input_lane_factor"
+        )
+        direction_factor = st.slider(
+            "Directional Factor", 
+            0.5, 1.0, 
+            value=st.session_state.get('input_direction_factor', default_dir), 
+            step=0.1,
+            key="input_direction_factor"
+        )
         
         st.divider()
         
@@ -596,13 +631,19 @@ def main():
         st.subheader("🚛 ค่า Truck Factor")
         
         tf_key = f"tf_{pavement_type}_{pt}_{param}"
-        if tf_key not in st.session_state:
+        
+        # ถ้ามี loaded_tf จาก JSON ให้ใช้ค่านั้น
+        if loaded_tf and tf_key not in st.session_state:
             st.session_state[tf_key] = {}
             for code in TRUCKS.keys():
-                if loaded_tf and code in loaded_tf:
+                if code in loaded_tf:
                     st.session_state[tf_key][code] = loaded_tf[code]
                 else:
                     st.session_state[tf_key][code] = get_default_truck_factor(code, pavement_type, pt, param)
+        elif tf_key not in st.session_state:
+            st.session_state[tf_key] = {}
+            for code in TRUCKS.keys():
+                st.session_state[tf_key][code] = get_default_truck_factor(code, pavement_type, pt, param)
         
         if st.button("🔄 Reset เป็นค่า Default", use_container_width=True):
             for code in TRUCKS.keys():
@@ -753,7 +794,7 @@ def main():
                 # ESAL Results Table
                 st.write("**📊 ESAL รายปี:**")
                 display_df = results_df.copy()
-                display_df.columns = ['ปีที่', 'MB', 'HB', 'MT', 'HT', 'STR', 'TR', 'AADT', 'ESAL', 'ACC. ESAL']
+                display_df.columns = ['ปีที่', 'MB', 'HB', 'MT', 'HT', 'TR', 'STR', 'AADT', 'ESAL', 'ACC. ESAL']
                 st.dataframe(display_df, use_container_width=True, height=400)
                 
                 st.divider()
