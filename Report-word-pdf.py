@@ -271,6 +271,7 @@ def main():
         'truck_factor': 'การคำนวณ Truck Factor',
         'esals_ac': 'การคำนวณ ESALs สำหรับผิวทางลาดยาง (Flexible Pavement)',
         'esals_concrete': 'การคำนวณ ESALs สำหรับผิวทางคอนกรีต (Rigid Pavement)',
+        'cbr_analysis': 'การวิเคราะห์ค่า CBR ที่เปอร์เซ็นต์ไทล์',
         'ac_design': 'การออกแบบผิวทางลาดยาง (Flexible Pavement)',
         'jpcp_jrcp_design': 'การออกแบบผิวทางคอนกรีต JPCP/JRCP',
         'crcp_design': 'การออกแบบผิวทางคอนกรีต CRCP',
@@ -328,9 +329,23 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
     
     # ═══════════════════════════════════════════════════════════════
-    # ส่วนที่ 3: การออกแบบผิวทางลาดยาง
+    # ส่วนที่ 3: การวิเคราะห์ค่า CBR ที่เปอร์เซ็นต์ไทล์
     # ═══════════════════════════════════════════════════════════════
-    st.markdown('<div class="section-header">🛤️ 3. การออกแบบผิวทางลาดยาง (Flexible Pavement)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">🔬 3. การวิเคราะห์ค่า CBR ที่เปอร์เซ็นต์ไทล์</div>', unsafe_allow_html=True)
+    st.markdown('<div class="file-section">', unsafe_allow_html=True)
+    st.markdown("**การวิเคราะห์ค่า CBR ที่เปอร์เซ็นต์ไทล์**")
+    uploaded_files['cbr_analysis'] = st.file_uploader(
+        "เลือกไฟล์วิเคราะห์ CBR",
+        type=['docx'],
+        key='cbr_analysis',
+        help="ไฟล์รายงานการวิเคราะห์ค่า CBR ที่เปอร์เซ็นต์ไทล์ (Percentile Analysis)"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # ═══════════════════════════════════════════════════════════════
+    # ส่วนที่ 4: การออกแบบผิวทางลาดยาง
+    # ═══════════════════════════════════════════════════════════════
+    st.markdown('<div class="section-header">🛤️ 4. การออกแบบผิวทางลาดยาง (Flexible Pavement)</div>', unsafe_allow_html=True)
     st.markdown('<div class="file-section">', unsafe_allow_html=True)
     st.markdown("**การออกแบบผิวทางลาดยาง (AC)**")
     uploaded_files['ac_design'] = st.file_uploader(
@@ -342,15 +357,15 @@ def main():
     st.markdown('</div>', unsafe_allow_html=True)
     
     # ═══════════════════════════════════════════════════════════════
-    # ส่วนที่ 4: การออกแบบผิวทางคอนกรีต (แยกเป็น 2 ประเภท)
+    # ส่วนที่ 5: การออกแบบผิวทางคอนกรีต (แยกเป็น 2 ประเภท)
     # ═══════════════════════════════════════════════════════════════
-    st.markdown('<div class="section-header">🏗️ 4. การออกแบบผิวทางคอนกรีต (Rigid Pavement)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">🏗️ 5. การออกแบบผิวทางคอนกรีต (Rigid Pavement)</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown('<div class="file-section">', unsafe_allow_html=True)
-        st.markdown("**4.1 การออกแบบ JPCP/JRCP**")
+        st.markdown("**5.1 การออกแบบ JPCP/JRCP**")
         st.caption("Jointed Plain/Reinforced Concrete Pavement")
         uploaded_files['jpcp_jrcp_design'] = st.file_uploader(
             "เลือกไฟล์ออกแบบ JPCP/JRCP",
@@ -362,7 +377,7 @@ def main():
     
     with col2:
         st.markdown('<div class="file-section">', unsafe_allow_html=True)
-        st.markdown("**4.2 การออกแบบ CRCP**")
+        st.markdown("**5.2 การออกแบบ CRCP**")
         st.caption("Continuously Reinforced Concrete Pavement")
         uploaded_files['crcp_design'] = st.file_uploader(
             "เลือกไฟล์ออกแบบ CRCP",
@@ -373,15 +388,15 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
     
     # ═══════════════════════════════════════════════════════════════
-    # ส่วนที่ 5: Corrected Modulus of Subgrade Reaction (แยกเป็น 2 ประเภท)
+    # ส่วนที่ 6: Corrected Modulus of Subgrade Reaction (แยกเป็น 2 ประเภท)
     # ═══════════════════════════════════════════════════════════════
-    st.markdown('<div class="section-header">📐 5. การคำนวณ Corrected Modulus of Subgrade Reaction (k-value)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">📐 6. การคำนวณ Corrected Modulus of Subgrade Reaction (k-value)</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown('<div class="file-section">', unsafe_allow_html=True)
-        st.markdown("**5.1 k-value สำหรับ JPCP/JRCP**")
+        st.markdown("**6.1 k-value สำหรับ JPCP/JRCP**")
         uploaded_files['k_value_jpcp_jrcp'] = st.file_uploader(
             "เลือกไฟล์ k-value JPCP/JRCP",
             type=['docx'],
@@ -392,7 +407,7 @@ def main():
     
     with col2:
         st.markdown('<div class="file-section">', unsafe_allow_html=True)
-        st.markdown("**5.2 k-value สำหรับ CRCP**")
+        st.markdown("**6.2 k-value สำหรับ CRCP**")
         uploaded_files['k_value_crcp'] = st.file_uploader(
             "เลือกไฟล์ k-value CRCP",
             type=['docx'],
@@ -402,9 +417,9 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
     
     # ═══════════════════════════════════════════════════════════════
-    # ส่วนที่ 6: การประมาณราคา
+    # ส่วนที่ 7: การประมาณราคา
     # ═══════════════════════════════════════════════════════════════
-    st.markdown('<div class="section-header">💰 6. การประมาณราคาค่าก่อสร้าง</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">💰 7. การประมาณราคาค่าก่อสร้าง</div>', unsafe_allow_html=True)
     st.markdown('<div class="file-section">', unsafe_allow_html=True)
     st.markdown("**การประมาณราคาค่าก่อสร้าง** (ถ้ามี)")
     uploaded_files['cost_estimate'] = st.file_uploader(
@@ -430,17 +445,18 @@ def main():
             '1. Truck Factor',
             '2.1 ESALs (Flexible)',
             '2.2 ESALs (Rigid)',
-            '3. AC Design',
-            '4.1 JPCP/JRCP',
-            '4.2 CRCP',
-            '5.1 k-value (JPCP/JRCP)',
-            '5.2 k-value (CRCP)',
-            '6. Cost Estimate'
+            '3. CBR Analysis',
+            '4. AC Design',
+            '5.1 JPCP/JRCP',
+            '5.2 CRCP',
+            '6.1 k-value (JPCP/JRCP)',
+            '6.2 k-value (CRCP)',
+            '7. Cost Estimate'
         ],
         'สถานะ': []
     }
     
-    file_keys = ['truck_factor', 'esals_ac', 'esals_concrete', 'ac_design', 
+    file_keys = ['truck_factor', 'esals_ac', 'esals_concrete', 'cbr_analysis', 'ac_design', 
                  'jpcp_jrcp_design', 'crcp_design', 'k_value_jpcp_jrcp', 
                  'k_value_crcp', 'cost_estimate']
     
@@ -459,7 +475,7 @@ def main():
             else:
                 st.warning(f"{name}: {status}")
     
-    st.markdown(f"### 📈 อัปโหลดแล้ว: **{file_count}** จาก **9** ไฟล์")
+    st.markdown(f"### 📈 อัปโหลดแล้ว: **{file_count}** จาก **10** ไฟล์")
     
     st.markdown("---")
     
