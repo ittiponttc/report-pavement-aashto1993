@@ -299,23 +299,44 @@ def create_word_report(results_df, pavement_type, pt, param, lane_factor, direct
     """สร้างรายงาน Word ในรูปแบบมาตรฐาน"""
     try:
         from docx import Document
-        from docx.shared import Inches, Pt, Cm, RGBColor
+        from docx.shared import Inches, Pt, Cm, RGBColor, Twips
         from docx.enum.text import WD_ALIGN_PARAGRAPH
         from docx.enum.table import WD_TABLE_ALIGNMENT
-        from docx.oxml.ns import nsdecls
+        from docx.oxml.ns import nsdecls, qn
         from docx.oxml import parse_xml
     except ImportError:
         return None
     
     doc = Document()
     
-    # Set page to landscape
+    # ตั้งค่าหน้ากระดาษ A4 แนวตั้ง (Portrait)
     section = doc.sections[0]
-    section.page_width, section.page_height = section.page_height, section.page_width
-    section.left_margin = Cm(1.5)
-    section.right_margin = Cm(1.5)
-    section.top_margin = Cm(1.5)
-    section.bottom_margin = Cm(1.5)
+    section.page_width = Cm(21.0)   # A4 width
+    section.page_height = Cm(29.7)  # A4 height
+    section.left_margin = Cm(2.0)
+    section.right_margin = Cm(2.0)
+    section.top_margin = Cm(2.0)
+    section.bottom_margin = Cm(2.0)
+    
+    # กำหนด font TH Sarabun New เป็น default
+    FONT_NAME = 'TH Sarabun New'
+    
+    def set_cell_font(cell, font_name=FONT_NAME, font_size=14, bold=False):
+        """ตั้งค่า font สำหรับ cell ในตาราง"""
+        for paragraph in cell.paragraphs:
+            for run in paragraph.runs:
+                run.font.name = font_name
+                run.font.size = Pt(font_size)
+                run.bold = bold
+                # สำหรับภาษาไทย
+                run._element.rPr.rFonts.set(qn('w:eastAsia'), font_name)
+    
+    def set_run_font(run, font_name=FONT_NAME, font_size=14, bold=False):
+        """ตั้งค่า font สำหรับ run"""
+        run.font.name = font_name
+        run.font.size = Pt(font_size)
+        run.bold = bold
+        run._element.rPr.rFonts.set(qn('w:eastAsia'), font_name)
     
     pavement_text = "Rigid Pavement" if pavement_type == 'rigid' else "Flexible Pavement"
     pavement_thai = "แข็ง" if pavement_type == 'rigid' else "ยืดหยุ่น"
@@ -325,14 +346,12 @@ def create_word_report(results_df, pavement_type, pt, param, lane_factor, direct
     title = doc.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = title.add_run(f"ปริมาณเพลามาตรฐาน (ESALs) ระยะเวลาออกแบบ {num_years} ปี")
-    run.bold = True
-    run.font.size = Pt(16)
+    set_run_font(run, font_size=18, bold=True)
     
     subtitle = doc.add_paragraph()
     subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = subtitle.add_run(f"ผิวทางแบบ{pavement_thai} ({pavement_text})")
-    run.bold = True
-    run.font.size = Pt(14)
+    set_run_font(run, font_size=16, bold=True)
     
     doc.add_paragraph()
     
@@ -355,11 +374,9 @@ def create_word_report(results_df, pavement_type, pt, param, lane_factor, direct
         row = param_table.rows[i]
         row.cells[0].text = label
         row.cells[1].text = value
-        if i == 0:
-            for cell in row.cells:
-                for paragraph in cell.paragraphs:
-                    for run in paragraph.runs:
-                        run.bold = True
+        is_header = (i == 0)
+        set_cell_font(row.cells[0], font_size=14, bold=is_header)
+        set_cell_font(row.cells[1], font_size=14, bold=is_header)
     
     doc.add_paragraph()
     
@@ -373,15 +390,15 @@ def create_word_report(results_df, pavement_type, pt, param, lane_factor, direct
     hdr.cells[1].text = 'ประเภท'
     hdr.cells[2].text = 'Truck Factor'
     for cell in hdr.cells:
-        for paragraph in cell.paragraphs:
-            for run in paragraph.runs:
-                run.bold = True
+        set_cell_font(cell, font_size=14, bold=True)
     
     for i, code in enumerate(TRUCKS.keys()):
         row = tf_table.rows[i + 1]
         row.cells[0].text = code
         row.cells[1].text = TRUCKS[code]['desc']
         row.cells[2].text = f"{truck_factors[code]:.4f}"
+        for cell in row.cells:
+            set_cell_font(cell, font_size=14, bold=False)
     
     doc.add_paragraph()
     
@@ -396,8 +413,7 @@ def create_word_report(results_df, pavement_type, pt, param, lane_factor, direct
         hdr.cells[j].text = header
         for paragraph in hdr.cells[j].paragraphs:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            for run in paragraph.runs:
-                run.bold = True
+        set_cell_font(hdr.cells[j], font_size=12, bold=True)
     
     # Data rows
     for i, row_data in results_df.iterrows():
@@ -418,6 +434,7 @@ def create_word_report(results_df, pavement_type, pt, param, lane_factor, direct
                     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 else:
                     paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            set_cell_font(row.cells[j], font_size=12, bold=False)
     
     # Save to BytesIO
     output = BytesIO()
