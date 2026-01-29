@@ -599,13 +599,13 @@ def main():
             st.info(f"**{esal_million:.2f} ล้าน ESALs**")
             st.markdown("---")
             
-            st.subheader("2️⃣ Serviceability")
+            st.subheader("2️⃣ Serviceability📉")
             pt = st.slider("Terminal Serviceability (Pt)", 1.5, 3.0, st.session_state.get('calc_pt', 2.0), 0.1, key="calc_pt")
             delta_psi = 4.5 - pt
             st.info(f"ΔPSI = 4.5 - {pt:.1f} = **{delta_psi:.1f}**")
             st.markdown("---")
             
-            st.subheader("3️⃣ ความเชื่อมั่น")
+            st.subheader("3️⃣ ความเชื่อมั่น📈")
             reliability = st.select_slider("Reliability (R)", [80, 85, 90, 95], st.session_state.get('calc_reliability', 90), key="calc_reliability")
             zr = get_zr_value(reliability)
             st.info(f"ZR = **{zr:.3f}**")
@@ -631,7 +631,7 @@ def main():
             sc = st.number_input("Modulus of Rupture (Sc) psi", 400, 1000, st.session_state.get('calc_sc', int(sc_auto)), 10, key="calc_sc")
             st.markdown("---")
             
-            st.subheader("6️⃣ Load Transfer และ Drainage")
+            st.subheader("6️⃣ Load Transfer🔗 และ Drainage💧")
             st.caption(f"ค่าแนะนำสำหรับ {pavement_type}: **J = {J_VALUES[pavement_type]}**")
             with st.expander("📊 ตารางค่า Load Transfer Coefficient (J)", expanded=False):
                 st.markdown("""
