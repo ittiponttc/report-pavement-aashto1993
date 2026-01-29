@@ -619,8 +619,6 @@ def main():
             st.info(f"M_R = {mr_subgrade_psi:,.0f} psi ({mr_subgrade_mpa:.0f} MPa)")
             
             k_eff = st.number_input("Effective k (pci)", 50, 1000, st.session_state.get('calc_k_eff', 200), 25, key="calc_k_eff")
-            # Loss of Support (LS)
-            st.markdown("**Loss of Support (LS)**")
         
             with st.expander("📊 ตารางค่า Loss of Support แนะนำ (AASHTO 1993)"):
             st.markdown("""
