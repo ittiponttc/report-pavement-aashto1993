@@ -619,6 +619,19 @@ def main():
             st.info(f"M_R = {mr_subgrade_psi:,.0f} psi ({mr_subgrade_mpa:.0f} MPa)")
             
             k_eff = st.number_input("Effective k (pci)", 50, 1000, st.session_state.get('calc_k_eff', 200), 25, key="calc_k_eff")
+            st.markdown("""
+            | ประเภทวัสดุ | Loss of Support (LS) |
+            |------------|---------------------|
+            | Cement Treated Granular Base | 0.0 - 1.0 |
+            | Cement Aggregate Mixtures | 0.0 - 1.0 |
+            | Asphalt Treated Base | 0.0 - 1.0 |
+            | Bituminous Stabilized Mixtures | 0.0 - 1.0 |
+            | Lime Stabilized | 1.0 - 3.0 |
+            | Unbound Granular Materials | 1.0 - 3.0 |
+            | Fine Grained or Natural Subgrade | 2.0 - 3.0 |
+            
+            **หมายเหตุ:** ค่า LS ใช้ปรับลดค่า k_eff เพื่อคำนึงถึงการสูญเสียการรองรับจากการกัดเซาะ
+            """)
             ls_value = st.number_input("Loss of Support (LS)", 0.0, 3.0, st.session_state.get('calc_ls', 1.0), 0.5, "%.1f", key="calc_ls")
             st.markdown("---")
             
