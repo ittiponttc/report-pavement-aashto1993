@@ -612,7 +612,7 @@ def main():
             so = st.number_input("Standard Deviation (So)", 0.30, 0.45, st.session_state.get('calc_so', 0.35), 0.01, "%.2f", key="calc_so")
             st.markdown("---")
             
-            st.subheader("4️⃣ คุณสมบัติดินฐานราก")
+            st.subheader("4️⃣ คุณสมบัติดินคันทาง")
             cbr_value = st.number_input("ค่า CBR (%)", 1.0, 100.0, st.session_state.get('calc_cbr', 4.0), 0.5, key="calc_cbr")
             mr_subgrade_psi = 1500 * cbr_value if cbr_value < 10 else 1000 + 555 * cbr_value
             mr_subgrade_mpa = mr_subgrade_psi / 145.038
