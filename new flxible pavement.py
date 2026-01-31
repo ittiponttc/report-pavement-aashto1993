@@ -1314,7 +1314,7 @@ def main():
                 else:
                     wearing_thick = st.number_input(
                         "ความหนา (cm)", min_value=1, max_value=15.0,
-                        value=st.session_state.get('wearing_thick', 1), step=1, key="wearing_thick"
+                        value=st.session_state.get('wearing_thick', 1), step=0.5, key="wearing_thick"
                     )
             
             # Binder Course
