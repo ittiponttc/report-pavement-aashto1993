@@ -39,7 +39,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # ================================================================================
 
 st.set_page_config(
-    page_title="AASHTO 1993 Flexible Pavement Design (DOH)",
+    page_title="Flexible Pavement Design (AASHTO 1993)",
     page_icon="🛣️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -1855,7 +1855,7 @@ def main():
     st.markdown("""
     <div style='text-align: center; color: gray;'>
     <p>AASHTO 1993 Flexible Pavement Design Application v4.0</p>
-    <p>พัฒนาตามมาตรฐานกรมทางหลวง (DOH Thailand)</p>
+    <p>พัฒนาโดย รศ.ดร.อิทธิพล มีผล // ภาควิชาครุศาสตร์โยธา // มจพ.</p>
     </div>
     """, unsafe_allow_html=True)
 
