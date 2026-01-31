@@ -1308,12 +1308,12 @@ def main():
                 if wearing_std != "กำหนดเอง":
                     wearing_val = int(wearing_std.replace(" มม.", "")) / 10  # แปลง มม. เป็น cm
                     wearing_thick = st.number_input(
-                        "ความหนา (cm)", min_value=4, max_value=15.0,
+                        "ความหนา (cm)", min_value=1, max_value=15.0,
                         value=wearing_val, step=1, key="wearing_thick", disabled=True
                     )
                 else:
                     wearing_thick = st.number_input(
-                        "ความหนา (cm)", min_value=4, max_value=15.0,
+                        "ความหนา (cm)", min_value=1, max_value=15.0,
                         value=st.session_state.get('wearing_thick', 1), step=0.5, key="wearing_thick"
                     )
             
