@@ -654,7 +654,7 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
         text_color = 'white' if color in dark_colors else 'black'
         
         # ข้อความกลาง: ความหนา
-        fontsize = 14 if is_sublayer else 16
+        fontsize = 16 if is_sublayer else 16
         ax.text(x_center, y_center_pos, f'{thickness:.0f} cm',
                 ha='center', va='center', fontsize=fontsize, fontweight='bold', color=text_color)
         
