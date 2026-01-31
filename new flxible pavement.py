@@ -562,9 +562,9 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
                 'base': '#4A4A4A'       # เทากลาง
             }
             sublayer_names = {
-                'wearing': 'Wearing Course (ผิวทาง)',
-                'binder': 'Binder Course (ยึดเกาะ)',
-                'base': 'Base Course (รองผิว)'
+                'wearing': 'Wearing Course',
+                'binder': 'Binder Course',
+                'base': 'Base Course'
             }
             
             # เพิ่ม Wearing Course (ถ้าความหนา > 0)
