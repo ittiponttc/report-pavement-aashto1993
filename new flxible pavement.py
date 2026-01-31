@@ -659,7 +659,7 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
                 ha='center', va='center', fontsize=fontsize, fontweight='bold', color=text_color)
         
         # ซ้าย: ชื่อวัสดุ (Thai)
-        name_fontsize = 12 if is_sublayer else 14
+        name_fontsize = 14 if is_sublayer else 14
         ax.text(x_start - 0.5, y_center_pos, thai_name,
                 ha='right', va='center', fontsize=name_fontsize, fontweight='bold',
                 fontproperties=thai_font_bold, color='black')
