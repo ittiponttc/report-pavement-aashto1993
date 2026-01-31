@@ -1393,16 +1393,16 @@ def main():
             with col_b:
                 layer1_a = st.number_input(
                     "a₁", min_value=0.10, max_value=0.50, 
-                    value=st.session_state.get('layer1_a', default_a1), step=0.01,
+                    value=default_a1, step=0.01,
                     key="layer1_a",
-                    help=f"Layer Coefficient (ค่า default จากโปรแกรม = {default_a1:.2f})"
+                    help=f"Layer Coefficient (ค่า default จากวัสดุ = {default_a1:.2f})"
                 )
             with col_c:
                 layer1_m = st.number_input(
                     "m₁", min_value=0.5, max_value=1.5, 
-                    value=st.session_state.get('layer1_m', default_m1), step=0.05,
+                    value=default_m1, step=0.05,
                     key="layer1_m",
-                    help=f"Drainage Coefficient (ค่า default จากโปรแกรม = {default_m1:.2f})"
+                    help=f"Drainage Coefficient (ค่า default จากวัสดุ = {default_m1:.2f})"
                 )
             st.session_state['ac_sublayers'] = None
         
@@ -1418,17 +1418,17 @@ def main():
                 layer1_a = st.number_input(
                     "a₁ (Layer Coefficient)",
                     min_value=0.10, max_value=0.50,
-                    value=st.session_state.get('layer1_a', default_a1), step=0.01,
+                    value=default_a1, step=0.01,
                     key="layer1_a_sublayer",
-                    help=f"Layer Coefficient (ค่า default จากโปรแกรม = {default_a1:.2f})"
+                    help=f"Layer Coefficient (ค่า default จากวัสดุ = {default_a1:.2f})"
                 )
             with col_am2:
                 layer1_m = st.number_input(
                     "m₁ (Drainage Coefficient)",
                     min_value=0.5, max_value=1.5,
-                    value=st.session_state.get('layer1_m', default_m1), step=0.05,
+                    value=default_m1, step=0.05,
                     key="layer1_m_sublayer",
-                    help=f"Drainage Coefficient (ค่า default จากโปรแกรม = {default_m1:.2f})"
+                    help=f"Drainage Coefficient (ค่า default จากวัสดุ = {default_m1:.2f})"
                 )
         else:
             # กรณีไม่ใช้ sublayers ให้ใช้ค่า layer1_a ที่กำหนดไว้แล้ว
@@ -1496,19 +1496,19 @@ def main():
                 layer_a = st.number_input(
                     f"a{i}",
                     min_value=0.01, max_value=0.50, 
-                    value=st.session_state.get(f'layer{i}_a', default_a), 
+                    value=default_a, 
                     step=0.01,
                     key=f"layer{i}_a",
-                    help=f"Layer Coefficient (ค่า default จากโปรแกรม = {default_a:.2f})"
+                    help=f"Layer Coefficient (ค่า default จากวัสดุ = {default_a:.2f})"
                 )
             with col_e:
                 layer_m = st.number_input(
                     f"m{i}",
                     min_value=0.5, max_value=1.5, 
-                    value=st.session_state.get(f'layer{i}_m', default_m), 
+                    value=default_m, 
                     step=0.05,
                     key=f"layer{i}_m",
-                    help=f"Drainage Coefficient (ค่า default จากโปรแกรม = {default_m:.2f})"
+                    help=f"Drainage Coefficient (ค่า default จากวัสดุ = {default_m:.2f})"
                 )
             
             # แสดงค่า E
