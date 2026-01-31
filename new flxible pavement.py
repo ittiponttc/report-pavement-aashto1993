@@ -1,3 +1,4 @@
+
 """
 ================================================================================
 AASHTO 1993 Flexible Pavement Design - Streamlit Application (Version 4)
@@ -305,8 +306,7 @@ def calculate_layer_thicknesses(W18: float, Zr: float, So: float, delta_psi: flo
     
     for i, layer in enumerate(active_layers):
         mat = MATERIALS[layer['material']]
-        # ใช้ค่า a จากผู้ใช้ถ้ามี ไม่งั้นใช้จากฐานข้อมูล
-        a_i = layer.get('layer_coeff', mat['layer_coeff'])
+        a_i = mat['layer_coeff']
         m_i = layer.get('drainage_coeff', 1.0)
         
         sn_required_at_layer = sn_values[i]['sn_required'] if sn_values[i]['sn_required'] else 0
@@ -1379,11 +1379,7 @@ def main():
             }
         else:
             # ไม่แบ่งชั้นย่อย - ใช้ความหนารวม
-            mat_props = MATERIALS[layer1_mat]
-            default_a1 = mat_props['layer_coeff']
-            default_m1 = mat_props['drainage_coeff']
-            
-            col_a, col_b, col_c = st.columns(3)
+            col_a, col_b = st.columns(2)
             with col_a:
                 layer1_thick = st.number_input(
                     "ความหนา (cm)", min_value=1.0, max_value=30.0, 
@@ -1391,51 +1387,27 @@ def main():
                     key="layer1_thick"
                 )
             with col_b:
-                layer1_a = st.number_input(
-                    "a₁", min_value=0.10, max_value=0.50, 
-                    value=st.session_state.get('layer1_a', default_a1), step=0.01,
-                    key="layer1_a",
-                    help=f"Layer Coefficient (ค่า default จากโปรแกรม = {default_a1:.2f})"
-                )
-            with col_c:
                 layer1_m = st.number_input(
                     "m₁", min_value=0.5, max_value=1.5, 
-                    value=st.session_state.get('layer1_m', default_m1), step=0.05,
+                    value=st.session_state.get('layer1_m', 1.0), step=0.05,
                     key="layer1_m",
-                    help=f"Drainage Coefficient (ค่า default จากโปรแกรม = {default_m1:.2f})"
+                    help="Drainage Coefficient สำหรับชั้นผิวทาง (ค่า default = 1.0)"
                 )
             st.session_state['ac_sublayers'] = None
         
-        # ค่า a และ m สำหรับชั้น AC เมื่อใช้ sublayers
+        # ค่า m สำหรับชั้น AC เมื่อใช้ sublayers
         if use_sublayers:
             st.markdown("---")
-            mat_props = MATERIALS[layer1_mat]
-            default_a1 = mat_props['layer_coeff']
-            default_m1 = mat_props['drainage_coeff']
-            
-            col_am1, col_am2 = st.columns(2)
-            with col_am1:
-                layer1_a = st.number_input(
-                    "a₁ (Layer Coefficient)",
-                    min_value=0.10, max_value=0.50,
-                    value=st.session_state.get('layer1_a', default_a1), step=0.01,
-                    key="layer1_a_sublayer",
-                    help=f"Layer Coefficient (ค่า default จากโปรแกรม = {default_a1:.2f})"
-                )
-            with col_am2:
-                layer1_m = st.number_input(
-                    "m₁ (Drainage Coefficient)",
-                    min_value=0.5, max_value=1.5,
-                    value=st.session_state.get('layer1_m', default_m1), step=0.05,
-                    key="layer1_m_sublayer",
-                    help=f"Drainage Coefficient (ค่า default จากโปรแกรม = {default_m1:.2f})"
-                )
-        else:
-            # กรณีไม่ใช้ sublayers ให้ใช้ค่า layer1_a ที่กำหนดไว้แล้ว
-            pass
+            layer1_m = st.number_input(
+                "m₁ (Drainage Coefficient)",
+                min_value=0.5, max_value=1.5,
+                value=st.session_state.get('layer1_m', 1.0), step=0.05,
+                key="layer1_m_sublayer",
+                help="Drainage Coefficient สำหรับชั้นผิวทาง AC (ค่า default = 1.0)"
+            )
         
         mat_props = MATERIALS[layer1_mat]
-        st.markdown(f'<p style="color: #1E90FF; font-size: 14px;">E = {mat_props["mr_mpa"]:,} MPa</p>', unsafe_allow_html=True)
+        st.caption(f"a₁ = {mat_props['layer_coeff']}, E = {mat_props['mr_mpa']:,} MPa")
         
         # Placeholder สำหรับแสดงสถานะชั้นที่ 1
         status_placeholders[1] = st.empty()
@@ -1443,7 +1415,6 @@ def main():
         layer_data.append({
             'material': layer1_mat,
             'thickness_cm': layer1_thick,
-            'layer_coeff': layer1_a,
             'drainage_coeff': layer1_m
         })
         
@@ -1483,7 +1454,7 @@ def main():
             default_a = mat_props['layer_coeff']
             default_m = mat_props['drainage_coeff']
             
-            col_c, col_d, col_e = st.columns(3)
+            col_c, col_d = st.columns(2)
             with col_c:
                 layer_thick = st.number_input(
                     "ความหนา (cm)",
@@ -1493,15 +1464,6 @@ def main():
                     key=f"layer{i}_thick"
                 )
             with col_d:
-                layer_a = st.number_input(
-                    f"a{i}",
-                    min_value=0.01, max_value=0.50, 
-                    value=st.session_state.get(f'layer{i}_a', default_a), 
-                    step=0.01,
-                    key=f"layer{i}_a",
-                    help=f"Layer Coefficient (ค่า default จากโปรแกรม = {default_a:.2f})"
-                )
-            with col_e:
                 layer_m = st.number_input(
                     f"m{i}",
                     min_value=0.5, max_value=1.5, 
@@ -1511,8 +1473,8 @@ def main():
                     help=f"Drainage Coefficient (ค่า default จากโปรแกรม = {default_m:.2f})"
                 )
             
-            # แสดงค่า E
-            st.markdown(f'<p style="color: #1E90FF; font-size: 14px;">E = {mat_props["mr_mpa"]:,} MPa</p>', unsafe_allow_html=True)
+            # แสดงค่า a และ E
+            st.markdown(f'<p style="color: #1E90FF; font-size: 14px;">a{i} = {default_a:.2f}, E = {mat_props["mr_mpa"]:,} MPa</p>', unsafe_allow_html=True)
             
             # Placeholder สำหรับแสดงสถานะชั้นที่ i
             status_placeholders[i] = st.empty()
@@ -1520,7 +1482,6 @@ def main():
             layer_data.append({
                 'material': layer_mat,
                 'thickness_cm': layer_thick,
-                'layer_coeff': layer_a,
                 'drainage_coeff': layer_m
             })
     
