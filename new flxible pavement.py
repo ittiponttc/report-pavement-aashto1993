@@ -554,7 +554,7 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
     for layer in valid_layers:
         ac_sublayers = layer.get('ac_sublayers', None)
         if ac_sublayers is not None and layer['layer_no'] == 1:
-            # แบ่งชั้น AC ออกเป็นชั้นย่อย (เฉพาะที่มีความหนา > 0)
+            # แบ่งชั้น AC ออกเป็น 3 ชั้นย่อย
             # สีสำหรับชั้นย่อย AC (ไล่เฉด)
             sublayer_colors = {
                 'wearing': '#1C1C1C',   # ดำเข้ม
@@ -567,36 +567,33 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
                 'base': 'Base Course (รองผิว)'
             }
             
-            # เพิ่ม Wearing Course (ถ้ามีความหนา > 0)
-            if ac_sublayers['wearing'] > 0:
-                expanded_layers.append({
-                    'design_thickness_cm': ac_sublayers['wearing'],
-                    'material': sublayer_names['wearing'],
-                    'short_name': 'WC',
-                    'color': sublayer_colors['wearing'],
-                    'mr_mpa': layer['mr_mpa'],
-                    'is_sublayer': True
-                })
-            # เพิ่ม Binder Course (ถ้ามีความหนา > 0)
-            if ac_sublayers['binder'] > 0:
-                expanded_layers.append({
-                    'design_thickness_cm': ac_sublayers['binder'],
-                    'material': sublayer_names['binder'],
-                    'short_name': 'BC',
-                    'color': sublayer_colors['binder'],
-                    'mr_mpa': layer['mr_mpa'],
-                    'is_sublayer': True
-                })
-            # เพิ่ม Base Course (ถ้ามีความหนา > 0)
-            if ac_sublayers['base'] > 0:
-                expanded_layers.append({
-                    'design_thickness_cm': ac_sublayers['base'],
-                    'material': sublayer_names['base'],
-                    'short_name': 'ABC',
-                    'color': sublayer_colors['base'],
-                    'mr_mpa': layer['mr_mpa'],
-                    'is_sublayer': True
-                })
+            # เพิ่ม Wearing Course
+            expanded_layers.append({
+                'design_thickness_cm': ac_sublayers['wearing'],
+                'material': sublayer_names['wearing'],
+                'short_name': 'WC',
+                'color': sublayer_colors['wearing'],
+                'mr_mpa': layer['mr_mpa'],
+                'is_sublayer': True
+            })
+            # เพิ่ม Binder Course
+            expanded_layers.append({
+                'design_thickness_cm': ac_sublayers['binder'],
+                'material': sublayer_names['binder'],
+                'short_name': 'BC',
+                'color': sublayer_colors['binder'],
+                'mr_mpa': layer['mr_mpa'],
+                'is_sublayer': True
+            })
+            # เพิ่ม Base Course
+            expanded_layers.append({
+                'design_thickness_cm': ac_sublayers['base'],
+                'material': sublayer_names['base'],
+                'short_name': 'ABC',
+                'color': sublayer_colors['base'],
+                'mr_mpa': layer['mr_mpa'],
+                'is_sublayer': True
+            })
         else:
             expanded_layers.append(layer)
     
@@ -1321,30 +1318,24 @@ def main():
             st.markdown("**🔹 Binder Course (ชั้นยึดเกาะ)**")
             col_b1, col_b2 = st.columns([1, 1])
             with col_b1:
-                binder_std_options = ["กำหนดเอง", "ไม่ใช้ชั้นนี้"] + [f"{t} มม." for t in DOH_THICKNESS_STANDARDS["Binder Course"]["options"]]
+                binder_std_options = ["กำหนดเอง"] + [f"{t} มม." for t in DOH_THICKNESS_STANDARDS["Binder Course"]["options"]]
                 binder_std = st.selectbox(
                     "ความหนามาตรฐาน ทล.",
                     options=binder_std_options,
                     index=0,
                     key="binder_std_select",
-                    help="Binder Course: 40-80 มม. ตามมาตรฐานกรมทางหลวง (เลือก 'ไม่ใช้ชั้นนี้' หรือใส่ 0 เพื่อข้าม)"
+                    help="Binder Course: 40-80 มม. ตามมาตรฐานกรมทางหลวง"
                 )
             with col_b2:
-                if binder_std == "ไม่ใช้ชั้นนี้":
-                    binder_thick = 0.0
-                    st.number_input(
-                        "ความหนา (cm)", min_value=0.0, max_value=15.0,
-                        value=0.0, step=0.5, key="binder_thick", disabled=True
-                    )
-                elif binder_std != "กำหนดเอง":
+                if binder_std != "กำหนดเอง":
                     binder_val = int(binder_std.replace(" มม.", "")) / 10
                     binder_thick = st.number_input(
-                        "ความหนา (cm)", min_value=0.0, max_value=15.0,
+                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
                         value=binder_val, step=0.5, key="binder_thick", disabled=True
                     )
                 else:
                     binder_thick = st.number_input(
-                        "ความหนา (cm)", min_value=0.0, max_value=15.0,
+                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
                         value=st.session_state.get('binder_thick', 7.0), step=0.5, key="binder_thick"
                     )
             
@@ -1352,30 +1343,24 @@ def main():
             st.markdown("**🔹 Base Course (ชั้นรองผิวทาง)**")
             col_bc1, col_bc2 = st.columns([1, 1])
             with col_bc1:
-                base_std_options = ["กำหนดเอง", "ไม่ใช้ชั้นนี้"] + [f"{t} มม." for t in DOH_THICKNESS_STANDARDS["Base Course"]["options"]]
+                base_std_options = ["กำหนดเอง"] + [f"{t} มม." for t in DOH_THICKNESS_STANDARDS["Base Course"]["options"]]
                 base_std = st.selectbox(
                     "ความหนามาตรฐาน ทล.",
                     options=base_std_options,
                     index=0,
                     key="base_std_select",
-                    help="Base Course: 70-100 มม. ตามมาตรฐานกรมทางหลวง (เลือก 'ไม่ใช้ชั้นนี้' หรือใส่ 0 เพื่อข้าม)"
+                    help="Base Course: 70-100 มม. ตามมาตรฐานกรมทางหลวง"
                 )
             with col_bc2:
-                if base_std == "ไม่ใช้ชั้นนี้":
-                    base_course_thick = 0.0
-                    st.number_input(
-                        "ความหนา (cm)", min_value=0.0, max_value=15.0,
-                        value=0.0, step=0.5, key="base_course_thick", disabled=True
-                    )
-                elif base_std != "กำหนดเอง":
+                if base_std != "กำหนดเอง":
                     base_val = int(base_std.replace(" มม.", "")) / 10
                     base_course_thick = st.number_input(
-                        "ความหนา (cm)", min_value=0.0, max_value=15.0,
+                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
                         value=base_val, step=0.5, key="base_course_thick", disabled=True
                     )
                 else:
                     base_course_thick = st.number_input(
-                        "ความหนา (cm)", min_value=0.0, max_value=15.0,
+                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
                         value=st.session_state.get('base_course_thick', 10.0), step=0.5, key="base_course_thick"
                     )
             
@@ -1385,7 +1370,7 @@ def main():
                        f'📏 ความหนารวมผิวทาง AC = {wearing_thick:.1f} + {binder_thick:.1f} + {base_course_thick:.1f} = {layer1_thick:.1f} cm</p>',
                        unsafe_allow_html=True)
             
-            # เก็บข้อมูลชั้นย่อยไว้ใน session_state (ไม่เก็บชั้นที่มีความหนา 0)
+            # เก็บข้อมูลชั้นย่อยไว้ใน session_state
             st.session_state['ac_sublayers'] = {
                 'wearing': wearing_thick,
                 'binder': binder_thick,
@@ -1401,14 +1386,10 @@ def main():
             # ตรวจสอบว่าวัสดุเปลี่ยนหรือไม่ - ถ้าเปลี่ยนให้ reset ค่า a และ m
             if 'layer1_prev_mat' not in st.session_state:
                 st.session_state['layer1_prev_mat'] = layer1_mat
-                if 'layer1_a_val' not in st.session_state:
-                    st.session_state['layer1_a_val'] = default_a1
-                if 'layer1_m_val' not in st.session_state:
-                    st.session_state['layer1_m_val'] = default_m1
             
             if st.session_state['layer1_prev_mat'] != layer1_mat:
-                st.session_state['layer1_a_val'] = default_a1
-                st.session_state['layer1_m_val'] = default_m1
+                st.session_state['layer1_a'] = default_a1
+                st.session_state['layer1_m'] = default_m1
                 st.session_state['layer1_prev_mat'] = layer1_mat
             
             col_a, col_b, col_c = st.columns(3)
@@ -1422,18 +1403,18 @@ def main():
                 st.markdown(f"a₁ &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_a1:.2f})</span>", unsafe_allow_html=True)
                 layer1_a = st.number_input(
                     "a1_input", min_value=0.10, max_value=0.50, 
-                    value=st.session_state['layer1_a_val'], step=0.01,
+                    value=st.session_state.get('layer1_a', default_a1), step=0.01,
+                    key="layer1_a",
                     label_visibility="collapsed"
                 )
-                st.session_state['layer1_a_val'] = layer1_a
             with col_c:
                 st.markdown(f"m₁ &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_m1:.2f})</span>", unsafe_allow_html=True)
                 layer1_m = st.number_input(
                     "m1_input", min_value=0.5, max_value=1.5, 
-                    value=st.session_state['layer1_m_val'], step=0.05,
+                    value=st.session_state.get('layer1_m', default_m1), step=0.05,
+                    key="layer1_m",
                     label_visibility="collapsed"
                 )
-                st.session_state['layer1_m_val'] = layer1_m
             st.session_state['ac_sublayers'] = None
         
         # ค่า a และ m สำหรับชั้น AC เมื่อใช้ sublayers
@@ -1446,14 +1427,10 @@ def main():
             # ตรวจสอบว่าวัสดุเปลี่ยนหรือไม่ - ถ้าเปลี่ยนให้ reset ค่า a และ m
             if 'layer1_prev_mat_sub' not in st.session_state:
                 st.session_state['layer1_prev_mat_sub'] = layer1_mat
-                if 'layer1_a_val_sub' not in st.session_state:
-                    st.session_state['layer1_a_val_sub'] = default_a1
-                if 'layer1_m_val_sub' not in st.session_state:
-                    st.session_state['layer1_m_val_sub'] = default_m1
             
             if st.session_state['layer1_prev_mat_sub'] != layer1_mat:
-                st.session_state['layer1_a_val_sub'] = default_a1
-                st.session_state['layer1_m_val_sub'] = default_m1
+                st.session_state['layer1_a_sublayer'] = default_a1
+                st.session_state['layer1_m_sublayer'] = default_m1
                 st.session_state['layer1_prev_mat_sub'] = layer1_mat
             
             col_am1, col_am2 = st.columns(2)
@@ -1462,19 +1439,19 @@ def main():
                 layer1_a = st.number_input(
                     "a1_sublayer_input",
                     min_value=0.10, max_value=0.50,
-                    value=st.session_state['layer1_a_val_sub'], step=0.01,
+                    value=st.session_state.get('layer1_a_sublayer', default_a1), step=0.01,
+                    key="layer1_a_sublayer",
                     label_visibility="collapsed"
                 )
-                st.session_state['layer1_a_val_sub'] = layer1_a
             with col_am2:
                 st.markdown(f"m₁ (Drainage Coefficient) &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_m1:.2f})</span>", unsafe_allow_html=True)
                 layer1_m = st.number_input(
                     "m1_sublayer_input",
                     min_value=0.5, max_value=1.5,
-                    value=st.session_state['layer1_m_val_sub'], step=0.05,
+                    value=st.session_state.get('layer1_m_sublayer', default_m1), step=0.05,
+                    key="layer1_m_sublayer",
                     label_visibility="collapsed"
                 )
-                st.session_state['layer1_m_val_sub'] = layer1_m
         else:
             # กรณีไม่ใช้ sublayers ให้ใช้ค่า layer1_a ที่กำหนดไว้แล้ว
             pass
@@ -1532,16 +1509,11 @@ def main():
             prev_mat_key = f'layer{i}_prev_mat'
             if prev_mat_key not in st.session_state:
                 st.session_state[prev_mat_key] = layer_mat
-                # ตั้งค่า default ครั้งแรก
-                if f'layer{i}_a_val' not in st.session_state:
-                    st.session_state[f'layer{i}_a_val'] = default_a
-                if f'layer{i}_m_val' not in st.session_state:
-                    st.session_state[f'layer{i}_m_val'] = default_m
             
             # ถ้าวัสดุเปลี่ยน ให้ reset ค่า a และ m
             if st.session_state[prev_mat_key] != layer_mat:
-                st.session_state[f'layer{i}_a_val'] = default_a
-                st.session_state[f'layer{i}_m_val'] = default_m
+                st.session_state[f'layer{i}_a'] = default_a
+                st.session_state[f'layer{i}_m'] = default_m
                 st.session_state[prev_mat_key] = layer_mat
             
             col_c, col_d, col_e = st.columns(3)
@@ -1554,27 +1526,26 @@ def main():
                     key=f"layer{i}_thick"
                 )
             with col_d:
+                # แสดงค่า a จากวัสดุ (read-only style) และให้ผู้ใช้แก้ไขได้
                 st.markdown(f"a{i} &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_a:.2f})</span>", unsafe_allow_html=True)
                 layer_a = st.number_input(
                     f"a{i}_input",
                     min_value=0.01, max_value=0.50, 
-                    value=st.session_state[f'layer{i}_a_val'], 
+                    value=st.session_state.get(f'layer{i}_a', default_a), 
                     step=0.01,
+                    key=f"layer{i}_a",
                     label_visibility="collapsed"
                 )
-                # อัพเดทค่าใน session_state
-                st.session_state[f'layer{i}_a_val'] = layer_a
             with col_e:
                 st.markdown(f"m{i} &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_m:.2f})</span>", unsafe_allow_html=True)
                 layer_m = st.number_input(
                     f"m{i}_input",
                     min_value=0.5, max_value=1.5, 
-                    value=st.session_state[f'layer{i}_m_val'], 
+                    value=st.session_state.get(f'layer{i}_m', default_m), 
                     step=0.05,
+                    key=f"layer{i}_m",
                     label_visibility="collapsed"
                 )
-                # อัพเดทค่าใน session_state
-                st.session_state[f'layer{i}_m_val'] = layer_m
             
             # แสดงค่า E
             st.markdown(f'<p style="color: #1E90FF; font-size: 14px;">E = {mat_props["mr_mpa"]:,} MPa</p>', unsafe_allow_html=True)
