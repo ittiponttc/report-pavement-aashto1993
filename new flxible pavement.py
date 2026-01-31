@@ -1383,6 +1383,15 @@ def main():
             default_a1 = mat_props['layer_coeff']
             default_m1 = mat_props['drainage_coeff']
             
+            # ตรวจสอบว่าวัสดุเปลี่ยนหรือไม่ - ถ้าเปลี่ยนให้ reset ค่า a และ m
+            if 'layer1_prev_mat' not in st.session_state:
+                st.session_state['layer1_prev_mat'] = layer1_mat
+            
+            if st.session_state['layer1_prev_mat'] != layer1_mat:
+                st.session_state['layer1_a'] = default_a1
+                st.session_state['layer1_m'] = default_m1
+                st.session_state['layer1_prev_mat'] = layer1_mat
+            
             col_a, col_b, col_c = st.columns(3)
             with col_a:
                 layer1_thick = st.number_input(
@@ -1391,18 +1400,20 @@ def main():
                     key="layer1_thick"
                 )
             with col_b:
+                st.markdown(f"a₁ &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_a1:.2f})</span>", unsafe_allow_html=True)
                 layer1_a = st.number_input(
-                    "a₁", min_value=0.10, max_value=0.50, 
-                    value=default_a1, step=0.01,
+                    "a1_input", min_value=0.10, max_value=0.50, 
+                    value=st.session_state.get('layer1_a', default_a1), step=0.01,
                     key="layer1_a",
-                    help=f"Layer Coefficient (ค่า default จากวัสดุ = {default_a1:.2f})"
+                    label_visibility="collapsed"
                 )
             with col_c:
+                st.markdown(f"m₁ &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_m1:.2f})</span>", unsafe_allow_html=True)
                 layer1_m = st.number_input(
-                    "m₁", min_value=0.5, max_value=1.5, 
-                    value=default_m1, step=0.05,
+                    "m1_input", min_value=0.5, max_value=1.5, 
+                    value=st.session_state.get('layer1_m', default_m1), step=0.05,
                     key="layer1_m",
-                    help=f"Drainage Coefficient (ค่า default จากวัสดุ = {default_m1:.2f})"
+                    label_visibility="collapsed"
                 )
             st.session_state['ac_sublayers'] = None
         
@@ -1413,22 +1424,33 @@ def main():
             default_a1 = mat_props['layer_coeff']
             default_m1 = mat_props['drainage_coeff']
             
+            # ตรวจสอบว่าวัสดุเปลี่ยนหรือไม่ - ถ้าเปลี่ยนให้ reset ค่า a และ m
+            if 'layer1_prev_mat_sub' not in st.session_state:
+                st.session_state['layer1_prev_mat_sub'] = layer1_mat
+            
+            if st.session_state['layer1_prev_mat_sub'] != layer1_mat:
+                st.session_state['layer1_a_sublayer'] = default_a1
+                st.session_state['layer1_m_sublayer'] = default_m1
+                st.session_state['layer1_prev_mat_sub'] = layer1_mat
+            
             col_am1, col_am2 = st.columns(2)
             with col_am1:
+                st.markdown(f"a₁ (Layer Coefficient) &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_a1:.2f})</span>", unsafe_allow_html=True)
                 layer1_a = st.number_input(
-                    "a₁ (Layer Coefficient)",
+                    "a1_sublayer_input",
                     min_value=0.10, max_value=0.50,
-                    value=default_a1, step=0.01,
+                    value=st.session_state.get('layer1_a_sublayer', default_a1), step=0.01,
                     key="layer1_a_sublayer",
-                    help=f"Layer Coefficient (ค่า default จากวัสดุ = {default_a1:.2f})"
+                    label_visibility="collapsed"
                 )
             with col_am2:
+                st.markdown(f"m₁ (Drainage Coefficient) &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_m1:.2f})</span>", unsafe_allow_html=True)
                 layer1_m = st.number_input(
-                    "m₁ (Drainage Coefficient)",
+                    "m1_sublayer_input",
                     min_value=0.5, max_value=1.5,
-                    value=default_m1, step=0.05,
+                    value=st.session_state.get('layer1_m_sublayer', default_m1), step=0.05,
                     key="layer1_m_sublayer",
-                    help=f"Drainage Coefficient (ค่า default จากวัสดุ = {default_m1:.2f})"
+                    label_visibility="collapsed"
                 )
         else:
             # กรณีไม่ใช้ sublayers ให้ใช้ค่า layer1_a ที่กำหนดไว้แล้ว
@@ -1478,10 +1500,21 @@ def main():
                 key=f"layer{i}_mat"
             )
             
-            # ดึงค่า a และ m จากฐานข้อมูลเป็น default
+            # ดึงค่า a และ m จากฐานข้อมูลของวัสดุที่เลือก
             mat_props = MATERIALS[layer_mat]
             default_a = mat_props['layer_coeff']
             default_m = mat_props['drainage_coeff']
+            
+            # ตรวจสอบว่าวัสดุเปลี่ยนหรือไม่ - ถ้าเปลี่ยนให้ reset ค่า a และ m
+            prev_mat_key = f'layer{i}_prev_mat'
+            if prev_mat_key not in st.session_state:
+                st.session_state[prev_mat_key] = layer_mat
+            
+            # ถ้าวัสดุเปลี่ยน ให้ reset ค่า a และ m
+            if st.session_state[prev_mat_key] != layer_mat:
+                st.session_state[f'layer{i}_a'] = default_a
+                st.session_state[f'layer{i}_m'] = default_m
+                st.session_state[prev_mat_key] = layer_mat
             
             col_c, col_d, col_e = st.columns(3)
             with col_c:
@@ -1493,22 +1526,25 @@ def main():
                     key=f"layer{i}_thick"
                 )
             with col_d:
+                # แสดงค่า a จากวัสดุ (read-only style) และให้ผู้ใช้แก้ไขได้
+                st.markdown(f"a{i} &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_a:.2f})</span>", unsafe_allow_html=True)
                 layer_a = st.number_input(
-                    f"a{i}",
+                    f"a{i}_input",
                     min_value=0.01, max_value=0.50, 
-                    value=default_a, 
+                    value=st.session_state.get(f'layer{i}_a', default_a), 
                     step=0.01,
                     key=f"layer{i}_a",
-                    help=f"Layer Coefficient (ค่า default จากวัสดุ = {default_a:.2f})"
+                    label_visibility="collapsed"
                 )
             with col_e:
+                st.markdown(f"m{i} &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_m:.2f})</span>", unsafe_allow_html=True)
                 layer_m = st.number_input(
-                    f"m{i}",
+                    f"m{i}_input",
                     min_value=0.5, max_value=1.5, 
-                    value=default_m, 
+                    value=st.session_state.get(f'layer{i}_m', default_m), 
                     step=0.05,
                     key=f"layer{i}_m",
-                    help=f"Drainage Coefficient (ค่า default จากวัสดุ = {default_m:.2f})"
+                    label_visibility="collapsed"
                 )
             
             # แสดงค่า E
