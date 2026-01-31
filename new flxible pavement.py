@@ -1386,14 +1386,10 @@ def main():
             # ตรวจสอบว่าวัสดุเปลี่ยนหรือไม่ - ถ้าเปลี่ยนให้ reset ค่า a และ m
             if 'layer1_prev_mat' not in st.session_state:
                 st.session_state['layer1_prev_mat'] = layer1_mat
-                if 'layer1_a_val' not in st.session_state:
-                    st.session_state['layer1_a_val'] = default_a1
-                if 'layer1_m_val' not in st.session_state:
-                    st.session_state['layer1_m_val'] = default_m1
             
             if st.session_state['layer1_prev_mat'] != layer1_mat:
-                st.session_state['layer1_a_val'] = default_a1
-                st.session_state['layer1_m_val'] = default_m1
+                st.session_state['layer1_a'] = default_a1
+                st.session_state['layer1_m'] = default_m1
                 st.session_state['layer1_prev_mat'] = layer1_mat
             
             col_a, col_b, col_c = st.columns(3)
@@ -1407,18 +1403,18 @@ def main():
                 st.markdown(f"a₁ &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_a1:.2f})</span>", unsafe_allow_html=True)
                 layer1_a = st.number_input(
                     "a1_input", min_value=0.10, max_value=0.50, 
-                    value=st.session_state['layer1_a_val'], step=0.01,
+                    value=st.session_state.get('layer1_a', default_a1), step=0.01,
+                    key="layer1_a",
                     label_visibility="collapsed"
                 )
-                st.session_state['layer1_a_val'] = layer1_a
             with col_c:
                 st.markdown(f"m₁ &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_m1:.2f})</span>", unsafe_allow_html=True)
                 layer1_m = st.number_input(
                     "m1_input", min_value=0.5, max_value=1.5, 
-                    value=st.session_state['layer1_m_val'], step=0.05,
+                    value=st.session_state.get('layer1_m', default_m1), step=0.05,
+                    key="layer1_m",
                     label_visibility="collapsed"
                 )
-                st.session_state['layer1_m_val'] = layer1_m
             st.session_state['ac_sublayers'] = None
         
         # ค่า a และ m สำหรับชั้น AC เมื่อใช้ sublayers
@@ -1431,14 +1427,10 @@ def main():
             # ตรวจสอบว่าวัสดุเปลี่ยนหรือไม่ - ถ้าเปลี่ยนให้ reset ค่า a และ m
             if 'layer1_prev_mat_sub' not in st.session_state:
                 st.session_state['layer1_prev_mat_sub'] = layer1_mat
-                if 'layer1_a_val_sub' not in st.session_state:
-                    st.session_state['layer1_a_val_sub'] = default_a1
-                if 'layer1_m_val_sub' not in st.session_state:
-                    st.session_state['layer1_m_val_sub'] = default_m1
             
             if st.session_state['layer1_prev_mat_sub'] != layer1_mat:
-                st.session_state['layer1_a_val_sub'] = default_a1
-                st.session_state['layer1_m_val_sub'] = default_m1
+                st.session_state['layer1_a_sublayer'] = default_a1
+                st.session_state['layer1_m_sublayer'] = default_m1
                 st.session_state['layer1_prev_mat_sub'] = layer1_mat
             
             col_am1, col_am2 = st.columns(2)
@@ -1447,19 +1439,19 @@ def main():
                 layer1_a = st.number_input(
                     "a1_sublayer_input",
                     min_value=0.10, max_value=0.50,
-                    value=st.session_state['layer1_a_val_sub'], step=0.01,
+                    value=st.session_state.get('layer1_a_sublayer', default_a1), step=0.01,
+                    key="layer1_a_sublayer",
                     label_visibility="collapsed"
                 )
-                st.session_state['layer1_a_val_sub'] = layer1_a
             with col_am2:
                 st.markdown(f"m₁ (Drainage Coefficient) &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_m1:.2f})</span>", unsafe_allow_html=True)
                 layer1_m = st.number_input(
                     "m1_sublayer_input",
                     min_value=0.5, max_value=1.5,
-                    value=st.session_state['layer1_m_val_sub'], step=0.05,
+                    value=st.session_state.get('layer1_m_sublayer', default_m1), step=0.05,
+                    key="layer1_m_sublayer",
                     label_visibility="collapsed"
                 )
-                st.session_state['layer1_m_val_sub'] = layer1_m
         else:
             # กรณีไม่ใช้ sublayers ให้ใช้ค่า layer1_a ที่กำหนดไว้แล้ว
             pass
@@ -1517,16 +1509,11 @@ def main():
             prev_mat_key = f'layer{i}_prev_mat'
             if prev_mat_key not in st.session_state:
                 st.session_state[prev_mat_key] = layer_mat
-                # ตั้งค่า default ครั้งแรก
-                if f'layer{i}_a_val' not in st.session_state:
-                    st.session_state[f'layer{i}_a_val'] = default_a
-                if f'layer{i}_m_val' not in st.session_state:
-                    st.session_state[f'layer{i}_m_val'] = default_m
             
             # ถ้าวัสดุเปลี่ยน ให้ reset ค่า a และ m
             if st.session_state[prev_mat_key] != layer_mat:
-                st.session_state[f'layer{i}_a_val'] = default_a
-                st.session_state[f'layer{i}_m_val'] = default_m
+                st.session_state[f'layer{i}_a'] = default_a
+                st.session_state[f'layer{i}_m'] = default_m
                 st.session_state[prev_mat_key] = layer_mat
             
             col_c, col_d, col_e = st.columns(3)
@@ -1539,27 +1526,26 @@ def main():
                     key=f"layer{i}_thick"
                 )
             with col_d:
+                # แสดงค่า a จากวัสดุ (read-only style) และให้ผู้ใช้แก้ไขได้
                 st.markdown(f"a{i} &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_a:.2f})</span>", unsafe_allow_html=True)
                 layer_a = st.number_input(
                     f"a{i}_input",
                     min_value=0.01, max_value=0.50, 
-                    value=st.session_state[f'layer{i}_a_val'], 
+                    value=st.session_state.get(f'layer{i}_a', default_a), 
                     step=0.01,
+                    key=f"layer{i}_a",
                     label_visibility="collapsed"
                 )
-                # อัพเดทค่าใน session_state
-                st.session_state[f'layer{i}_a_val'] = layer_a
             with col_e:
                 st.markdown(f"m{i} &nbsp;&nbsp;<span style='color: #1E90FF; font-size: 12px;'>(default = {default_m:.2f})</span>", unsafe_allow_html=True)
                 layer_m = st.number_input(
                     f"m{i}_input",
                     min_value=0.5, max_value=1.5, 
-                    value=st.session_state[f'layer{i}_m_val'], 
+                    value=st.session_state.get(f'layer{i}_m', default_m), 
                     step=0.05,
+                    key=f"layer{i}_m",
                     label_visibility="collapsed"
                 )
-                # อัพเดทค่าใน session_state
-                st.session_state[f'layer{i}_m_val'] = layer_m
             
             # แสดงค่า E
             st.markdown(f'<p style="color: #1E90FF; font-size: 14px;">E = {mat_props["mr_mpa"]:,} MPa</p>', unsafe_allow_html=True)
