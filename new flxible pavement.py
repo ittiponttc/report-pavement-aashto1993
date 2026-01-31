@@ -1305,13 +1305,13 @@ def main():
                 if wearing_std != "กำหนดเอง":
                     wearing_val = int(wearing_std.replace(" มม.", "")) / 10  # แปลง มม. เป็น cm
                     wearing_thick = st.number_input(
-                        "ความหนา (cm)", min_value=4, max_value=7.0,
-                        value=wearing_val, step=1, key="wearing_thick", disabled=True
+                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
+                        value=wearing_val, step=0.5, key="wearing_thick", disabled=True
                     )
                 else:
                     wearing_thick = st.number_input(
-                        "ความหนา (cm)", min_value=4, max_value=8,
-                        value=st.session_state.get('wearing_thick', 5.0), step=1, key="wearing_thick"
+                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
+                        value=st.session_state.get('wearing_thick', 5.0), step=0.5, key="wearing_thick"
                     )
             
             # Binder Course
@@ -1330,12 +1330,12 @@ def main():
                 if binder_std != "กำหนดเอง":
                     binder_val = int(binder_std.replace(" มม.", "")) / 10
                     binder_thick = st.number_input(
-                        "ความหนา (cm)", min_value=4, max_value=8,
-                        value=binder_val, step=1, key="binder_thick", disabled=True
+                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
+                        value=binder_val, step=0.5, key="binder_thick", disabled=True
                     )
                 else:
                     binder_thick = st.number_input(
-                        "ความหนา (cm)", min_value=1.0, max_value=10,
+                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
                         value=st.session_state.get('binder_thick', 7.0), step=0.5, key="binder_thick"
                     )
             
@@ -1355,13 +1355,13 @@ def main():
                 if base_std != "กำหนดเอง":
                     base_val = int(base_std.replace(" มม.", "")) / 10
                     base_course_thick = st.number_input(
-                        "ความหนา (cm)", min_value=0, max_value=10.0,
-                        value=base_val, step=1, key="base_course_thick", disabled=True
+                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
+                        value=base_val, step=0.5, key="base_course_thick", disabled=True
                     )
                 else:
                     base_course_thick = st.number_input(
-                        "ความหนา (cm)", min_value=0, max_value=7,
-                        value=st.session_state.get('base_course_thick', 10.0), step=1, key="base_course_thick"
+                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
+                        value=st.session_state.get('base_course_thick', 10.0), step=0.5, key="base_course_thick"
                     )
             
             # คำนวณความหนารวมของ AC
