@@ -567,33 +567,36 @@ def plot_pavement_section_thai(layers_result: list, subgrade_mr: float = None,
                 'base': 'Base Course (รองผิว)'
             }
             
-            # เพิ่ม Wearing Course
-            expanded_layers.append({
-                'design_thickness_cm': ac_sublayers['wearing'],
-                'material': sublayer_names['wearing'],
-                'short_name': 'WC',
-                'color': sublayer_colors['wearing'],
-                'mr_mpa': layer['mr_mpa'],
-                'is_sublayer': True
-            })
-            # เพิ่ม Binder Course
-            expanded_layers.append({
-                'design_thickness_cm': ac_sublayers['binder'],
-                'material': sublayer_names['binder'],
-                'short_name': 'BC',
-                'color': sublayer_colors['binder'],
-                'mr_mpa': layer['mr_mpa'],
-                'is_sublayer': True
-            })
-            # เพิ่ม Base Course
-            expanded_layers.append({
-                'design_thickness_cm': ac_sublayers['base'],
-                'material': sublayer_names['base'],
-                'short_name': 'ABC',
-                'color': sublayer_colors['base'],
-                'mr_mpa': layer['mr_mpa'],
-                'is_sublayer': True
-            })
+            # เพิ่ม Wearing Course (ถ้าความหนา > 0)
+            if ac_sublayers['wearing'] > 0:
+                expanded_layers.append({
+                    'design_thickness_cm': ac_sublayers['wearing'],
+                    'material': sublayer_names['wearing'],
+                    'short_name': 'WC',
+                    'color': sublayer_colors['wearing'],
+                    'mr_mpa': layer['mr_mpa'],
+                    'is_sublayer': True
+                })
+            # เพิ่ม Binder Course (ถ้าความหนา > 0)
+            if ac_sublayers['binder'] > 0:
+                expanded_layers.append({
+                    'design_thickness_cm': ac_sublayers['binder'],
+                    'material': sublayer_names['binder'],
+                    'short_name': 'BC',
+                    'color': sublayer_colors['binder'],
+                    'mr_mpa': layer['mr_mpa'],
+                    'is_sublayer': True
+                })
+            # เพิ่ม Base Course (ถ้าความหนา > 0)
+            if ac_sublayers['base'] > 0:
+                expanded_layers.append({
+                    'design_thickness_cm': ac_sublayers['base'],
+                    'material': sublayer_names['base'],
+                    'short_name': 'ABC',
+                    'color': sublayer_colors['base'],
+                    'mr_mpa': layer['mr_mpa'],
+                    'is_sublayer': True
+                })
         else:
             expanded_layers.append(layer)
     
