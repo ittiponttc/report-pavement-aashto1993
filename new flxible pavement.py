@@ -1339,28 +1339,34 @@ def main():
                         value=st.session_state.get('binder_thick', 7.0), step=0.5, key="binder_thick"
                     )
             
-            # Base Course
+           # Base Course
             st.markdown("**🔹 Base Course (ชั้นรองผิวทาง)**")
             col_bc1, col_bc2 = st.columns([1, 1])
             with col_bc1:
-                base_std_options = ["กำหนดเอง"] + [f"{t} มม." for t in DOH_THICKNESS_STANDARDS["Base Course"]["options"]]
+                base_std_options = ["กำหนดเอง", "ไม่ใช้ชั้นนี้"] + [f"{t} มม." for t in DOH_THICKNESS_STANDARDS["Base Course"]["options"]]
                 base_std = st.selectbox(
                     "ความหนามาตรฐาน ทล.",
                     options=base_std_options,
                     index=0,
                     key="base_std_select",
-                    help="Base Course: 70-100 มม. ตามมาตรฐานกรมทางหลวง"
+                    help="Base Course: 70-100 มม. ตามมาตรฐานกรมทางหลวง (เลือก 'ไม่ใช้ชั้นนี้' หรือใส่ 0 เพื่อข้าม)"
                 )
             with col_bc2:
-                if base_std != "กำหนดเอง":
+                if base_std == "ไม่ใช้ชั้นนี้":
+                    base_course_thick = 0.0
+                    st.number_input(
+                        "ความหนา (cm)", min_value=0.0, max_value=15.0,
+                        value=0.0, step=0.5, key="base_course_thick", disabled=True
+                    )
+                elif base_std != "กำหนดเอง":
                     base_val = int(base_std.replace(" มม.", "")) / 10
                     base_course_thick = st.number_input(
-                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
+                        "ความหนา (cm)", min_value=0.0, max_value=15.0,
                         value=base_val, step=0.5, key="base_course_thick", disabled=True
                     )
                 else:
                     base_course_thick = st.number_input(
-                        "ความหนา (cm)", min_value=1.0, max_value=15.0,
+                        "ความหนา (cm)", min_value=0.0, max_value=15.0,
                         value=st.session_state.get('base_course_thick', 10.0), step=0.5, key="base_course_thick"
                     )
             
