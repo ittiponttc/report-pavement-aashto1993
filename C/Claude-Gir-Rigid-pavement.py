@@ -673,7 +673,7 @@ def main():
             d_inch_selected = round(d_cm_selected / 2.54)
             st.success(f"**D = {d_cm_selected} ซม. ≈ {d_inch_selected} นิ้ว**")
           
-            with col2:
+        with col2:
             st.subheader("📊 ผลการคำนวณ")
             comparison_results = []
             thicknesses_cm = [20, 22, 25, 28, 30, 32, 35, 38, 40]
