@@ -672,7 +672,10 @@ def main():
             d_cm_selected = st.slider("", 20, 40, st.session_state.get('calc_d', 30), 1, key="calc_d", label_visibility="collapsed")
             d_inch_selected = round(d_cm_selected / 2.54)
             st.success(f"**D = {d_cm_selected} ซม. ≈ {d_inch_selected} นิ้ว**")
-        
+            if passed_sel:
+                st.success(f"✅ **ผ่านเกณฑ์** อัตราส่วน = {ratio_sel:.2f}")
+            else:
+                st.error(f"❌ **ไม่ผ่านเกณฑ์** อัตราส่วน = {ratio_sel:.2f}")
         with col2:
             st.subheader("📊 ผลการคำนวณ")
             comparison_results = []
