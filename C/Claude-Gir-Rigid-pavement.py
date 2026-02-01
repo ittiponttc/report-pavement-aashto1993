@@ -673,7 +673,7 @@ def main():
             st.caption("ความหนาผิวทางคอนกรีต D (ซม.)")
             d_cm_selected = st.slider("", 20, 40, st.session_state.get('calc_d', 30), 1, key="calc_d", label_visibility="collapsed")
             d_inch_selected = round(d_cm_selected / 2.54)
-            st.success(f"**D = {d_cm_selected} ซม. ≈ {d_inch_selected} นิ้ว**")
+            st.success(f"**ความหนาผิวทางคอนกรีต D = {d_cm_selected} ซม. ≈ {d_inch_selected} นิ้ว**")
             st.markdown("---")
             st.subheader(f"🎯 ผลการตรวจสอบ D = {d_cm_selected} ซม.")
             log_w18_sel, w18_sel = calculate_aashto_rigid_w18(d_inch_selected, delta_psi, pt, zr, so, sc, cd, j_value, ec, k_eff)
