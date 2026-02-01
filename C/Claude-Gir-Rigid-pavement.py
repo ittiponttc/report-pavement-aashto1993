@@ -673,10 +673,11 @@ def main():
             d_cm_selected = st.slider("", 20, 40, st.session_state.get('calc_d', 30), 1, key="calc_d", label_visibility="collapsed")
             d_inch_selected = round(d_cm_selected / 2.54)
             st.success(f"**D = {d_cm_selected} ซม. ≈ {d_inch_selected} นิ้ว**")
+            st.markdown("---")
             st.subheader("📊 ผลการคำนวณ")
             comparison_results = []
             thicknesses_cm = [20, 22, 25, 28, 30, 32, 35, 38, 40]
-            st.markdown("---")
+
             for d_cm in thicknesses_cm:
                 d_inch = round(d_cm / 2.54)
                 log_w18, w18_capacity = calculate_aashto_rigid_w18(d_inch, delta_psi, pt, zr, so, sc, cd, j_value, ec, k_eff)
