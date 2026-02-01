@@ -665,7 +665,7 @@ def main():
             j_auto = J_VALUES[pavement_type]
             j_value = st.number_input("Load Transfer (J)", 2.0, 4.5, st.session_state.get('calc_j', j_auto), 0.1, "%.1f", key="calc_j")
             cd = st.number_input("Drainage (Cd)", 0.7, 1.3, st.session_state.get('calc_cd', 1.0), 0.05, "%.2f", key="calc_cd")
-            
+            st.markdown("---")
             
         with col2:
             st.subheader("7️⃣ 👷 🚧 ความหนาที่ตรวจสอบ")
