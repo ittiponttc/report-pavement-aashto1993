@@ -670,7 +670,7 @@ def main():
             
         with col2:
             st.subheader("7️⃣ 👷 🚧 ความหนาที่ตรวจสอบ")
-            st.caption("ความหนา D (ซม.)")
+            st.caption("ความหนาผิวทางคอนกรีต D (ซม.)")
             d_cm_selected = st.slider("", 20, 40, st.session_state.get('calc_d', 30), 1, key="calc_d", label_visibility="collapsed")
             d_inch_selected = round(d_cm_selected / 2.54)
             st.success(f"**D = {d_cm_selected} ซม. ≈ {d_inch_selected} นิ้ว**")
