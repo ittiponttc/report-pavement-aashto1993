@@ -431,7 +431,7 @@ def generate_word_report_nomograph(params, img1_bytes, img2_bytes=None):
 
 def main():
     st.set_page_config(page_title="AASHTO 1993 Rigid Pavement Design", page_icon="🛣️", layout="wide")
-    st.title("🛣️ AASHTO 1993 Rigid Pavement Design Calculator")
+    st.title("🛣️ Rigid Pavement Design Calculator (AASHTO 1993)")
     st.markdown("**โปรแกรมออกแบบความหนาถนนคอนกรีต และหาค่า k-value พร้อมปรับแก้ Loss of Support**")
     
     # Initialize Session State
