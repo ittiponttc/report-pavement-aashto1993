@@ -667,12 +667,6 @@ def main():
             cd = st.number_input("Drainage (Cd)", 0.7, 1.3, st.session_state.get('calc_cd', 1.0), 0.05, "%.2f", key="calc_cd")
             st.markdown("---")
             
-            st.subheader("7️⃣ ความหนาที่ตรวจสอบ")
-            st.caption("ความหนา D (ซม.)")
-            d_cm_selected = st.slider("", 20, 40, st.session_state.get('calc_d', 30), 1, key="calc_d", label_visibility="collapsed")
-            d_inch_selected = round(d_cm_selected / 2.54)
-            st.success(f"**D = {d_cm_selected} ซม. ≈ {d_inch_selected} นิ้ว**")
-          
         with col2:
             st.subheader("7️⃣ ความหนาที่ตรวจสอบ")
             st.caption("ความหนา D (ซม.)")
