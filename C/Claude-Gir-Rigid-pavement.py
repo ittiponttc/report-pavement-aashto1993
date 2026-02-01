@@ -674,24 +674,6 @@ def main():
             d_inch_selected = round(d_cm_selected / 2.54)
             st.success(f"**D = {d_cm_selected} ซม. ≈ {d_inch_selected} นิ้ว**")
             st.markdown("---")
-            st.subheader("📊 ผลการคำนวณ")
-            comparison_results = []
-            thicknesses_cm = [20, 22, 25, 28, 30, 32, 35, 38, 40]
-
-            for d_cm in thicknesses_cm:
-                d_inch = round(d_cm / 2.54)
-                log_w18, w18_capacity = calculate_aashto_rigid_w18(d_inch, delta_psi, pt, zr, so, sc, cd, j_value, ec, k_eff)
-                passed, ratio = check_design(w18_design, w18_capacity)
-                comparison_results.append({'d_cm': d_cm, 'd_inch': d_inch, 'log_w18': log_w18, 'w18': w18_capacity, 'passed': passed, 'ratio': ratio})
-            
-            import pandas as pd
-            df = pd.DataFrame([{
-                'D (ซม.)': r['d_cm'], 'D (นิ้ว)': r['d_inch'], 'log₁₀(W₁₈)': f"{r['log_w18']:.4f}",
-                'W₁₈ รองรับได้': f"{r['w18']:,.0f}", 'อัตราส่วน': f"{r['ratio']:.2f}", 'ผล': "✅" if r['passed'] else "❌"
-            } for r in comparison_results])
-            st.dataframe(df, use_container_width=True, hide_index=True)
-            
-            st.markdown("---")
             st.subheader(f"🎯 ผลการตรวจสอบ D = {d_cm_selected} ซม.")
             log_w18_sel, w18_sel = calculate_aashto_rigid_w18(d_inch_selected, delta_psi, pt, zr, so, sc, cd, j_value, ec, k_eff)
             passed_sel, ratio_sel = check_design(w18_design, w18_sel)
@@ -710,6 +692,25 @@ def main():
                 st.error(f"❌ **ไม่ผ่านเกณฑ์** อัตราส่วน = {ratio_sel:.2f}")
             
             st.markdown("---")
+            st.subheader("📊 ผลการคำนวณ")
+            comparison_results = []
+            thicknesses_cm = [20, 22, 25, 28, 30, 32, 35, 38, 40]
+
+            for d_cm in thicknesses_cm:
+                d_inch = round(d_cm / 2.54)
+                log_w18, w18_capacity = calculate_aashto_rigid_w18(d_inch, delta_psi, pt, zr, so, sc, cd, j_value, ec, k_eff)
+                passed, ratio = check_design(w18_design, w18_capacity)
+                comparison_results.append({'d_cm': d_cm, 'd_inch': d_inch, 'log_w18': log_w18, 'w18': w18_capacity, 'passed': passed, 'ratio': ratio})
+            
+            import pandas as pd
+            df = pd.DataFrame([{
+                'D (ซม.)': r['d_cm'], 'D (นิ้ว)': r['d_inch'], 'log₁₀(W₁₈)': f"{r['log_w18']:.4f}",
+                'W₁₈ รองรับได้': f"{r['w18']:,.0f}", 'อัตราส่วน': f"{r['ratio']:.2f}", 'ผล': "✅" if r['passed'] else "❌"
+            } for r in comparison_results])
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            
+            st.markdown("---")
+           
             fig_structure = create_pavement_structure_figure(layers_data, d_cm_selected)
             if fig_structure:
                 st.pyplot(fig_structure)
