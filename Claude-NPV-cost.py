@@ -1135,84 +1135,178 @@ def main():
             st.download_button("💾 บันทึก JSON", json.dumps(data_export, ensure_ascii=False, indent=2),
                              "lcca_v3_data.json", "application/json", use_container_width=True)
 
-    # ===== Tab 3: ผลวิเคราะห์ LCCA =====
+    # ===== Tab 3: ผลวิเคราะห์ LCCA (หน้าตาเหมือน v2.0) =====
     with tab3:
-        st.header("📈 ผลการวิเคราะห์ LCCA")
+        st.header("📊 ผลการวิเคราะห์ LCCA")
 
-        col_p1, col_p2, col_p3 = st.columns(3)
-        col_p1.info(f"📅 ระยะวิเคราะห์: **{ระยะวิเคราะห์} ปี**")
-        col_p2.info(f"📉 อัตราคิดลด: **{อัตราคิดลด * 100:.1f}%**")
-        ทางเลือกที่ใช้ = [ท for ท in st.session_state.ทางเลือกทั้งหมด if ท.เปิดใช้งาน]
-        col_p3.info(f"🛣️ ทางเลือก: **{len(ทางเลือกที่ใช้)}**")
+        # แสดงพารามิเตอร์
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.info(f"📅 ระยะวิเคราะห์: **{ระยะวิเคราะห์} ปี**")
+        with col2:
+            st.info(f"📉 อัตราคิดลด: **{อัตราคิดลด * 100:.1f}%**")
+        with col3:
+            ทางเลือกที่ใช้ = [ท for ท in st.session_state.ทางเลือกทั้งหมด if ท.เปิดใช้งาน]
+            st.info(f"🛣️ ทางเลือกที่วิเคราะห์: **{len(ทางเลือกที่ใช้)}**")
 
         if not รวมมูลค่าซาก:
             st.warning("⚠️ **ไม่รวมมูลค่าซาก (Salvage Value)** — การวิเคราะห์ไม่ได้หักมูลค่าซากออกจากต้นทุน สามารถเปิดได้ที่ Sidebar")
 
         if len(ทางเลือกที่ใช้) == 0:
-            st.warning("⚠️ กรุณาเปิดใช้งานอย่างน้อย 1 ทางเลือก")
+            st.warning("⚠️ กรุณาเปิดใช้งานอย่างน้อย 1 ทางเลือกในแท็บ 'โครงสร้าง/บำรุงรักษา'")
         else:
+            # ดำเนินการวิเคราะห์
             สรุป, กระแสเงินสด = วิเคราะห์_LCCA(st.session_state.ทางเลือกทั้งหมด, ระยะวิเคราะห์, อัตราคิดลด, รวมมูลค่าซาก)
 
-            if len(สรุป) > 0:
-                ผู้ชนะ = สรุป.iloc[0]
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("🏆 ทางเลือกที่ดีที่สุด", ผู้ชนะ['ทางเลือก'])
-                c2.metric("💰 PW รวม", f"{ผู้ชนะ['มูลค่าปัจจุบันรวม']:,.0f} บาท")
-                c3.metric("📊 EAC", f"{ผู้ชนะ['ต้นทุนเฉลี่ยรายปี']:,.0f} บาท/ปี")
-                c4.metric("📐 ต้นทุน/ตร.ม./ปี", f"{ผู้ชนะ['ต้นทุนต่อตรม_ต่อปี']:,.2f} บาท")
+            st.subheader("🏆 ตารางเปรียบเทียบ")
 
-                st.divider()
+            # จัดรูปแบบตาราง (เหมือน v2.0)
+            สรุป_display = สรุป[['ลำดับ', 'ทางเลือก', 'ประเภทผิวทาง', 'ความหนา_ซม', 'พื้นที่_ตรม',
+                                'ต้นทุนก่อสร้าง_ตรม', 'มูลค่าปัจจุบันรวม',
+                                'ต้นทุนเฉลี่ยรายปี', 'ต้นทุนต่อตรม_ต่อปี']].copy()
+            สรุป_display.columns = ['ลำดับ', 'ทางเลือก', 'ประเภท', 'ความหนา (ซม.)', 'พื้นที่ (ตร.ม.)',
+                                   'ก่อสร้าง (บาท/ตร.ม.)', 'มูลค่าปัจจุบัน (บาท)',
+                                   'EAC (บาท/ปี)', 'ต้นทุน (บาท/ตร.ม./ปี)']
 
-                # ตารางสรุป
-                st.subheader("📋 ตารางเปรียบเทียบ")
-                display_cols = ['ลำดับ', 'ทางเลือก', 'ประเภทผิวทาง', 'ต้นทุนก่อสร้าง_ตรม', 'มูลค่าปัจจุบันรวม', 'ต้นทุนเฉลี่ยรายปี', 'ต้นทุนต่อตรม_ต่อปี']
-                st.dataframe(
-                    สรุป[display_cols].style.format({
-                        'ต้นทุนก่อสร้าง_ตรม': '{:,.2f}',
-                        'มูลค่าปัจจุบันรวม': '{:,.0f}',
-                        'ต้นทุนเฉลี่ยรายปี': '{:,.0f}',
-                        'ต้นทุนต่อตรม_ต่อปี': '{:,.2f}'
-                    }).background_gradient(subset=['มูลค่าปัจจุบันรวม'], cmap='RdYlGn_r'),
+            def highlight_best(row):
+                if row['ลำดับ'] == 1:
+                    return ['background-color: #90EE90'] * len(row)
+                return [''] * len(row)
+
+            st.dataframe(
+                สรุป_display.style.apply(highlight_best, axis=1).format({
+                    'ความหนา (ซม.)': '{:,.1f}',
+                    'พื้นที่ (ตร.ม.)': '{:,.0f}',
+                    'ก่อสร้าง (บาท/ตร.ม.)': '{:,.0f}',
+                    'มูลค่าปัจจุบัน (บาท)': '{:,.0f}',
+                    'EAC (บาท/ปี)': '{:,.0f}',
+                    'ต้นทุน (บาท/ตร.ม./ปี)': '{:,.2f}'
+                }),
+                use_container_width=True,
+                hide_index=True
+            )
+
+            # แสดงผู้ชนะ
+            ผู้ชนะ = สรุป.iloc[0]
+            st.success(f"""
+            ### ⭐ ทางเลือกที่ประหยัดที่สุด: **{ผู้ชนะ['ทางเลือก']}**
+            - มูลค่าปัจจุบันรวม: **{ผู้ชนะ['มูลค่าปัจจุบันรวม']:,.0f} บาท**
+            - ต้นทุนเฉลี่ยรายปี: **{ผู้ชนะ['ต้นทุนเฉลี่ยรายปี']:,.0f} บาท/ปี**
+            - ต้นทุนต่อตารางเมตรต่อปี: **{ผู้ชนะ['ต้นทุนต่อตรม_ต่อปี']:,.2f} บาท/ตร.ม./ปี**
+            """)
+
+            # เปรียบเทียบกับทางเลือกอื่น
+            if len(สรุป) > 1:
+                st.subheader("💡 การเปรียบเทียบกับทางเลือกอื่น")
+                for idx in range(1, len(สรุป)):
+                    อื่น = สรุป.iloc[idx]
+                    ส่วนต่าง = อื่น['มูลค่าปัจจุบันรวม'] - ผู้ชนะ['มูลค่าปัจจุบันรวม']
+                    ร้อยละ = (ส่วนต่าง / อื่น['มูลค่าปัจจุบันรวม']) * 100
+                    st.info(f"📊 vs {อื่น['ทางเลือก']}: ประหยัด **{ส่วนต่าง:,.0f} บาท** ({ร้อยละ:.1f}%)")
+
+            st.divider()
+
+            # กราฟแท่งเปรียบเทียบองค์ประกอบต้นทุน (Stacked Bar — เหมือน v2.0)
+            st.subheader("📊 กราฟเปรียบเทียบองค์ประกอบต้นทุน")
+
+            fig_bar = go.Figure()
+
+            สีองค์ประกอบ = {
+                'PW_ก่อสร้าง': ('#1f77b4', 'ก่อสร้างเริ่มต้น'),
+                'PW_บำรุงรักษา': ('#ff7f0e', 'บำรุงรักษา'),
+                'PW_ฟื้นฟูสภาพ': ('#2ca02c', 'ฟื้นฟูสภาพ')
+            }
+
+            for องค์ประกอบ, (สี, ชื่อ) in สีองค์ประกอบ.items():
+                fig_bar.add_trace(go.Bar(
+                    name=ชื่อ,
+                    x=สรุป['ทางเลือก'],
+                    y=สรุป[องค์ประกอบ],
+                    marker_color=สี
+                ))
+
+            fig_bar.update_layout(
+                barmode='stack',
+                title='องค์ประกอบต้นทุน (มูลค่าปัจจุบัน)',
+                yaxis_title='มูลค่าปัจจุบัน (บาท)',
+                xaxis_title='ทางเลือกผิวทาง',
+                legend_title='องค์ประกอบ',
+                height=500
+            )
+
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+            # กราฟวงกลม สัดส่วนต้นทุนแต่ละทางเลือก
+            st.subheader("🥧 สัดส่วนต้นทุนแต่ละทางเลือก")
+
+            cols_pie = st.columns(min(len(สรุป), 4))
+            for idx, (_, row) in enumerate(สรุป.iterrows()):
+                with cols_pie[idx % len(cols_pie)]:
+                    ข้อมูลวงกลม = {
+                        'องค์ประกอบ': ['ก่อสร้าง', 'บำรุงรักษา', 'ฟื้นฟูสภาพ'],
+                        'มูลค่า': [row['PW_ก่อสร้าง'], row['PW_บำรุงรักษา'], row['PW_ฟื้นฟูสภาพ']]
+                    }
+                    fig_pie = px.pie(
+                        ข้อมูลวงกลม,
+                        values='มูลค่า',
+                        names='องค์ประกอบ',
+                        title=row['ทางเลือก'],
+                        color_discrete_sequence=px.colors.qualitative.Set2
+                    )
+                    fig_pie.update_layout(height=350)
+                    st.plotly_chart(fig_pie, use_container_width=True)
+
+            st.divider()
+
+            # Cumulative NPV Timeline (จาก NPV-Cost v3.0)
+            st.subheader("📈 Cumulative PW Timeline")
+            colors_line = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#28A745', '#6F42C1']
+            fig_cum = go.Figure()
+            for idx_cf, (ชื่อ_cf, cf_data) in enumerate(กระแสเงินสด.items()):
+                cf_sorted = cf_data.sort_values('ปี')
+                cum_pw = cf_sorted['มูลค่าปัจจุบัน'].cumsum()
+                fig_cum.add_trace(go.Scatter(
+                    x=cf_sorted['ปี'], y=cum_pw, mode='lines+markers',
+                    name=ชื่อ_cf, line=dict(color=colors_line[idx_cf % len(colors_line)], width=2)
+                ))
+            fig_cum.update_layout(
+                xaxis_title='ปี', yaxis_title='Cumulative PW (บาท)',
+                height=400, hovermode='x unified',
+                title='กราฟสะสมมูลค่าปัจจุบัน (Cumulative Present Worth)'
+            )
+            st.plotly_chart(fig_cum, use_container_width=True)
+
+            # ปุ่มส่งออกรายงาน
+            st.divider()
+            st.subheader("📄 ส่งออกรายงาน")
+
+            col_export1, col_export2 = st.columns(2)
+
+            with col_export1:
+                if DOCX_AVAILABLE:
+                    word_file = สร้างรายงาน_Word(
+                        สรุป, กระแสเงินสด, ระยะวิเคราะห์, อัตราคิดลด,
+                        st.session_state.ทางเลือกทั้งหมด
+                    )
+                    st.download_button(
+                        label="📝 ดาวน์โหลดรายงาน Word",
+                        data=word_file,
+                        file_name=f"LCCA_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True
+                    )
+                else:
+                    st.warning("⚠️ ต้องติดตั้ง python-docx: `pip install python-docx`")
+
+            with col_export2:
+                csv_summary = สรุป.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(
+                    label="📊 ดาวน์โหลดสรุป CSV",
+                    data=csv_summary,
+                    file_name=f"LCCA_Summary_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                    mime="text/csv",
                     use_container_width=True
                 )
-
-                # กราฟเปรียบเทียบ
-                st.subheader("📊 กราฟเปรียบเทียบ")
-                fig = make_subplots(rows=1, cols=2,
-                    subplot_titles=('มูลค่าปัจจุบันรวม (บาท)', 'องค์ประกอบต้นทุน (PW)'))
-
-                colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#28A745', '#6F42C1']
-
-                fig.add_trace(go.Bar(
-                    x=สรุป['ทางเลือก'], y=สรุป['มูลค่าปัจจุบันรวม'],
-                    marker_color=colors[:len(สรุป)],
-                    text=สรุป['มูลค่าปัจจุบันรวม'].apply(lambda x: f'{x:,.0f}'),
-                    textposition='outside', name='PW รวม'
-                ), row=1, col=1)
-
-                fig.add_trace(go.Bar(x=สรุป['ทางเลือก'], y=สรุป['PW_ก่อสร้าง'], name='ก่อสร้าง', marker_color='#2E86AB'), row=1, col=2)
-                fig.add_trace(go.Bar(x=สรุป['ทางเลือก'], y=สรุป['PW_บำรุงรักษา'], name='บำรุงรักษา', marker_color='#F18F01'), row=1, col=2)
-                fig.add_trace(go.Bar(x=สรุป['ทางเลือก'], y=สรุป['PW_ฟื้นฟูสภาพ'], name='ฟื้นฟูสภาพ', marker_color='#A23B72'), row=1, col=2)
-                fig.add_trace(go.Bar(x=สรุป['ทางเลือก'], y=สรุป['PW_มูลค่าซาก'], name='มูลค่าซาก', marker_color='#28A745'), row=1, col=2)
-
-                fig.update_layout(height=450, barmode='relative', legend=dict(orientation="h", y=1.1))
-                st.plotly_chart(fig, use_container_width=True)
-
-                # Cumulative NPV Timeline
-                st.subheader("📈 Cumulative PW Timeline")
-                fig_cum = go.Figure()
-                for idx, (ชื่อ, cf) in enumerate(กระแสเงินสด.items()):
-                    cf_sorted = cf.sort_values('ปี')
-                    cum_pw = cf_sorted['มูลค่าปัจจุบัน'].cumsum()
-                    fig_cum.add_trace(go.Scatter(
-                        x=cf_sorted['ปี'], y=cum_pw, mode='lines+markers',
-                        name=ชื่อ, line=dict(color=colors[idx % len(colors)], width=2)
-                    ))
-                fig_cum.update_layout(
-                    xaxis_title='ปี', yaxis_title='Cumulative PW (บาท)',
-                    height=400, hovermode='x unified'
-                )
-                st.plotly_chart(fig_cum, use_container_width=True)
 
     # ===== Tab 4: กระแสเงินสด =====
     with tab4:
