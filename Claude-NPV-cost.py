@@ -1402,6 +1402,7 @@ def main():
                 st.download_button("📊 ดาวน์โหลดสรุป CSV", csv_summary,
                     f"LCCA_Summary_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", "text/csv",
                     use_container_width=True)
+                    key="download_csv_summary"
             with col_e3:
                 data_export = {
                     'ระยะวิเคราะห์': ระยะวิเคราะห์, 'อัตราคิดลด': อัตราคิดลด,
