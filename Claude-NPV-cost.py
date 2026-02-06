@@ -638,8 +638,82 @@ def สร้างรายงาน_Word(
     doc.add_paragraph(f'อัตราคิดลด: {อัตราคิดลด * 100:.1f}%')
     doc.add_paragraph(f'จำนวนทางเลือก: {len(สรุป)} ทางเลือก')
 
+    # ตารางราคาเปรียบเทียบโครงสร้างชั้นทาง
+    doc.add_heading('2. ตารางราคาเปรียบเทียบโครงสร้างชั้นทาง', level=1)
+
+    # 2.1 ผิวทาง Asphalt Concrete (บาท/ตร.ม.)
+    doc.add_heading('2.1 ผิวทาง Asphalt Concrete (บาท/ตร.ม.)', level=2)
+    ac_thicknesses = [2.5, 3, 4, 5, 6, 7, 8, 9, 10]
+    ac_types_list = ['PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course']
+    # ดึงราคาจาก session_state ถ้ามี หรือใช้ค่า default
+    lib = None
+    try:
+        lib = st.session_state.get('price_library', None)
+    except Exception:
+        pass
+
+    t_ac = doc.add_table(rows=1, cols=5)
+    t_ac.style = 'Table Grid'
+    t_ac.alignment = WD_TABLE_ALIGNMENT.CENTER
+    hdr = t_ac.rows[0].cells
+    for j, h in enumerate(['ความหนา (cm)', 'PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course']):
+        hdr[j].text = h
+        hdr[j].paragraphs[0].runs[0].bold = True
+    for thk in ac_thicknesses:
+        row = t_ac.add_row().cells
+        row[0].text = str(thk)
+        for col_idx, ac_type in enumerate(ac_types_list):
+            if lib and 'ac_prices' in lib:
+                price = lib['ac_prices'].get(ac_type, {}).get(thk, AC_PRICE_TABLE.get(ac_type, {}).get(thk, 0))
+            else:
+                price = AC_PRICE_TABLE.get(ac_type, {}).get(thk, 0)
+            row[col_idx + 1].text = f"{price:,.0f}"
+    doc.add_paragraph()
+
+    # 2.2 ผิวทางคอนกรีต (บาท/ตร.ม.)
+    doc.add_heading('2.2 ผิวทางคอนกรีต (บาท/ตร.ม.)', level=2)
+    conc_thicknesses = [25, 28, 32, 35]
+    conc_types_list = ['JRCP', 'JPCP', 'CRCP']
+    t_conc = doc.add_table(rows=1, cols=4)
+    t_conc.style = 'Table Grid'
+    t_conc.alignment = WD_TABLE_ALIGNMENT.CENTER
+    hdr_c = t_conc.rows[0].cells
+    for j, h in enumerate(['ความหนา (cm)', 'JRCP', 'JPCP', 'CRCP']):
+        hdr_c[j].text = h
+        hdr_c[j].paragraphs[0].runs[0].bold = True
+    for thk in conc_thicknesses:
+        row = t_conc.add_row().cells
+        row[0].text = str(thk)
+        for col_idx, conc_type in enumerate(conc_types_list):
+            if lib and 'concrete_prices' in lib:
+                price = lib['concrete_prices'].get(conc_type, {}).get(thk, CONCRETE_PRICE_TABLE.get(conc_type, {}).get(thk, 0))
+            else:
+                price = CONCRETE_PRICE_TABLE.get(conc_type, {}).get(thk, 0)
+            row[col_idx + 1].text = f"{price:,.0f}"
+    doc.add_paragraph()
+
+    # 2.3 วัสดุพื้นทาง/รองพื้นทาง (บาท/ลบ.ม.)
+    doc.add_heading('2.3 วัสดุพื้นทาง/รองพื้นทาง (บาท/ลบ.ม.)', level=2)
+    t_base = doc.add_table(rows=1, cols=2)
+    t_base.style = 'Table Grid'
+    t_base.alignment = WD_TABLE_ALIGNMENT.CENTER
+    hdr_b = t_base.rows[0].cells
+    hdr_b[0].text = 'วัสดุ'
+    hdr_b[0].paragraphs[0].runs[0].bold = True
+    hdr_b[1].text = 'ราคา (บาท/ลบ.ม.)'
+    hdr_b[1].paragraphs[0].runs[0].bold = True
+    for mat_name, default_price in BASE_MATERIAL_PRICES.items():
+        if lib and 'base_prices' in lib:
+            price = lib['base_prices'].get(mat_name, default_price)
+        else:
+            price = default_price
+        row = t_base.add_row().cells
+        row[0].text = mat_name
+        row[1].text = f"{price:,.0f}"
+    doc.add_paragraph()
+
     # ตาราง BOQ แต่ละทางเลือก
-    doc.add_heading('2. รายละเอียดค่าก่อสร้างแต่ละทางเลือก', level=1)
+    doc.add_heading('3. รายละเอียดค่าก่อสร้างแต่ละทางเลือก', level=1)
     for ทางเลือก in ทางเลือกทั้งหมด:
         if not ทางเลือก.เปิดใช้งาน:
             continue
@@ -664,7 +738,7 @@ def สร้างรายงาน_Word(
         doc.add_paragraph()
 
     # ผลการวิเคราะห์ LCCA
-    doc.add_heading('3. ผลการวิเคราะห์ LCCA', level=1)
+    doc.add_heading('4. ผลการวิเคราะห์ LCCA', level=1)
     table2 = doc.add_table(rows=1, cols=5)
     table2.style = 'Table Grid'
     for j, h in enumerate(['ลำดับ', 'ทางเลือก', 'มูลค่าปัจจุบันรวม (บาท)', 'EAC (บาท/ปี)', 'ต้นทุน (บาท/ตร.ม./ปี)']):
@@ -679,7 +753,7 @@ def สร้างรายงาน_Word(
         row_cells[4].text = f"{row['ต้นทุนต่อตรม_ต่อปี']:,.2f}"
 
     # องค์ประกอบต้นทุน
-    doc.add_heading('4. องค์ประกอบต้นทุน (มูลค่าปัจจุบัน)', level=1)
+    doc.add_heading('5. องค์ประกอบต้นทุน (มูลค่าปัจจุบัน)', level=1)
     table3 = doc.add_table(rows=1, cols=6)
     table3.style = 'Table Grid'
     for j, h in enumerate(['ทางเลือก', 'ก่อสร้าง', 'บำรุงรักษา', 'ฟื้นฟูสภาพ', 'มูลค่าซาก', 'รวม (บาท)']):
@@ -695,7 +769,7 @@ def สร้างรายงาน_Word(
         r[5].text = f"{row['มูลค่าปัจจุบันรวม']:,.0f}"
 
     # สรุปผล
-    doc.add_heading('5. สรุปผล', level=1)
+    doc.add_heading('6. สรุปผล', level=1)
     if len(สรุป) > 0:
         ผู้ชนะ = สรุป.iloc[0]
         doc.add_paragraph(f'ทางเลือกที่ประหยัดที่สุด: {ผู้ชนะ["ทางเลือก"]}')
@@ -704,7 +778,7 @@ def สร้างรายงาน_Word(
 
     # กระแสเงินสด
     doc.add_page_break()
-    doc.add_heading('6. รายละเอียดกระแสเงินสด', level=1)
+    doc.add_heading('7. รายละเอียดกระแสเงินสด', level=1)
     for ชื่อ, cf in กระแสเงินสด.items():
         doc.add_heading(ชื่อ, level=2)
         t = doc.add_table(rows=1, cols=5)
@@ -889,14 +963,16 @@ def main():
                 st.subheader("🧱 ชั้นวัสดุ")
                 if ทางเลือก.ชั้นวัสดุ:
                     total_cost_sqm = 0.0
-                    cols_h = st.columns([3, 1.2, 1.5, 1.5])
+                    cols_h = st.columns([3, 1.2, 1.5, 1.5, 0.5])
                     cols_h[0].markdown("**วัสดุ**")
                     cols_h[1].markdown("**หนา (cm)**")
                     cols_h[2].markdown("**ราคา/หน่วย**")
                     cols_h[3].markdown("**บาท/ตร.ม.**")
+                    cols_h[4].markdown("**ลบ**")
 
+                    del_layer = []
                     for j, layer in enumerate(ทางเลือก.ชั้นวัสดุ):
-                        cols = st.columns([3, 1.2, 1.5, 1.5])
+                        cols = st.columns([3, 1.2, 1.5, 1.5, 0.5])
                         with cols[0]:
                             layer['name'] = st.text_input("วัสดุ", value=layer['name'], key=f"lyr_name_{i}_{j}", label_visibility="collapsed")
                         with cols[1]:
@@ -912,6 +988,32 @@ def main():
                                 cost_sqm = layer['unit_cost']
                             total_cost_sqm += cost_sqm
                             st.markdown(f"**{cost_sqm:,.2f}**")
+                        with cols[4]:
+                            if st.button("🗑️", key=f"del_lyr_{i}_{j}"):
+                                del_layer.append(j)
+
+                    # ลบชั้นวัสดุที่เลือก
+                    for idx in sorted(del_layer, reverse=True):
+                        if len(ทางเลือก.ชั้นวัสดุ) > 1:
+                            ทางเลือก.ชั้นวัสดุ.pop(idx)
+                            st.rerun()
+
+                    # ปุ่มเพิ่มชั้นวัสดุ
+                    add_col1, add_col2 = st.columns(2)
+                    with add_col1:
+                        if st.button(f"➕ เพิ่มชั้นผิวทาง (sq.m)", key=f"add_lyr_surf_{i}"):
+                            ทางเลือก.ชั้นวัสดุ.append({
+                                'name': 'วัสดุใหม่', 'thickness': 5.0, 'unit': 'cm',
+                                'qty_unit': 'sq.m', 'unit_cost': 100.0, 'layer_type': 'surface'
+                            })
+                            st.rerun()
+                    with add_col2:
+                        if st.button(f"➕ เพิ่มชั้นพื้นทาง (cu.m)", key=f"add_lyr_base_{i}"):
+                            ทางเลือก.ชั้นวัสดุ.append({
+                                'name': 'วัสดุพื้นทางใหม่', 'thickness': 20.0, 'unit': 'cm',
+                                'qty_unit': 'cu.m', 'unit_cost': 375.0, 'layer_type': 'base'
+                            })
+                            st.rerun()
 
                     # Joints
                     joint_cost_sqm = 0.0
