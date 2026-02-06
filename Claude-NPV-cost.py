@@ -1397,12 +1397,15 @@ def main():
                         use_container_width=True)
                 else:
                     st.warning("⚠️ ติดตั้ง python-docx: `pip install python-docx`")
-            with col_e2:
-                csv_summary = สรุป.to_csv(index=False).encode('utf-8-sig')
-                st.download_button("📊 ดาวน์โหลดสรุป CSV", csv_summary,
-                    f"LCCA_Summary_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", "text/csv",
-                    use_container_width=True)
-                    key="download_csv_summary"
+            with col_export2:
+            csv_summary = สรุป.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📊 ดาวน์โหลดสรุป CSV",
+                data=csv_summary,
+                file_name=f"LCCA_Summary_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key="download_csv_summary"
             with col_e3:
                 data_export = {
                     'ระยะวิเคราะห์': ระยะวิเคราะห์, 'อัตราคิดลด': อัตราคิดลด,
