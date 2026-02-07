@@ -1369,61 +1369,72 @@ def main():
         # ตรวจสอบว่ามีข้อมูล construction หรือไม่
         if 'construction' in st.session_state and st.session_state['construction']:
             constr = st.session_state.get('construction', {})
-            all_details = {k: v.get('details', []) for k, v in constr.items()}
             
-            # แสดงตัวอย่างข้อมูลที่จะออกรายงาน
-            st.subheader("📊 ข้อมูลที่จะรวมในรายงาน")
+            # กรองเฉพาะโครงสร้างที่เลือก "แสดงในรายงาน"
+            all_details = {}
+            for k, v in constr.items():
+                if v.get('show', True):  # เฉพาะที่ tick แสดงในรายงาน
+                    all_details[k] = v.get('details', [])
             
-            for ptype, details in all_details.items():
-                if details:
-                    with st.expander(f"🔍 {ptype}"):
-                        df_preview = pd.DataFrame(details)
-                        st.dataframe(df_preview, use_container_width=True, hide_index=True)
-            
-            st.divider()
-            
-            # ปุ่มสร้างรายงาน
-            c1, c2 = st.columns(2)
-            
-            with c1:
-                if not DOCX_AVAILABLE:
-                    st.warning("⚠️ ไม่สามารถสร้างรายงาน Word ได้ เนื่องจาก python-docx ไม่สามารถใช้งานได้")
-                elif st.button("📄 สร้างรายงาน Word", type="primary", use_container_width=True):
-                    try:
-                        doc = generate_word_report_materials_only(
-                            st.session_state['project_info'],
-                            all_details
-                        )
-                        
-                        buf = io.BytesIO()
-                        doc.save(buf)
-                        buf.seek(0)
-                        
-                        st.download_button("⬇️ ดาวน์โหลด Word", data=buf,
-                                           file_name=f"Materials_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
-                                           mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            # ตรวจสอบว่ามีข้อมูลที่จะแสดงหรือไม่
+            if not all_details:
+                st.warning("⚠️ กรุณาเลือกอย่างน้อย 1 โครงสร้างที่ต้องการแสดงในรายงาน (tick ✅ แสดงในรายงาน ใน Tab 2)")
+            else:
+                # แสดงตัวอย่างข้อมูลที่จะออกรายงาน
+                st.subheader("📊 ข้อมูลที่จะรวมในรายงาน")
+                
+                for ptype, details in all_details.items():
+                    if details:
+                        # แสดงชื่อโครงสร้างจาก construction
+                        structure_name = constr[ptype].get('name', ptype)
+                        with st.expander(f"🔍 {structure_name}"):
+                            df_preview = pd.DataFrame(details)
+                            st.dataframe(df_preview, use_container_width=True, hide_index=True)
+                
+                st.divider()
+                
+                # ปุ่มสร้างรายงาน
+                c1, c2 = st.columns(2)
+                
+                with c1:
+                    if not DOCX_AVAILABLE:
+                        st.warning("⚠️ ไม่สามารถสร้างรายงาน Word ได้ เนื่องจาก python-docx ไม่สามารถใช้งานได้")
+                    elif st.button("📄 สร้างรายงาน Word", type="primary", use_container_width=True):
+                        try:
+                            doc = generate_word_report_materials_only(
+                                st.session_state['project_info'],
+                                all_details
+                            )
+                            
+                            buf = io.BytesIO()
+                            doc.save(buf)
+                            buf.seek(0)
+                            
+                            st.download_button("⬇️ ดาวน์โหลด Word", data=buf,
+                                               file_name=f"Materials_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
+                                               mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                               use_container_width=True)
+                            st.success("✅ สร้างรายงานสำเร็จ!")
+                        except Exception as e:
+                            st.error(f"❌ เกิดข้อผิดพลาดในการสร้างรายงาน: {str(e)}")
+                
+                with c2:
+                    if st.button("💾 บันทึกโครงการ (JSON)", use_container_width=True):
+                        data = {
+                            'project_info': st.session_state['project_info'],
+                            'construction': {
+                                k: {
+                                    'cost': v.get('cost', 0),
+                                    'details': v.get('details', [])
+                                } for k, v in st.session_state.get('construction', {}).items()
+                            },
+                            'saved_at': datetime.now().isoformat()
+                        }
+                        st.download_button("⬇️ ดาวน์โหลด JSON", data=json.dumps(data, ensure_ascii=False, indent=2),
+                                           file_name=f"Project_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+                                           mime="application/json",
                                            use_container_width=True)
-                        st.success("✅ สร้างรายงานสำเร็จ!")
-                    except Exception as e:
-                        st.error(f"❌ เกิดข้อผิดพลาดในการสร้างรายงาน: {str(e)}")
-            
-            with c2:
-                if st.button("💾 บันทึกโครงการ (JSON)", use_container_width=True):
-                    data = {
-                        'project_info': st.session_state['project_info'],
-                        'construction': {
-                            k: {
-                                'cost': v.get('cost', 0),
-                                'details': v.get('details', [])
-                            } for k, v in st.session_state.get('construction', {}).items()
-                        },
-                        'saved_at': datetime.now().isoformat()
-                    }
-                    st.download_button("⬇️ ดาวน์โหลด JSON", data=json.dumps(data, ensure_ascii=False, indent=2),
-                                       file_name=f"Project_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
-                                       mime="application/json",
-                                       use_container_width=True)
-                    st.success("✅ บันทึกโครงการสำเร็จ!")
+                        st.success("✅ บันทึกโครงการสำเร็จ!")
         else:
             st.warning("⚠️ กรุณาเพิ่มข้อมูลโครงสร้างชั้นทางใน Tab 2 ก่อน")
     
