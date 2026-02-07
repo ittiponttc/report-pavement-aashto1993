@@ -1029,6 +1029,11 @@ def main():
                     'base_prices': uploaded_base_prices,
                 }
                 
+                # เพิ่ม version เพื่อบังคับให้ widget keys เปลี่ยน
+                import hashlib
+                file_hash = hashlib.md5(uploaded_price_excel.getvalue()).hexdigest()[:8]
+                st.session_state['price_upload_version'] = file_hash
+                
                 st.success("✅ โหลด Price Library สำเร็จ!")
                 st.caption(f"📊 {len(uploaded_ac_prices)} AC types, {len(uploaded_concrete_prices)} Concrete types")
                 
@@ -1219,6 +1224,9 @@ def main():
         # ===== ส่วนผิวทาง AC =====
         st.subheader("🔵 ผิวทาง Asphalt Concrete (บาท/ตร.ม.)")
         
+        # ใช้ version จาก upload เพื่อ force refresh widgets
+        upload_version = st.session_state.get('price_upload_version', 'default')
+        
         ac_cols = st.columns(4)
         ac_types = ['PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course']
         thicknesses = [2.5, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -1232,7 +1240,7 @@ def main():
                     price = st.number_input(
                         f"{thk} cm", 
                         value=float(current_price),
-                        key=f"ac_{ac_type}_{thk}",
+                        key=f"ac_{ac_type}_{thk}_{upload_version}",
                         step=10.0,
                         label_visibility="visible"
                     )
@@ -1256,7 +1264,7 @@ def main():
                     price = st.number_input(
                         f"{thk} cm", 
                         value=float(current_price),
-                        key=f"conc_{conc_type}_{thk}",
+                        key=f"conc_{conc_type}_{thk}_{upload_version}",
                         step=10.0
                     )
                     st.session_state['price_library']['concrete_prices'][conc_type][thk] = price
@@ -1266,7 +1274,7 @@ def main():
                 excl_price = st.number_input(
                     f"{conc_type} (excl. Joint)",
                     value=float(CONCRETE_EXCL_JOINT[conc_type]),
-                    key=f"conc_excl_{conc_type}",
+                    key=f"conc_excl_{conc_type}_{upload_version}",
                     step=10.0
                 )
         
@@ -1285,7 +1293,7 @@ def main():
                 price = st.number_input(
                     mat,
                     value=float(current_price),
-                    key=f"base_{mat}",
+                    key=f"base_{mat}_{upload_version}",
                     step=10.0
                 )
                 st.session_state['price_library']['base_prices'][mat] = price
