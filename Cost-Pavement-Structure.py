@@ -1181,27 +1181,25 @@ def main():
         st.divider()
         
         # เก็บราคาใน session state
-        # ใช้ราคาจาก uploaded_price_library (sidebar) ถ้ามี ไม่งั้นใช้ default
-        if 'price_library' not in st.session_state:
-            # ตรวจสอบว่ามี upload จาก sidebar หรือไม่
-            if 'uploaded_price_library' in st.session_state:
-                st.session_state['price_library'] = st.session_state['uploaded_price_library']
-            else:
-                # ใช้ default
-                st.session_state['price_library'] = {
-                    'ac_prices': {
-                        'PMA Wearing Course': dict(AC_PRICE_TABLE['PMA Wearing Course']),
-                        'AC Wearing Course': dict(AC_PRICE_TABLE['AC Wearing Course']),
-                        'AC Binder Course': dict(AC_PRICE_TABLE['AC Binder Course']),
-                        'AC Base Course': dict(AC_PRICE_TABLE['AC Base Course']),
-                    },
-                    'concrete_prices': {
-                        'JRCP': dict(CONCRETE_PRICE_TABLE['JRCP']),
-                        'JPCP': dict(CONCRETE_PRICE_TABLE['JPCP']),
-                        'CRCP': dict(CONCRETE_PRICE_TABLE['CRCP']),
-                    },
-                    'base_prices': dict(BASE_MATERIAL_PRICES),
-                }
+        # ถ้ามี uploaded_price_library ให้ใช้แทน (ทุกครั้งที่ rerun)
+        if 'uploaded_price_library' in st.session_state:
+            st.session_state['price_library'] = st.session_state['uploaded_price_library'].copy()
+        elif 'price_library' not in st.session_state:
+            # ไม่มีทั้ง uploaded และ price_library → ใช้ default
+            st.session_state['price_library'] = {
+                'ac_prices': {
+                    'PMA Wearing Course': dict(AC_PRICE_TABLE['PMA Wearing Course']),
+                    'AC Wearing Course': dict(AC_PRICE_TABLE['AC Wearing Course']),
+                    'AC Binder Course': dict(AC_PRICE_TABLE['AC Binder Course']),
+                    'AC Base Course': dict(AC_PRICE_TABLE['AC Base Course']),
+                },
+                'concrete_prices': {
+                    'JRCP': dict(CONCRETE_PRICE_TABLE['JRCP']),
+                    'JPCP': dict(CONCRETE_PRICE_TABLE['JPCP']),
+                    'CRCP': dict(CONCRETE_PRICE_TABLE['CRCP']),
+                },
+                'base_prices': dict(BASE_MATERIAL_PRICES),
+            }
         
         # ===== ส่วนผิวทาง AC =====
         st.subheader("🔵 ผิวทาง Asphalt Concrete (บาท/ตร.ม.)")
