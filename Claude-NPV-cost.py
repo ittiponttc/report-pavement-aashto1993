@@ -1133,7 +1133,7 @@ def main():
                 'ทางเลือก': [ทางเลือก_เป็น_dict(ท) for ท in st.session_state.ทางเลือกทั้งหมด]
             }
             st.download_button("💾 บันทึก JSON", json.dumps(data_export, ensure_ascii=False, indent=2),
-                             "lcca_v3_data.json", "application/json", use_container_width=True)
+                             "lcca_v3_data.json", "application/json", use_container_width=True, key="dl_json_tab2")
 
     # ===== Tab 3: ผลวิเคราะห์ LCCA (หน้าตาเหมือน v2.0) =====
     with tab3:
@@ -1293,7 +1293,8 @@ def main():
                         data=word_file,
                         file_name=f"LCCA_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        use_container_width=True
+                        use_container_width=True,
+                        key="dl_word_tab3"
                     )
                 else:
                     st.warning("⚠️ ต้องติดตั้ง python-docx: `pip install python-docx`")
@@ -1305,7 +1306,8 @@ def main():
                     data=csv_summary,
                     file_name=f"LCCA_Summary_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                     mime="text/csv",
-                    use_container_width=True
+                    use_container_width=True,
+                    key="dl_csv_tab3"
                 )
 
     # ===== Tab 4: กระแสเงินสด =====
@@ -1394,14 +1396,14 @@ def main():
                     st.download_button("📝 ดาวน์โหลด Word", word_file,
                         f"LCCA_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        use_container_width=True)
+                        use_container_width=True, key="dl_word_tab6")
                 else:
                     st.warning("⚠️ ติดตั้ง python-docx: `pip install python-docx`")
             with col_e2:
                 csv_summary = สรุป.to_csv(index=False).encode('utf-8-sig')
                 st.download_button("📊 ดาวน์โหลดสรุป CSV", csv_summary,
                     f"LCCA_Summary_{datetime.now().strftime('%Y%m%d_%H%M')}.csv", "text/csv",
-                    use_container_width=True)
+                    use_container_width=True, key="dl_csv_tab6")
             with col_e3:
                 data_export = {
                     'ระยะวิเคราะห์': ระยะวิเคราะห์, 'อัตราคิดลด': อัตราคิดลด,
@@ -1409,7 +1411,7 @@ def main():
                 }
                 st.download_button("💾 ดาวน์โหลด JSON", json.dumps(data_export, ensure_ascii=False, indent=2),
                     f"LCCA_Data_{datetime.now().strftime('%Y%m%d_%H%M')}.json", "application/json",
-                    use_container_width=True)
+                    use_container_width=True, key="dl_json_tab6")
 
     # ===== Tab 7: ทฤษฎี =====
     with tab7:
