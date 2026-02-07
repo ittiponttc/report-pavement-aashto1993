@@ -318,8 +318,9 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     """
     updated_layers = []
     
-    # คำนวณพื้นที่ต่อ กม. 
-    area_per_km = total_width * 1000 * 2  # ตร.ม./กม. (2 ทิศทาง)
+    # คำนวณพื้นที่ต่อ กม.
+    # total_width รวมทั้ง 2 ทิศทางไว้แล้ว (num_lanes = lanes_per_direction * 2)
+    area_per_km = total_width * 1000  # ตร.ม./กม.
     
     # แยก layers เป็นกลุ่ม
     surface_layers = []
@@ -905,21 +906,29 @@ def main():
         st.header("📐 ขนาดถนน")
         lane_width = st.number_input("ความกว้างช่องจราจร (ม.)", value=loaded_info.get('lane_width', 3.5), min_value=2.5, max_value=4.0, step=0.25)
         
-        # หา index สำหรับ num_lanes
-        default_lanes = loaded_info.get('num_lanes', 2)
-        lanes_options = [2, 4, 6]
-        lanes_idx = lanes_options.index(default_lanes) if default_lanes in lanes_options else 0
-        num_lanes = st.selectbox("จำนวนช่องจราจร (รวม 2 ทิศทาง)", options=lanes_options, index=lanes_idx)
+        # หา index สำหรับ num_lanes_per_direction
+        # แปลงจาก num_lanes เดิม (รวม 2 ทิศทาง) เป็น lanes_per_direction
+        default_lanes_total = loaded_info.get('num_lanes', 4)  # default 4 (2 ช่อง/ทิศทาง)
+        default_lanes_per_dir = default_lanes_total // 2
+        
+        lanes_per_dir_options = [2, 3, 4]
+        lanes_per_dir_idx = lanes_per_dir_options.index(default_lanes_per_dir) if default_lanes_per_dir in lanes_per_dir_options else 0
+        lanes_per_direction = st.selectbox("จำนวนช่องต่อทิศทาง (เลน/ทิศทาง)", options=lanes_per_dir_options, index=lanes_per_dir_idx)
+        
+        # คำนวณจำนวนช่องรวม (คูณ 2 สำหรับ 2 ทิศทาง)
+        num_lanes = lanes_per_direction * 2
         
         shoulder_left = st.number_input("ไหล่ทางซ้าย (ม.)", value=loaded_info.get('shoulder_left', 2.5), min_value=0.0, max_value=3.5, step=0.25)
         shoulder_right = st.number_input("ไหล่ทางขวา (ม.)", value=loaded_info.get('shoulder_right', 1.5), min_value=0.0, max_value=3.5, step=0.25)
         
         # คำนวณความกว้างรวม
-        # ความกว้างผิวจราจร = ช่องจราจร × จำนวนช่อง
-        # ความกว้างรวม = ผิวจราจร + ไหล่ทางซ้าย + ไหล่ทางขวา
+        # ความกว้างผิวจราจร = ช่องจราจร × จำนวนช่อง (รวม 2 ทิศทาง)
+        # แต่ละทิศทางมีไหล่ทางซ้าย + ไหล่ทางขวา
+        # ความกว้างรวม = ผิวจราจร + (ไหล่ทางซ้าย + ไหล่ทางขวา) × 2 ทิศทาง
         road_surface_width = lane_width * num_lanes
-        total_width = road_surface_width + shoulder_left + shoulder_right
-        st.info(f"📏 ความกว้างผิวจราจร: {road_surface_width:.2f} ม.\n📏 ความกว้างรวม (รวมไหล่ทาง): {total_width:.2f} ม.")
+        total_shoulders = (shoulder_left + shoulder_right) * 2  # ไหล่ทางรวม 2 ทิศทาง
+        total_width = road_surface_width + total_shoulders
+        st.info(f"📏 จำนวนช่องรวม (2 ทิศทาง): {num_lanes} ช่อง\n📏 ความกว้างผิวจราจร: {road_surface_width:.2f} ม.\n📏 ความกว้างไหล่ทาง (2 ทิศทาง): {total_shoulders:.2f} ม.\n📏 ความกว้างรวม: {total_width:.2f} ม.")
     
     # เก็บข้อมูลโครงการ
     project_info = {
@@ -1139,7 +1148,8 @@ def main():
         st.info("💡 แก้ไขชื่อ ความหนา และราคาต่อหน่วยได้ตามต้องการ | ✅ เลือกโครงสร้างที่ต้องการแสดงในรายงาน")
         
         # คำนวณพื้นที่ต่อ กม.
-        area_per_km = total_width * 1000 * 2  # ตร.ม./กม. (2 ทิศทาง)
+        # total_width รวมทั้ง 2 ทิศทางไว้แล้ว (num_lanes = lanes_per_direction * 2)
+        area_per_km = total_width * 1000  # ตร.ม./กม.
         
         # ===== AC Pavement =====
         st.subheader("🔵 ผิวทางแอสฟัลต์คอนกรีต (AC)")
