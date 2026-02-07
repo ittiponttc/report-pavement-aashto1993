@@ -402,11 +402,10 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     
     # ===== ส่วนผิวทาง =====
     st.markdown("**ผิวทาง** (หน่วย: ตร.ม.)")
-    cols = st.columns([3, 1, 1.5, 1.5])
+    cols = st.columns([3, 1, 1.5])
     cols[0].markdown("รายการ")
     cols[1].markdown("หนา (cm)")
-    cols[2].markdown("ปริมาณ (auto)")
-    cols[3].markdown("ราคา (บาท/ตร.ม.)")
+    cols[2].markdown("ราคา (บาท/ตร.ม.)")
     
     # ตัวเลือกวัสดุ
     wearing_options = ['AC Wearing Course', 'PMA Wearing Course']
@@ -415,7 +414,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     concrete_options = ['JPCP', 'JRCP', 'CRCP']
     
     for i, layer in enumerate(surface_layers):
-        cols = st.columns([3, 1, 1.5, 1.5])
+        cols = st.columns([3, 1, 1.5])
         name_lower = layer['name'].lower()
         
         # กำหนดว่าเป็นชั้นไหน
@@ -502,8 +501,6 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
         default_cost = lib_price if lib_price else layer['unit_cost']
         
         with cols[2]:
-            st.text(f"{auto_qty:,.0f}")
-        with cols[3]:
             st.markdown(f"**{default_cost:,.2f}**")
         
         # เก็บชื่อที่ถูกต้อง
@@ -568,14 +565,15 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
     num_base = st.number_input("จำนวนชั้นพื้นทาง/รองพื้นทาง", value=len(base_layers), 
                                 min_value=1, max_value=5, key=f"{key_prefix}_num_base")
     
-    cols = st.columns([3, 1, 1.5, 1.5])
+    cols = st.columns([3, 1, 1.2, 1.2, 1.2])
     cols[0].markdown("วัสดุ")
     cols[1].markdown("หนา (cm)")
     cols[2].markdown("ปริมาณ (ตร.ม.)")
-    cols[3].markdown("ราคา (บาท/ตร.ม.)")
+    cols[3].markdown("ราคา (บาท/ลบ.ม.)")
+    cols[4].markdown("ราคา (บาท/ตร.ม.)")
     
     for i in range(int(num_base)):
-        cols = st.columns([3, 1, 1.5, 1.5])
+        cols = st.columns([3, 1, 1.2, 1.2, 1.2])
         
         # ค่า default
         if i < len(base_layers):
@@ -627,7 +625,13 @@ def render_layer_editor(layers, key_prefix, total_width, road_length):
         with cols[2]:
             st.text(f"{auto_qty:,.0f}")
         with cols[3]:
-            # แสดงราคาที่คำนวณแล้ว (อัพเดทตามความหนาอัตโนมัติ)
+            # แสดงราคา บาท/ลบ.ม. (ดึงจาก Library)
+            if base_materials[selected].get('is_ac', False):
+                st.markdown("**-**")  # AC ไม่มีหน่วย ลบ.ม.
+            else:
+                st.markdown(f"**{lib_cost_cum:,.2f}**")
+        with cols[4]:
+            # แสดงราคาที่คำนวณแล้ว บาท/ตร.ม. (อัพเดทตามความหนาอัตโนมัติ)
             st.markdown(f"**{cost_per_sqm:,.2f}**")
         
         updated_layers.append({
