@@ -892,6 +892,13 @@ def generate_word_report_materials_only(project_info, all_details):
 def main():
     st.markdown('<div class="main-header">🛣️ ระบบวิเคราะห์ค่าก่อสร้างโครงสร้างชั้นทาง</div>', unsafe_allow_html=True)
     st.markdown("##### ตามแนวทาง AASHTO 1993 - รองรับ AC, JPCP/JRCP, CRCP")
+    st.markdown("""
+    <div style='text-align: center; color: #666; font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px;'>
+        พัฒนาโดย <b>รศ.ดร.อิทธิพล มีผล</b><br>
+        ภาควิชาครุศาสตร์โยธา คณะครุศาสตร์อุตสาหกรรม<br>
+        มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (มจพ.)
+    </div>
+    """, unsafe_allow_html=True)
     
     # Sidebar
     with st.sidebar:
@@ -1736,6 +1743,18 @@ def main():
                 else:
                     design_life = 25
                 st.metric("⏱️ อายุออกแบบ", f"{design_life} ปี")
+    
+    # เครดิต (footer)
+    st.divider()
+    st.markdown("""
+    <div style='text-align: center; color: #888; font-size: 0.85rem; padding: 20px;'>
+        <b>พัฒนาโดย</b><br>
+        รศ.ดร.อิทธิพล มีผล<br>
+        ภาควิชาครุศาสตร์โยธา คณะครุศาสตร์อุตสาหกรรม<br>
+        มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (มจพ.)<br>
+        <small style='color: #aaa;'>Pavement Structure Cost Analysis System v5.0</small>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
