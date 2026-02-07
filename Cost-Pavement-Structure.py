@@ -37,6 +37,13 @@ try:
 except ImportError:
     PIL_AVAILABLE = False
 
+try:
+    import openpyxl
+    OPENPYXL_AVAILABLE = True
+except ImportError:
+    OPENPYXL_AVAILABLE = False
+    st.warning("⚠️ openpyxl ไม่สามารถใช้งานได้ การ Upload/Download Excel อาจไม่ทำงาน")
+
 # ตั้งค่าหน้าเว็บ
 st.set_page_config(
     page_title="วิเคราะห์ค่าก่อสร้างโครงสร้างชั้นทาง",
@@ -994,7 +1001,110 @@ def main():
     # ===== Tab 1: Library ราคา =====
     with tab1:
         st.header("📊 ตารางราคาเปรียบเทียบโครงสร้างชั้นทาง")
-        st.info("💡 สามารถปรับเปลี่ยนราคาได้ตามต้องการ ราคาจะถูกใช้ในการคำนวณทุก Tab")
+        st.info("💡 สามารถปรับเปลี่ยนราคาได้ตามต้องการ หรือ Upload ไฟล์ Excel เพื่ออัพเดทราคาทั้งหมด")
+        
+        # ===== Upload Excel & Download Template =====
+        col_upload, col_template = st.columns(2)
+        
+        with col_template:
+            st.subheader("📥 ดาวน์โหลด Template Excel")
+            if st.button("⬇️ ดาวน์โหลด Template", use_container_width=True):
+                # สร้าง Excel Template
+                template_data = {
+                    'AC_Prices': pd.DataFrame({
+                        'Material': ['PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course'],
+                        '2.5cm': [170, 128, 129, 129],
+                        '3cm': [203, 152, 154, 154],
+                        '4cm': [268, 202, 202, 202],
+                        '5cm': [333, 250, 251, 251],
+                        '6cm': [406, 306, 308, 308],
+                        '7cm': [471, 355, 356, 356],
+                        '8cm': [536, 403, 405, 405],
+                        '9cm': [601, 452, 454, 454],
+                        '10cm': [667, 502, 503, 503],
+                    }),
+                    'Concrete_Prices': pd.DataFrame({
+                        'Type': ['JRCP', 'JPCP', 'CRCP'],
+                        '25cm': [924, 928, 1245],
+                        '28cm': [1002, 1000, 1358],
+                        '32cm': [1106, 1095, 1509],
+                        '35cm': [1184, 1167, 1622],
+                    }),
+                    'Base_Materials': pd.DataFrame({
+                        'Material': list(BASE_MATERIAL_PRICES.keys()),
+                        'Price (Baht/cu.m)': list(BASE_MATERIAL_PRICES.values()),
+                    })
+                }
+                
+                # สร้าง Excel file
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    template_data['AC_Prices'].to_excel(writer, sheet_name='AC_Prices', index=False)
+                    template_data['Concrete_Prices'].to_excel(writer, sheet_name='Concrete_Prices', index=False)
+                    template_data['Base_Materials'].to_excel(writer, sheet_name='Base_Materials', index=False)
+                output.seek(0)
+                
+                st.download_button(
+                    "💾 บันทึก Template",
+                    data=output,
+                    file_name=f"Price_Library_Template_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+        
+        with col_upload:
+            st.subheader("📤 อัพโหลด Excel")
+            uploaded_excel = st.file_uploader(
+                "เลือกไฟล์ Excel (ตาม Template)",
+                type=['xlsx', 'xls'],
+                key="upload_price_library"
+            )
+            
+            if uploaded_excel is not None:
+                try:
+                    # อ่านไฟล์ Excel
+                    ac_df = pd.read_excel(uploaded_excel, sheet_name='AC_Prices')
+                    concrete_df = pd.read_excel(uploaded_excel, sheet_name='Concrete_Prices')
+                    base_df = pd.read_excel(uploaded_excel, sheet_name='Base_Materials')
+                    
+                    # แปลงเป็น dictionary format
+                    new_ac_prices = {}
+                    for _, row in ac_df.iterrows():
+                        material = row['Material']
+                        prices = {}
+                        for col in ac_df.columns[1:]:
+                            thickness = float(col.replace('cm', ''))
+                            prices[thickness] = float(row[col])
+                        new_ac_prices[material] = prices
+                    
+                    new_concrete_prices = {}
+                    for _, row in concrete_df.iterrows():
+                        conc_type = row['Type']
+                        prices = {}
+                        for col in concrete_df.columns[1:]:
+                            thickness = int(col.replace('cm', ''))
+                            prices[thickness] = float(row[col])
+                        new_concrete_prices[conc_type] = prices
+                    
+                    new_base_prices = {}
+                    for _, row in base_df.iterrows():
+                        new_base_prices[row['Material']] = float(row['Price (Baht/cu.m)'])
+                    
+                    # อัพเดท session state
+                    st.session_state['price_library'] = {
+                        'ac_prices': new_ac_prices,
+                        'concrete_prices': new_concrete_prices,
+                        'base_prices': new_base_prices,
+                    }
+                    
+                    st.success("✅ อัพโหลดและอัพเดทราคาสำเร็จ!")
+                    st.info("💡 ราคาใหม่จะถูกใช้ในการคำนวณทันที")
+                    
+                except Exception as e:
+                    st.error(f"❌ เกิดข้อผิดพลาดในการอ่านไฟล์: {str(e)}")
+                    st.warning("⚠️ กรุณาตรวจสอบว่าไฟล์ Excel มีโครงสร้างตาม Template")
+        
+        st.divider()
         
         # เก็บราคาใน session state
         if 'price_library' not in st.session_state:
