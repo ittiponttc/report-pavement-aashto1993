@@ -786,7 +786,7 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
 
 
 def generate_word_report_materials_only(project_info, all_details):
-    """สร้างรายงาน Word - เฉพาะวัสดุและราคา (ไม่มี NPV)"""
+    """สร้างรายงาน Word - เฉพาะวัสดุและราคา (ไม่มี NPV) พร้อมตารางสรุปแยกชนิด"""
     if not DOCX_AVAILABLE:
         raise ImportError("python-docx ไม่สามารถใช้งานได้")
     
@@ -806,11 +806,15 @@ def generate_word_report_materials_only(project_info, all_details):
     
     doc.add_heading('2. รายละเอียดวัสดุและราคา', level=1)
     
-    # สรุปค่าใช้จ่ายทั้งหมด
-    grand_total = 0
+    # เก็บข้อมูลสรุป
+    summary_data = []
+    length = project_info.get('length', 1)
     
-    for ptype, details in all_details.items():
-        doc.add_heading(ptype, level=2)
+    for ptype, data in all_details.items():
+        structure_name = data.get('name', ptype)
+        details = data.get('details', [])
+        
+        doc.add_heading(structure_name, level=2)
         if details:
             table = doc.add_table(rows=len(details)+1, cols=4)
             table.style = 'Table Grid'
@@ -834,21 +838,48 @@ def generate_word_report_materials_only(project_info, all_details):
                 table.rows[i+1].cells[3].text = f"{d['มูลค่า (บาท)']:,.0f}"
                 subtotal += d['มูลค่า (บาท)']
             
-            grand_total += subtotal
-            
             # แสดงยอดรวมย่อย
-            doc.add_paragraph(f"รวม {ptype}: {subtotal:,.0f} บาท", style='Intense Quote')
+            doc.add_paragraph(f"รวม {structure_name}: {subtotal:,.0f} บาท", style='Intense Quote')
             doc.add_paragraph()
+            
+            # เก็บข้อมูลสำหรับตารางสรุป
+            cost_per_km_million = data.get('cost_per_km', 0)  # ล้านบาท/กม.
+            cost_per_km_baht = cost_per_km_million * 1_000_000  # บาท/กม.
+            cost_per_sqm = data.get('cost_sqm', 0)  # บาท/ตร.ม.
+            total_value = subtotal  # มูลค่ารวม (บาท)
+            
+            summary_data.append({
+                'name': structure_name,
+                'total_value': total_value,
+                'cost_per_km_million': cost_per_km_million,
+                'cost_per_sqm': cost_per_sqm
+            })
     
+    # สร้างตารางสรุปแยกแต่ละชนิด
     doc.add_heading('3. สรุปค่าใช้จ่าย', level=1)
-    doc.add_paragraph(f"ค่าใช้จ่ายรวมทั้งสิ้น: {grand_total:,.0f} บาท")
     
-    # คำนวณต่อ กม.
-    length = project_info.get('length', 1)
-    if length > 0:
-        cost_per_km = grand_total / length
-        doc.add_paragraph(f"ค่าใช้จ่ายเฉลี่ยต่อกม.: {cost_per_km:,.0f} บาท/กม.")
-        doc.add_paragraph(f"ค่าใช้จ่ายเฉลี่ยต่อกม.: {cost_per_km/1_000_000:.2f} ล้านบาท/กม.")
+    if summary_data:
+        table = doc.add_table(rows=len(summary_data)+1, cols=4)
+        table.style = 'Table Grid'
+        
+        # Header
+        headers = ['ชนิดโครงสร้าง', 'มูลค่ารวม/กม. (บาท)', 'ราคา/กม. (ล้านบาท)', 'ราคา/ตร.ม. (บาท)']
+        for j, h in enumerate(headers):
+            cell = table.rows[0].cells[j]
+            cell.text = h
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.font.bold = True
+        
+        # Data rows
+        for i, item in enumerate(summary_data):
+            # มูลค่ารวมต่อ กม. = มูลค่ารวม / ความยาว
+            total_per_km = item['total_value'] / length if length > 0 else 0
+            
+            table.rows[i+1].cells[0].text = item['name']
+            table.rows[i+1].cells[1].text = f"{total_per_km:,.0f}"
+            table.rows[i+1].cells[2].text = f"{item['cost_per_km_million']:.2f}"
+            table.rows[i+1].cells[3].text = f"{item['cost_per_sqm']:,.2f}"
     
     doc.add_paragraph()
     doc.add_paragraph(f"รายงานสร้างเมื่อ: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
@@ -1382,9 +1413,15 @@ def main():
             
             # กรองเฉพาะโครงสร้างที่เลือก "แสดงในรายงาน"
             all_details = {}
+            structure_costs = {}  # เก็บข้อมูล cost แยก
             for k, v in constr.items():
                 if v.get('show', True):  # เฉพาะที่ tick แสดงในรายงาน
-                    all_details[k] = v.get('details', [])
+                    all_details[k] = {
+                        'name': v.get('name', k),
+                        'details': v.get('details', []),
+                        'cost_per_km': v.get('cost', 0),  # ล้านบาท/กม.
+                        'cost_sqm': v.get('cost_sqm', 0)   # บาท/ตร.ม.
+                    }
             
             # ตรวจสอบว่ามีข้อมูลที่จะแสดงหรือไม่
             if not all_details:
@@ -1393,12 +1430,12 @@ def main():
                 # แสดงตัวอย่างข้อมูลที่จะออกรายงาน
                 st.subheader("📊 ข้อมูลที่จะรวมในรายงาน")
                 
-                for ptype, details in all_details.items():
-                    if details:
-                        # แสดงชื่อโครงสร้างจาก construction
-                        structure_name = constr[ptype].get('name', ptype)
+                for ptype, data in all_details.items():
+                    if data['details']:
+                        # แสดงชื่อโครงสร้าง
+                        structure_name = data['name']
                         with st.expander(f"🔍 {structure_name}"):
-                            df_preview = pd.DataFrame(details)
+                            df_preview = pd.DataFrame(data['details'])
                             st.dataframe(df_preview, use_container_width=True, hide_index=True)
                 
                 st.divider()
