@@ -1238,6 +1238,57 @@ def main():
                 )
                 st.session_state['price_library']['base_prices'][mat] = price
         
+        # ===== วัสดุกำหนดเอง =====
+        st.markdown("---")
+        st.markdown("**✨ วัสดุกำหนดเอง** (เพิ่มวัสดุของคุณเอง)")
+        
+        custom_cols = st.columns(3)
+        
+        for i in range(1, 4):  # วัสดุกำหนดเอง 1, 2, 3
+            with custom_cols[i-1]:
+                # กำหนด key สำหรับวัสดุกำหนดเอง
+                custom_key = f"custom_material_{i}"
+                
+                # ดึงข้อมูลจาก session_state ถ้ามี
+                if 'custom_materials' not in st.session_state:
+                    st.session_state['custom_materials'] = {}
+                
+                existing_data = st.session_state['custom_materials'].get(custom_key, {'name': '', 'price': 0.0})
+                
+                # ชื่อวัสดุ
+                material_name = st.text_input(
+                    f"ชื่อวัสดุ {i}",
+                    value=existing_data['name'],
+                    key=f"custom_name_{i}_{upload_version}",
+                    placeholder=f"ระบุชื่อวัสดุ {i}..."
+                )
+                
+                # ราคา (แสดงเฉพาะเมื่อมีชื่อ)
+                if material_name:
+                    material_price = st.number_input(
+                        f"ราคา (บาท/ลบ.ม.)",
+                        value=float(existing_data['price']),
+                        key=f"custom_price_{i}_{upload_version}",
+                        step=10.0,
+                        min_value=0.0
+                    )
+                    
+                    # บันทึกใน session_state
+                    st.session_state['custom_materials'][custom_key] = {
+                        'name': material_name,
+                        'price': material_price
+                    }
+                    
+                    # เพิ่มเข้า price_library ด้วย (เพื่อใช้ใน Tab 2)
+                    st.session_state['price_library']['base_prices'][material_name] = material_price
+                else:
+                    # ถ้าไม่มีชื่อ ลบออกจาก custom_materials
+                    if custom_key in st.session_state['custom_materials']:
+                        old_name = st.session_state['custom_materials'][custom_key]['name']
+                        if old_name in st.session_state['price_library']['base_prices']:
+                            del st.session_state['price_library']['base_prices'][old_name]
+                        del st.session_state['custom_materials'][custom_key]
+        
         st.divider()
         
         # ===== ปุ่มดาวน์โหลด =====
