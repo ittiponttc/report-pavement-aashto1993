@@ -980,6 +980,63 @@ def main():
         
         st.divider()
         
+        # ===== Upload Price Library Excel =====
+        st.subheader("💰 Price Library (Excel)")
+        st.caption("อัพโหลด Excel เพื่อแทนที่ราคา Default")
+        
+        uploaded_price_excel = st.file_uploader(
+            "เลือกไฟล์ Excel Price Library",
+            type=['xlsx', 'xls'],
+            help="อัพโหลดไฟล์ราคาที่ Download จาก Tab 1",
+            key="sidebar_upload_price"
+        )
+        
+        # โหลดราคาจาก Excel ถ้ามี upload
+        if uploaded_price_excel is not None:
+            try:
+                # อ่านไฟล์ Excel
+                ac_df = pd.read_excel(uploaded_price_excel, sheet_name='AC_Prices')
+                concrete_df = pd.read_excel(uploaded_price_excel, sheet_name='Concrete_Prices')
+                base_df = pd.read_excel(uploaded_price_excel, sheet_name='Base_Materials')
+                
+                # แปลงเป็น dictionary format
+                uploaded_ac_prices = {}
+                for _, row in ac_df.iterrows():
+                    material = row['Material']
+                    prices = {}
+                    for col in ac_df.columns[1:]:
+                        thickness = float(col.replace('cm', ''))
+                        prices[thickness] = float(row[col])
+                    uploaded_ac_prices[material] = prices
+                
+                uploaded_concrete_prices = {}
+                for _, row in concrete_df.iterrows():
+                    conc_type = row['Type']
+                    prices = {}
+                    for col in concrete_df.columns[1:]:
+                        thickness = int(col.replace('cm', ''))
+                        prices[thickness] = float(row[col])
+                    uploaded_concrete_prices[conc_type] = prices
+                
+                uploaded_base_prices = {}
+                for _, row in base_df.iterrows():
+                    uploaded_base_prices[row['Material']] = float(row['Price (Baht/cu.m)'])
+                
+                # เก็บใน session_state
+                st.session_state['uploaded_price_library'] = {
+                    'ac_prices': uploaded_ac_prices,
+                    'concrete_prices': uploaded_concrete_prices,
+                    'base_prices': uploaded_base_prices,
+                }
+                
+                st.success("✅ โหลด Price Library สำเร็จ!")
+                st.caption(f"📊 {len(uploaded_ac_prices)} AC types, {len(uploaded_concrete_prices)} Concrete types")
+                
+            except Exception as e:
+                st.error(f"❌ อ่านไฟล์ไม่สำเร็จ: {str(e)}")
+        
+        st.divider()
+        
         # ตรวจสอบว่ามีข้อมูลที่โหลดมาหรือไม่
         loaded_project = st.session_state.get('loaded_project', {})
         loaded_info = loaded_project.get('project_info', {})
@@ -1062,6 +1119,12 @@ def main():
         
         with col_upload:
             st.subheader("📤 อัพโหลด Excel")
+            
+            # แสดงข้อความถ้าเพิ่งอัพโหลดเสร็จ
+            if st.session_state.get('just_uploaded', False):
+                st.success("✅ อัพเดทราคาเสร็จสมบูรณ์! ตารางด้านล่างแสดงราคาใหม่แล้ว")
+                st.session_state['just_uploaded'] = False
+            
             uploaded_excel = st.file_uploader(
                 "เลือกไฟล์ Excel (ตาม Template)",
                 type=['xlsx', 'xls'],
@@ -1105,11 +1168,10 @@ def main():
                         'base_prices': new_base_prices,
                     }
                     
-                    st.success("✅ อัพโหลดและอัพเดทราคาสำเร็จ!")
+                    # ตั้ง flag ว่าเพิ่ง upload เสร็จ
+                    st.session_state['just_uploaded'] = True
                     
-                    # Rerun เพื่อให้ UI แสดงราคาใหม่
-                    import time
-                    time.sleep(0.5)  # รอให้เห็นข้อความ success
+                    st.success("✅ อัพโหลดสำเร็จ! กำลังอัพเดทราคา...")
                     st.rerun()
                     
                 except Exception as e:
@@ -1119,21 +1181,27 @@ def main():
         st.divider()
         
         # เก็บราคาใน session state
+        # ใช้ราคาจาก uploaded_price_library (sidebar) ถ้ามี ไม่งั้นใช้ default
         if 'price_library' not in st.session_state:
-            st.session_state['price_library'] = {
-                'ac_prices': {
-                    'PMA Wearing Course': dict(AC_PRICE_TABLE['PMA Wearing Course']),
-                    'AC Wearing Course': dict(AC_PRICE_TABLE['AC Wearing Course']),
-                    'AC Binder Course': dict(AC_PRICE_TABLE['AC Binder Course']),
-                    'AC Base Course': dict(AC_PRICE_TABLE['AC Base Course']),
-                },
-                'concrete_prices': {
-                    'JRCP': dict(CONCRETE_PRICE_TABLE['JRCP']),
-                    'JPCP': dict(CONCRETE_PRICE_TABLE['JPCP']),
-                    'CRCP': dict(CONCRETE_PRICE_TABLE['CRCP']),
-                },
-                'base_prices': dict(BASE_MATERIAL_PRICES),
-            }
+            # ตรวจสอบว่ามี upload จาก sidebar หรือไม่
+            if 'uploaded_price_library' in st.session_state:
+                st.session_state['price_library'] = st.session_state['uploaded_price_library']
+            else:
+                # ใช้ default
+                st.session_state['price_library'] = {
+                    'ac_prices': {
+                        'PMA Wearing Course': dict(AC_PRICE_TABLE['PMA Wearing Course']),
+                        'AC Wearing Course': dict(AC_PRICE_TABLE['AC Wearing Course']),
+                        'AC Binder Course': dict(AC_PRICE_TABLE['AC Binder Course']),
+                        'AC Base Course': dict(AC_PRICE_TABLE['AC Base Course']),
+                    },
+                    'concrete_prices': {
+                        'JRCP': dict(CONCRETE_PRICE_TABLE['JRCP']),
+                        'JPCP': dict(CONCRETE_PRICE_TABLE['JPCP']),
+                        'CRCP': dict(CONCRETE_PRICE_TABLE['CRCP']),
+                    },
+                    'base_prices': dict(BASE_MATERIAL_PRICES),
+                }
         
         # ===== ส่วนผิวทาง AC =====
         st.subheader("🔵 ผิวทาง Asphalt Concrete (บาท/ตร.ม.)")
