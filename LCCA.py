@@ -1062,17 +1062,16 @@ def main():
 
                 # ===== ส่วนผิวทาง =====
                 st.markdown("**ผิวทาง** (หน่วย: ตร.ม.)")
-                cols_h = st.columns([3, 1.2, 1.5, 1.5, 0.5])
+                cols_h = st.columns([3, 1.2, 1.5, 0.5])
                 cols_h[0].markdown("รายการ")
                 cols_h[1].markdown("หนา (cm)")
-                cols_h[2].markdown(f"ปริมาณ (auto)")
-                cols_h[3].markdown("ราคา (บาท/ตร.ม.)")
-                cols_h[4].markdown("ลบ")
+                cols_h[2].markdown("ราคา (บาท/ตร.ม.)")
+                cols_h[3].markdown("ลบ")
 
                 updated_surface = []
                 del_surf = []
                 for j, layer in enumerate(surface_layers):
-                    cols = st.columns([3, 1.2, 1.5, 1.5, 0.5])
+                    cols = st.columns([3, 1.2, 1.5, 0.5])
                     name_lower = layer['name'].lower()
                     is_wearing = 'wearing' in name_lower
                     is_binder = 'binder' in name_lower
@@ -1096,7 +1095,6 @@ def main():
                             sel_conc = st.selectbox("ชนิด", concrete_options, index=conc_def, key=f"sf_{i}_{j}", label_visibility="collapsed")
                             selected = f"350 Ksc. Concrete ({sel_conc})"
                         else:
-                            # Tack Coat, Prime Coat, Geotextile, Steel, custom
                             try:
                                 def_idx = all_surface_names.index(layer['name'])
                             except ValueError:
@@ -1132,14 +1130,11 @@ def main():
                         auto_price = custom_surf[selected]
 
                     with cols[2]:
-                        st.text(f"{ทางเลือก.พื้นที่:,.0f}")
-                    with cols[3]:
                         st.markdown(f"**{auto_price:,.2f}**")
-                    with cols[4]:
+                    with cols[3]:
                         if st.button("🗑️", key=f"delsf_{i}_{j}"):
                             del_surf.append(j)
 
-                    cost_sqm = auto_price if layer.get('unit') != 'Layer' else auto_price * thick
                     updated_surface.append({
                         'name': selected, 'thickness': thick, 'unit': layer.get('unit', 'cm'),
                         'qty_unit': 'sq.m', 'unit_cost': auto_price, 'layer_type': 'surface'
@@ -1166,7 +1161,7 @@ def main():
                 cols_bh = st.columns([3, 1.2, 1.5, 1.5])
                 cols_bh[0].markdown("วัสดุ")
                 cols_bh[1].markdown("หนา (cm)")
-                cols_bh[2].markdown(f"ปริมาณ (ตร.ม.)")
+                cols_bh[2].markdown("ราคา (บาท/ลบ.ม.)")
                 cols_bh[3].markdown("ราคา (บาท/ตร.ม.)")
 
                 updated_base = []
@@ -1197,7 +1192,7 @@ def main():
                     cost_per_sqm = lib_cost_cum * thick_b / 100.0
 
                     with cols[2]:
-                        st.text(f"{ทางเลือก.พื้นที่:,.0f}")
+                        st.markdown(f"**{lib_cost_cum:,.2f}**")
                     with cols[3]:
                         st.markdown(f"**{cost_per_sqm:,.2f}**")
 
@@ -1242,7 +1237,10 @@ def main():
                 ทางเลือก.ต้นทุนก่อสร้าง = round(final_cost, 2)
 
                 note = "(รวม Joints)" if ทางเลือก.รวมรอยต่อ and ทางเลือก.รอยต่อ else ""
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ทางเลือก.ต้นทุนก่อสร้าง:,.2f} บาท/ตร.ม. {note} | รวม: {ทางเลือก.ต้นทุนก่อสร้าง * ทางเลือก.พื้นที่:,.0f} บาท</div>', unsafe_allow_html=True)
+                cost_total = ทางเลือก.ต้นทุนก่อสร้าง * ทางเลือก.พื้นที่
+                cost_per_km = cost_total / (ความยาว if ความยาว > 0 else 1)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {cost_per_km/1e6:,.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ทางเลือก.ต้นทุนก่อสร้าง:,.2f} บาท/ตร.ม. {note} | รวม: {cost_total:,.0f} บาท</div>', unsafe_allow_html=True)
 
                 # แผนบำรุงรักษา
                 st.markdown("---")
