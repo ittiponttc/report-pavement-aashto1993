@@ -1219,30 +1219,30 @@ def main():
                 for layer in updated_base:
                     total_cost_sqm += layer['unit_cost'] * layer['thickness'] / 100.0
 
-                    # Joints
-                    joint_cost_sqm = 0.0
-                    if ทางเลือก.รอยต่อ:
-                        st.markdown("**รอยต่อ (Joints)**")
-                        for jj, joint in enumerate(ทางเลือก.รอยต่อ):
-                            cols_j = st.columns([3, 1.2, 1.5, 1.5])
-                            with cols_j[0]:
-                                st.text(joint['name'])
-                            with cols_j[1]:
-                                joint['quantity_per_km'] = st.number_input("ปริมาณ/กม.", value=float(joint.get('quantity_per_km', 0)), key=f"jt_qty_{i}_{jj}", label_visibility="collapsed")
-                            with cols_j[2]:
-                                joint['unit_cost'] = st.number_input("ราคา/ม.", value=float(joint.get('unit_cost', 0)), key=f"jt_cost_{i}_{jj}", label_visibility="collapsed")
-                            with cols_j[3]:
-                                j_per_sqm = joint['quantity_per_km'] * joint['unit_cost'] / ทางเลือก.พื้นที่ if ทางเลือก.พื้นที่ > 0 else 0
-                                joint_cost_sqm += j_per_sqm
-                                st.markdown(f"**{j_per_sqm:,.2f}**")
-                        ทางเลือก.รวมรอยต่อ = st.checkbox("รวมรอยต่อในต้นทุนก่อสร้าง", value=ทางเลือก.รวมรอยต่อ, key=f"inc_joint_{i}")
+                # Joints
+                joint_cost_sqm = 0.0
+                if ทางเลือก.รอยต่อ:
+                    st.markdown("**รอยต่อ (Joints)**")
+                    for jj, joint in enumerate(ทางเลือก.รอยต่อ):
+                        cols_j = st.columns([3, 1.2, 1.5, 1.5])
+                        with cols_j[0]:
+                            st.text(joint['name'])
+                        with cols_j[1]:
+                            joint['quantity_per_km'] = st.number_input("ปริมาณ/กม.", value=float(joint.get('quantity_per_km', 0)), key=f"jt_qty_{i}_{jj}", label_visibility="collapsed")
+                        with cols_j[2]:
+                            joint['unit_cost'] = st.number_input("ราคา/ม.", value=float(joint.get('unit_cost', 0)), key=f"jt_cost_{i}_{jj}", label_visibility="collapsed")
+                        with cols_j[3]:
+                            j_per_sqm = joint['quantity_per_km'] * joint['unit_cost'] / ทางเลือก.พื้นที่ if ทางเลือก.พื้นที่ > 0 else 0
+                            joint_cost_sqm += j_per_sqm
+                            st.markdown(f"**{j_per_sqm:,.2f}**")
+                    ทางเลือก.รวมรอยต่อ = st.checkbox("รวมรอยต่อในต้นทุนก่อสร้าง", value=ทางเลือก.รวมรอยต่อ, key=f"inc_joint_{i}")
 
-                    # อัปเดตต้นทุน
-                    final_cost = total_cost_sqm + (joint_cost_sqm if ทางเลือก.รวมรอยต่อ else 0)
-                    ทางเลือก.ต้นทุนก่อสร้าง = round(final_cost, 2)
+                # อัปเดตต้นทุน
+                final_cost = total_cost_sqm + (joint_cost_sqm if ทางเลือก.รวมรอยต่อ else 0)
+                ทางเลือก.ต้นทุนก่อสร้าง = round(final_cost, 2)
 
-                    note = "(รวม Joints)" if ทางเลือก.รวมรอยต่อ and ทางเลือก.รอยต่อ else ""
-                    st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ทางเลือก.ต้นทุนก่อสร้าง:,.2f} บาท/ตร.ม. {note} | รวม: {ทางเลือก.ต้นทุนก่อสร้าง * ทางเลือก.พื้นที่:,.0f} บาท</div>', unsafe_allow_html=True)
+                note = "(รวม Joints)" if ทางเลือก.รวมรอยต่อ and ทางเลือก.รอยต่อ else ""
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ทางเลือก.ต้นทุนก่อสร้าง:,.2f} บาท/ตร.ม. {note} | รวม: {ทางเลือก.ต้นทุนก่อสร้าง * ทางเลือก.พื้นที่:,.0f} บาท</div>', unsafe_allow_html=True)
 
                 # แผนบำรุงรักษา
                 st.markdown("---")
