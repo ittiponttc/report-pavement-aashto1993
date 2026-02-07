@@ -1,22 +1,41 @@
 """
 แอปพลิเคชันวิเคราะห์ความคุ้มค่าโครงสร้างชั้นทาง (AASHTO 1993)
-Version 3.0 - รองรับ AC, JPCP/JRCP, CRCP พร้อม Library วัสดุ
+Version 5.0 - Simplified: วัสดุและราคา (ไม่มี NPV)
 พัฒนาโดย: Claude AI สำหรับ อ.อิทธิพล - KMUTNB
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import json
 from datetime import datetime
-from docx import Document
-from docx.shared import Pt, Cm
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.oxml.ns import qn
 import io
+
+# Import with error handling
+try:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+    st.warning("⚠️ Plotly ไม่สามารถใช้งานได้ กราฟบางส่วนอาจไม่แสดง")
+
+try:
+    from docx import Document
+    from docx.shared import Pt, Cm
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.oxml.ns import qn
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
+    st.warning("⚠️ python-docx ไม่สามารถใช้งานได้ การสร้างรายงาน Word อาจไม่ทำงาน")
+
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
 
 # ตั้งค่าหน้าเว็บ
 st.set_page_config(
@@ -248,93 +267,6 @@ def calculate_joint_cost(joints, road_length_km=1.0):
     
     return total, details
 
-
-def calculate_npv_ac(initial_cost, seal_cost, overlay_cost, design_life, analysis_period, discount_rate):
-    """คำนวณ NPV สำหรับ AC Pavement"""
-    cash_flows = []
-    total_npv = 0
-    
-    for year in range(analysis_period + 1):
-        cost = 0
-        activities = []
-        
-        if year % design_life == 0:
-            cost += initial_cost
-            activities.append(f"ก่อสร้างใหม่")
-        elif year > 0:
-            if year % 9 == 0:
-                cost += overlay_cost
-                activities.append(f"Overlay")
-            elif year % 3 == 0:
-                cost += seal_cost
-                activities.append(f"Seal Coating")
-        
-        pv = cost / ((1 + discount_rate) ** year)
-        total_npv += pv
-        
-        cash_flows.append({
-            'year': year, 'cost': cost, 'pv': pv,
-            'cumulative_pv': total_npv,
-            'activities': ', '.join(activities) if activities else '-'
-        })
-    
-    return total_npv, cash_flows
-
-
-def calculate_npv_jrcp(initial_cost, joint_cost, design_life, analysis_period, discount_rate):
-    """คำนวณ NPV สำหรับ JRCP"""
-    cash_flows = []
-    total_npv = 0
-    
-    for year in range(analysis_period + 1):
-        cost = 0
-        activities = []
-        
-        if year % design_life == 0:
-            cost += initial_cost
-            activities.append(f"ก่อสร้างใหม่")
-        elif year > 0 and year % 3 == 0:
-            cost += joint_cost
-            activities.append(f"Joint Sealing")
-        
-        pv = cost / ((1 + discount_rate) ** year)
-        total_npv += pv
-        
-        cash_flows.append({
-            'year': year, 'cost': cost, 'pv': pv,
-            'cumulative_pv': total_npv,
-            'activities': ', '.join(activities) if activities else '-'
-        })
-    
-    return total_npv, cash_flows
-
-
-def calculate_npv_crcp(initial_cost, maint_cost, design_life, analysis_period, discount_rate):
-    """คำนวณ NPV สำหรับ CRCP"""
-    cash_flows = []
-    total_npv = 0
-    
-    for year in range(analysis_period + 1):
-        cost = 0
-        activities = []
-        
-        if year % design_life == 0:
-            cost += initial_cost
-            activities.append(f"ก่อสร้างใหม่")
-        elif year > 0 and year % 5 == 0:
-            cost += maint_cost
-            activities.append(f"บำรุงรักษา")
-        
-        pv = cost / ((1 + discount_rate) ** year)
-        total_npv += pv
-        
-        cash_flows.append({
-            'year': year, 'cost': cost, 'pv': pv,
-            'cumulative_pv': total_npv,
-            'activities': ', '.join(activities) if activities else '-'
-        })
-    
-    return total_npv, cash_flows
 
 
 def get_price_from_library(layer_name, thickness):
@@ -702,60 +634,6 @@ def render_joint_editor(joints, key_prefix, area_per_km, road_length):
     return updated_joints, include_joints
 
 
-def create_comparison_chart(results_df):
-    """สร้างกราฟเปรียบเทียบ"""
-    fig = make_subplots(
-        rows=1, cols=2,
-        subplot_titles=('NPV รวม (ล้านบาท/กม.)', 'องค์ประกอบค่าใช้จ่าย'),
-        specs=[[{"type": "bar"}, {"type": "bar"}]]
-    )
-    
-    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#28A745', '#6F42C1']
-    
-    fig.add_trace(
-        go.Bar(x=results_df['ประเภท'], y=results_df['NPV (ล้านบาท/กม.)'],
-               marker_color=colors[:len(results_df)], text=results_df['NPV (ล้านบาท/กม.)'].apply(lambda x: f'{x:.2f}'),
-               textposition='outside', name='NPV'),
-        row=1, col=1
-    )
-    
-    fig.add_trace(
-        go.Bar(x=results_df['ประเภท'], y=results_df['ค่าก่อสร้าง'],
-               marker_color='#2E86AB', name='ค่าก่อสร้าง'),
-        row=1, col=2
-    )
-    
-    maint_cost = results_df['NPV (ล้านบาท/กม.)'] - results_df['ค่าก่อสร้าง']
-    fig.add_trace(
-        go.Bar(x=results_df['ประเภท'], y=maint_cost,
-               marker_color='#F18F01', name='ค่าบำรุงรักษา (NPV)'),
-        row=1, col=2
-    )
-    
-    fig.update_layout(height=400, barmode='stack',
-                      legend=dict(orientation="h", yanchor="bottom", y=1.02))
-    return fig
-
-
-def create_timeline_chart(all_cash_flows, pavement_types):
-    """สร้างกราฟ Timeline"""
-    fig = go.Figure()
-    colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#28A745', '#6F42C1']
-    
-    for i, (ptype, cf) in enumerate(zip(pavement_types, all_cash_flows)):
-        years = [c['year'] for c in cf]
-        cum_pv = [c['cumulative_pv'] for c in cf]
-        fig.add_trace(go.Scatter(x=years, y=cum_pv, mode='lines',
-                                  name=ptype, line=dict(color=colors[i % len(colors)], width=2)))
-    
-    fig.update_layout(
-        title='Cumulative NPV ตลอดระยะเวลาวิเคราะห์',
-        xaxis_title='ปี', yaxis_title='Cumulative NPV (ล้านบาท/กม.)',
-        height=400, hovermode='x unified'
-    )
-    return fig
-
-
 def generate_word_report_table(project_info, structure_type, structure_name, cbr, layers, joints, road_length):
     """สร้างรายงาน Word รูปแบบตารางค่าก่อสร้าง (ตามตัวอย่างในเอกสาร)"""
     doc = Document()
@@ -908,6 +786,9 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
 
 def generate_word_report_materials_only(project_info, all_details):
     """สร้างรายงาน Word - เฉพาะวัสดุและราคา (ไม่มี NPV)"""
+    if not DOCX_AVAILABLE:
+        raise ImportError("python-docx ไม่สามารถใช้งานได้")
+    
     doc = Document()
     
     style = doc.styles['Normal']
@@ -1039,12 +920,6 @@ def main():
         road_surface_width = lane_width * num_lanes
         total_width = road_surface_width + shoulder_left + shoulder_right
         st.info(f"📏 ความกว้างผิวจราจร: {road_surface_width:.2f} ม.\n📏 ความกว้างรวม (รวมไหล่ทาง): {total_width:.2f} ม.")
-        
-        st.divider()
-        st.header("⚙️ พารามิเตอร์")
-        
-        discount_rate = st.number_input("Discount Rate (%)", value=loaded_info.get('discount_rate', 5.0), min_value=1.0, max_value=15.0, step=0.5)
-        analysis_period = st.number_input("ระยะเวลาวิเคราะห์ (ปี)", value=loaded_info.get('analysis_period', 100), min_value=20, max_value=200, step=5)
     
     # เก็บข้อมูลโครงการ
     project_info = {
@@ -1054,9 +929,7 @@ def main():
         'shoulder_left': shoulder_left,
         'shoulder_right': shoulder_right,
         'num_lanes': num_lanes,
-        'total_width': total_width,
-        'discount_rate': discount_rate,
-        'analysis_period': analysis_period
+        'total_width': total_width
     }
     
     # คำนวณพื้นที่ต่อ กม. (ใช้สำหรับคำนวณปริมาณ)
@@ -1513,21 +1386,26 @@ def main():
             c1, c2 = st.columns(2)
             
             with c1:
-                if st.button("📄 สร้างรายงาน Word", type="primary", use_container_width=True):
-                    doc = generate_word_report_materials_only(
-                        st.session_state['project_info'],
-                        all_details
-                    )
-                    
-                    buf = io.BytesIO()
-                    doc.save(buf)
-                    buf.seek(0)
-                    
-                    st.download_button("⬇️ ดาวน์โหลด Word", data=buf,
-                                       file_name=f"Materials_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
-                                       mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                       use_container_width=True)
-                    st.success("✅ สร้างรายงานสำเร็จ!")
+                if not DOCX_AVAILABLE:
+                    st.warning("⚠️ ไม่สามารถสร้างรายงาน Word ได้ เนื่องจาก python-docx ไม่สามารถใช้งานได้")
+                elif st.button("📄 สร้างรายงาน Word", type="primary", use_container_width=True):
+                    try:
+                        doc = generate_word_report_materials_only(
+                            st.session_state['project_info'],
+                            all_details
+                        )
+                        
+                        buf = io.BytesIO()
+                        doc.save(buf)
+                        buf.seek(0)
+                        
+                        st.download_button("⬇️ ดาวน์โหลด Word", data=buf,
+                                           file_name=f"Materials_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
+                                           mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                           use_container_width=True)
+                        st.success("✅ สร้างรายงานสำเร็จ!")
+                    except Exception as e:
+                        st.error(f"❌ เกิดข้อผิดพลาดในการสร้างรายงาน: {str(e)}")
             
             with c2:
                 if st.button("💾 บันทึกโครงการ (JSON)", use_container_width=True):
@@ -1800,66 +1678,6 @@ def main():
                 else:
                     design_life = 25
                 st.metric("⏱️ อายุออกแบบ", f"{design_life} ปี")
-            
-            # NPV Analysis
-            st.divider()
-            st.subheader("📈 วิเคราะห์ NPV")
-            
-            col_npv1, col_npv2 = st.columns(2)
-            with col_npv1:
-                img_discount_rate = st.number_input(
-                    "อัตราคิดลด (%)",
-                    value=4.0, min_value=0.0, max_value=20.0,
-                    key="img_discount"
-                )
-            with col_npv2:
-                img_analysis_period = st.number_input(
-                    "ระยะเวลาวิเคราะห์ (ปี)",
-                    value=50, min_value=10, max_value=100,
-                    key="img_period"
-                )
-            
-            if st.button("🔄 คำนวณ NPV", key="img_calc_npv", type="primary"):
-                r = img_discount_rate / 100
-                
-                # คำนวณ NPV ตามประเภท
-                structure_type = st.session_state.get('img_structure_type', 'JPCP')
-                
-                if 'AC' in structure_type:
-                    # AC: Seal ปี 3,6,12,15 | Overlay ปี 9,18 | สร้างใหม่ ปี 20,40
-                    npv, cf = calculate_npv_ac(cost_per_km, 1.76, 8.80, 20, img_analysis_period, r)
-                elif 'CRCP' in structure_type:
-                    # CRCP: บำรุงทุก 5 ปี | สร้างใหม่ ปี 30
-                    npv, cf = calculate_npv_crcp(cost_per_km, 0.50, 30, img_analysis_period, r)
-                else:
-                    # JPCP/JRCP: Joint seal ทุก 3 ปี | สร้างใหม่ ปี 25,50
-                    npv, cf = calculate_npv_jrcp(cost_per_km, 1.426, 25, img_analysis_period, r)
-                
-                st.success(f"✅ NPV = **{npv:,.2f} ล้านบาท/กม.** (ระยะ {img_analysis_period} ปี)")
-                
-                # แสดง Cash Flow
-                with st.expander("📋 ดู Cash Flow รายปี"):
-                    cf_df = pd.DataFrame({
-                        'ปี': list(range(len(cf))),
-                        'ค่าใช้จ่าย (ล้านบาท/กม.)': cf
-                    })
-                    st.dataframe(cf_df, use_container_width=True)
-                
-                # กราฟ
-                fig = go.Figure()
-                fig.add_trace(go.Bar(
-                    x=list(range(len(cf))),
-                    y=cf,
-                    marker_color='#2E86AB',
-                    name='ค่าใช้จ่าย'
-                ))
-                fig.update_layout(
-                    title=f'Cash Flow - {structure_type}',
-                    xaxis_title='ปี',
-                    yaxis_title='ค่าใช้จ่าย (ล้านบาท/กม.)',
-                    height=400
-                )
-                st.plotly_chart(fig, use_container_width=True)
 
 
 if __name__ == "__main__":
