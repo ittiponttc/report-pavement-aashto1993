@@ -1008,49 +1008,49 @@ def main():
         
         with col_template:
             st.subheader("📥 ดาวน์โหลด Template Excel")
-            if st.button("⬇️ ดาวน์โหลด Template", use_container_width=True):
-                # สร้าง Excel Template
-                template_data = {
-                    'AC_Prices': pd.DataFrame({
-                        'Material': ['PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course'],
-                        '2.5cm': [170, 128, 129, 129],
-                        '3cm': [203, 152, 154, 154],
-                        '4cm': [268, 202, 202, 202],
-                        '5cm': [333, 250, 251, 251],
-                        '6cm': [406, 306, 308, 308],
-                        '7cm': [471, 355, 356, 356],
-                        '8cm': [536, 403, 405, 405],
-                        '9cm': [601, 452, 454, 454],
-                        '10cm': [667, 502, 503, 503],
-                    }),
-                    'Concrete_Prices': pd.DataFrame({
-                        'Type': ['JRCP', 'JPCP', 'CRCP'],
-                        '25cm': [924, 928, 1245],
-                        '28cm': [1002, 1000, 1358],
-                        '32cm': [1106, 1095, 1509],
-                        '35cm': [1184, 1167, 1622],
-                    }),
-                    'Base_Materials': pd.DataFrame({
-                        'Material': list(BASE_MATERIAL_PRICES.keys()),
-                        'Price (Baht/cu.m)': list(BASE_MATERIAL_PRICES.values()),
-                    })
-                }
-                
-                # สร้าง Excel file
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    template_data['AC_Prices'].to_excel(writer, sheet_name='AC_Prices', index=False)
-                    template_data['Concrete_Prices'].to_excel(writer, sheet_name='Concrete_Prices', index=False)
-                    template_data['Base_Materials'].to_excel(writer, sheet_name='Base_Materials', index=False)
-                output.seek(0)
-                
-                st.download_button(
-                    "💾 บันทึก Template",
-                    data=output,
-                    file_name=f"Price_Library_Template_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
+            
+            # สร้าง Excel Template
+            template_data = {
+                'AC_Prices': pd.DataFrame({
+                    'Material': ['PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course'],
+                    '2.5cm': [170, 128, 129, 129],
+                    '3cm': [203, 152, 154, 154],
+                    '4cm': [268, 202, 202, 202],
+                    '5cm': [333, 250, 251, 251],
+                    '6cm': [406, 306, 308, 308],
+                    '7cm': [471, 355, 356, 356],
+                    '8cm': [536, 403, 405, 405],
+                    '9cm': [601, 452, 454, 454],
+                    '10cm': [667, 502, 503, 503],
+                }),
+                'Concrete_Prices': pd.DataFrame({
+                    'Type': ['JRCP', 'JPCP', 'CRCP'],
+                    '25cm': [924, 928, 1245],
+                    '28cm': [1002, 1000, 1358],
+                    '32cm': [1106, 1095, 1509],
+                    '35cm': [1184, 1167, 1622],
+                }),
+                'Base_Materials': pd.DataFrame({
+                    'Material': list(BASE_MATERIAL_PRICES.keys()),
+                    'Price (Baht/cu.m)': list(BASE_MATERIAL_PRICES.values()),
+                })
+            }
+            
+            # สร้าง Excel file
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                template_data['AC_Prices'].to_excel(writer, sheet_name='AC_Prices', index=False)
+                template_data['Concrete_Prices'].to_excel(writer, sheet_name='Concrete_Prices', index=False)
+                template_data['Base_Materials'].to_excel(writer, sheet_name='Base_Materials', index=False)
+            output.seek(0)
+            
+            st.download_button(
+                label="⬇️ ดาวน์โหลด Template",
+                data=output,
+                file_name=f"Price_Library_Template_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
         
         with col_upload:
             st.subheader("📤 อัพโหลด Excel")
@@ -1098,7 +1098,10 @@ def main():
                     }
                     
                     st.success("✅ อัพโหลดและอัพเดทราคาสำเร็จ!")
-                    st.info("💡 ราคาใหม่จะถูกใช้ในการคำนวณทันที")
+                    st.info("💡 กำลังรีเฟรชหน้าจอเพื่อแสดงราคาใหม่...")
+                    
+                    # Rerun เพื่อให้ UI แสดงราคาใหม่
+                    st.rerun()
                     
                 except Exception as e:
                     st.error(f"❌ เกิดข้อผิดพลาดในการอ่านไฟล์: {str(e)}")
@@ -1134,10 +1137,11 @@ def main():
             with ac_cols[col_idx]:
                 st.markdown(f"**{ac_type}**")
                 for thk in thicknesses:
-                    default_price = AC_PRICE_TABLE[ac_type].get(thk, 0)
+                    # ดึงราคาจาก session_state (ถ้า upload มาจะเป็นราคาใหม่)
+                    current_price = st.session_state['price_library']['ac_prices'][ac_type].get(thk, 0)
                     price = st.number_input(
                         f"{thk} cm", 
-                        value=float(default_price),
+                        value=float(current_price),
                         key=f"ac_{ac_type}_{thk}",
                         step=10.0,
                         label_visibility="visible"
@@ -1157,10 +1161,11 @@ def main():
             with conc_cols[col_idx]:
                 st.markdown(f"**{conc_type}**")
                 for thk in conc_thicknesses:
-                    default_price = CONCRETE_PRICE_TABLE[conc_type].get(thk, 0)
+                    # ดึงราคาจาก session_state
+                    current_price = st.session_state['price_library']['concrete_prices'][conc_type].get(thk, 0)
                     price = st.number_input(
                         f"{thk} cm", 
-                        value=float(default_price),
+                        value=float(current_price),
                         key=f"conc_{conc_type}_{thk}",
                         step=10.0
                     )
@@ -1185,10 +1190,11 @@ def main():
         
         for i, mat in enumerate(base_materials_list):
             with base_cols[i % 3]:
-                default_price = BASE_MATERIAL_PRICES[mat]
+                # ดึงราคาจาก session_state
+                current_price = st.session_state['price_library']['base_prices'].get(mat, 0)
                 price = st.number_input(
                     mat,
-                    value=float(default_price),
+                    value=float(current_price),
                     key=f"base_{mat}",
                     step=10.0
                 )
