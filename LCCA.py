@@ -1049,7 +1049,8 @@ def main():
                 # --- ตัวเลือกวัสดุพื้นทาง ---
                 base_material_names = list(BASE_MATERIAL_PRICES.keys())
                 custom_base = lib.get('custom_base_materials', {})
-                all_base_names = base_material_names + list(custom_base.keys())
+                # เพิ่ม AC Interlayer สำหรับ JRCP/CRCP
+                all_base_names = ['AC Interlayer (5 cm)'] + base_material_names + list(custom_base.keys())
 
                 # แยก surface layers กับ base layers
                 surface_layers = []
@@ -1184,21 +1185,36 @@ def main():
                     with cols[1]:
                         thick_b = st.number_input("หนา", value=float(def_thick), min_value=0.0, step=5.0, key=f"bt_{i}_{j}", label_visibility="collapsed")
 
-                    # ดึงราคา ลบ.ม. จาก library → แปลงเป็น บาท/ตร.ม.
-                    if sel_base in custom_base:
+                    # ดึงราคาจาก library
+                    is_ac_interlayer = 'AC Interlayer' in sel_base
+                    if is_ac_interlayer:
+                        # AC Interlayer: ดึงราคาจาก AC Base Course ตามความหนา (บาท/ตร.ม.)
+                        ac_base_prices = lib.get('ac_prices', {}).get('AC Base Course', {})
+                        lib_cost_cum = ac_base_prices.get(thick_b, 0)
+                        if lib_cost_cum == 0 and ac_base_prices:
+                            closest = min(ac_base_prices.keys(), key=lambda x: abs(x - thick_b))
+                            lib_cost_cum = ac_base_prices.get(closest, 251)
+                        cost_per_sqm = lib_cost_cum  # ราคาเป็น บาท/ตร.ม. อยู่แล้ว
+                    elif sel_base in custom_base:
                         lib_cost_cum = custom_base[sel_base]
+                        cost_per_sqm = lib_cost_cum * thick_b / 100.0
                     else:
                         lib_cost_cum = lib.get('base_prices', BASE_MATERIAL_PRICES).get(sel_base, 375)
-                    cost_per_sqm = lib_cost_cum * thick_b / 100.0
+                        cost_per_sqm = lib_cost_cum * thick_b / 100.0
 
                     with cols[2]:
-                        st.markdown(f"**{lib_cost_cum:,.2f}**")
+                        if is_ac_interlayer:
+                            st.markdown(f"**— (ตร.ม.)**")
+                        else:
+                            st.markdown(f"**{lib_cost_cum:,.2f}**")
                     with cols[3]:
                         st.markdown(f"**{cost_per_sqm:,.2f}**")
 
                     updated_base.append({
                         'name': sel_base, 'thickness': thick_b, 'unit': 'cm',
-                        'qty_unit': 'cu.m', 'unit_cost': lib_cost_cum, 'layer_type': 'base'
+                        'qty_unit': 'sq.m' if is_ac_interlayer else 'cu.m',
+                        'unit_cost': cost_per_sqm if is_ac_interlayer else lib_cost_cum,
+                        'layer_type': 'base'
                     })
 
                 # รวม layers กลับ
@@ -1212,7 +1228,12 @@ def main():
                     else:
                         total_cost_sqm += layer['unit_cost']
                 for layer in updated_base:
-                    total_cost_sqm += layer['unit_cost'] * layer['thickness'] / 100.0
+                    if layer.get('qty_unit') == 'sq.m':
+                        # AC Interlayer: unit_cost เป็น บาท/ตร.ม. อยู่แล้ว
+                        total_cost_sqm += layer['unit_cost']
+                    else:
+                        # วัสดุพื้นทางปกติ: unit_cost เป็น บาท/ลบ.ม. ต้องแปลง
+                        total_cost_sqm += layer['unit_cost'] * layer['thickness'] / 100.0
 
                 # Joints
                 joint_cost_sqm = 0.0
