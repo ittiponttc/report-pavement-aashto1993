@@ -896,6 +896,46 @@ def generate_word_report_materials_only(project_info, all_details):
 
 # ===== Main Application =====
 
+@st.cache_data
+def generate_excel_template():
+    """สร้าง Excel Template และ cache ไว้เพื่อประสิทธิภาพ"""
+    template_data = {
+        'AC_Prices': pd.DataFrame({
+            'Material': ['PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course'],
+            '2.5cm': [170, 128, 129, 129],
+            '3cm': [203, 152, 154, 154],
+            '4cm': [268, 202, 202, 202],
+            '5cm': [333, 250, 251, 251],
+            '6cm': [406, 306, 308, 308],
+            '7cm': [471, 355, 356, 356],
+            '8cm': [536, 403, 405, 405],
+            '9cm': [601, 452, 454, 454],
+            '10cm': [667, 502, 503, 503],
+        }),
+        'Concrete_Prices': pd.DataFrame({
+            'Type': ['JRCP', 'JPCP', 'CRCP'],
+            '25cm': [924, 928, 1245],
+            '28cm': [1002, 1000, 1358],
+            '32cm': [1106, 1095, 1509],
+            '35cm': [1184, 1167, 1622],
+        }),
+        'Base_Materials': pd.DataFrame({
+            'Material': list(BASE_MATERIAL_PRICES.keys()),
+            'Price (Baht/cu.m)': list(BASE_MATERIAL_PRICES.values()),
+        })
+    }
+    
+    # สร้าง Excel file
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        template_data['AC_Prices'].to_excel(writer, sheet_name='AC_Prices', index=False)
+        template_data['Concrete_Prices'].to_excel(writer, sheet_name='Concrete_Prices', index=False)
+        template_data['Base_Materials'].to_excel(writer, sheet_name='Base_Materials', index=False)
+    output.seek(0)
+    
+    return output.getvalue()
+
+
 def main():
     st.markdown('<div class="main-header">🛣️ ระบบวิเคราะห์ค่าก่อสร้างโครงสร้างชั้นทาง</div>', unsafe_allow_html=True)
     st.markdown("##### ตามแนวทาง AASHTO 1993 - รองรับ AC, JPCP/JRCP, CRCP")
@@ -1009,44 +1049,12 @@ def main():
         with col_template:
             st.subheader("📥 ดาวน์โหลด Template Excel")
             
-            # สร้าง Excel Template
-            template_data = {
-                'AC_Prices': pd.DataFrame({
-                    'Material': ['PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course'],
-                    '2.5cm': [170, 128, 129, 129],
-                    '3cm': [203, 152, 154, 154],
-                    '4cm': [268, 202, 202, 202],
-                    '5cm': [333, 250, 251, 251],
-                    '6cm': [406, 306, 308, 308],
-                    '7cm': [471, 355, 356, 356],
-                    '8cm': [536, 403, 405, 405],
-                    '9cm': [601, 452, 454, 454],
-                    '10cm': [667, 502, 503, 503],
-                }),
-                'Concrete_Prices': pd.DataFrame({
-                    'Type': ['JRCP', 'JPCP', 'CRCP'],
-                    '25cm': [924, 928, 1245],
-                    '28cm': [1002, 1000, 1358],
-                    '32cm': [1106, 1095, 1509],
-                    '35cm': [1184, 1167, 1622],
-                }),
-                'Base_Materials': pd.DataFrame({
-                    'Material': list(BASE_MATERIAL_PRICES.keys()),
-                    'Price (Baht/cu.m)': list(BASE_MATERIAL_PRICES.values()),
-                })
-            }
-            
-            # สร้าง Excel file
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                template_data['AC_Prices'].to_excel(writer, sheet_name='AC_Prices', index=False)
-                template_data['Concrete_Prices'].to_excel(writer, sheet_name='Concrete_Prices', index=False)
-                template_data['Base_Materials'].to_excel(writer, sheet_name='Base_Materials', index=False)
-            output.seek(0)
+            # ใช้ cached template (ไม่ต้องสร้างใหม่ทุกครั้ง rerun)
+            template_bytes = generate_excel_template()
             
             st.download_button(
                 label="⬇️ ดาวน์โหลด Template",
-                data=output,
+                data=template_bytes,
                 file_name=f"Price_Library_Template_{datetime.now().strftime('%Y%m%d')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
@@ -1098,9 +1106,10 @@ def main():
                     }
                     
                     st.success("✅ อัพโหลดและอัพเดทราคาสำเร็จ!")
-                    st.info("💡 กำลังรีเฟรชหน้าจอเพื่อแสดงราคาใหม่...")
                     
                     # Rerun เพื่อให้ UI แสดงราคาใหม่
+                    import time
+                    time.sleep(0.5)  # รอให้เห็นข้อความ success
                     st.rerun()
                     
                 except Exception as e:
