@@ -1032,6 +1032,12 @@ def main():
                 st.success("✅ โหลด Price Library สำเร็จ!")
                 st.caption(f"📊 {len(uploaded_ac_prices)} AC types, {len(uploaded_concrete_prices)} Concrete types")
                 
+                # แสดงตัวอย่างราคาที่อ่านได้
+                with st.expander("🔍 ตัวอย่างราคาที่อ่านได้"):
+                    st.write("**AC Wearing Course (7cm):**", uploaded_ac_prices.get('AC Wearing Course', {}).get(7.0, 'N/A'))
+                    st.write("**JPCP (25cm):**", uploaded_concrete_prices.get('JPCP', {}).get(25, 'N/A'))
+                    st.write("**Crushed Rock:**", uploaded_base_prices.get('Crushed Rock Base Course', 'N/A'))
+                
             except Exception as e:
                 st.error(f"❌ อ่านไฟล์ไม่สำเร็จ: {str(e)}")
         
@@ -1200,6 +1206,15 @@ def main():
                 },
                 'base_prices': dict(BASE_MATERIAL_PRICES),
             }
+        
+        # Debug info - แสดงที่มาของราคา
+        if 'uploaded_price_library' in st.session_state:
+            st.info("📋 **กำลังใช้ราคาจากไฟล์ Excel ที่ Upload ใน Sidebar**")
+            # แสดงตัวอย่าง
+            ac_7 = st.session_state['price_library']['ac_prices'].get('AC Wearing Course', {}).get(7.0, 'N/A')
+            st.caption(f"ตัวอย่าง: AC Wearing Course 7cm = {ac_7} บาท")
+        else:
+            st.caption("💡 กำลังใช้ราคา Default (Upload Excel ใน Sidebar เพื่อเปลี่ยนราคา)")
         
         # ===== ส่วนผิวทาง AC =====
         st.subheader("🔵 ผิวทาง Asphalt Concrete (บาท/ตร.ม.)")
