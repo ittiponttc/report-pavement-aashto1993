@@ -1109,14 +1109,13 @@ def main():
     # ===== Tab 1: Library ราคา =====
     with tab1:
         st.header("📊 ตารางราคาเปรียบเทียบโครงสร้างชั้นทาง")
-        st.info("💡 สามารถปรับเปลี่ยนราคาได้ตามต้องการ หรือ Upload ไฟล์ Excel เพื่ออัพเดทราคาทั้งหมด")
+        st.info("💡 สามารถปรับเปลี่ยนราคาได้ตามต้องการ หรือ Upload ไฟล์ Excel ใน **Sidebar** เพื่ออัพเดทราคาทั้งหมด")
         
-        # ===== Upload Excel & Download Template =====
-        col_upload, col_template = st.columns(2)
+        # ===== Download Template =====
+        st.subheader("📥 ดาวน์โหลด Template Excel")
         
-        with col_template:
-            st.subheader("📥 ดาวน์โหลด Template Excel")
-            
+        col1, col2, col3 = st.columns([2, 1, 2])
+        with col2:
             # ใช้ cached template (ไม่ต้องสร้างใหม่ทุกครั้ง rerun)
             template_bytes = generate_excel_template()
             
@@ -1128,66 +1127,7 @@ def main():
                 use_container_width=True
             )
         
-        with col_upload:
-            st.subheader("📤 อัพโหลด Excel")
-            
-            # แสดงข้อความถ้าเพิ่งอัพโหลดเสร็จ
-            if st.session_state.get('just_uploaded', False):
-                st.success("✅ อัพเดทราคาเสร็จสมบูรณ์! ตารางด้านล่างแสดงราคาใหม่แล้ว")
-                st.session_state['just_uploaded'] = False
-            
-            uploaded_excel = st.file_uploader(
-                "เลือกไฟล์ Excel (ตาม Template)",
-                type=['xlsx', 'xls'],
-                key="upload_price_library"
-            )
-            
-            if uploaded_excel is not None:
-                try:
-                    # อ่านไฟล์ Excel
-                    ac_df = pd.read_excel(uploaded_excel, sheet_name='AC_Prices')
-                    concrete_df = pd.read_excel(uploaded_excel, sheet_name='Concrete_Prices')
-                    base_df = pd.read_excel(uploaded_excel, sheet_name='Base_Materials')
-                    
-                    # แปลงเป็น dictionary format
-                    new_ac_prices = {}
-                    for _, row in ac_df.iterrows():
-                        material = row['Material']
-                        prices = {}
-                        for col in ac_df.columns[1:]:
-                            thickness = float(col.replace('cm', ''))
-                            prices[thickness] = float(row[col])
-                        new_ac_prices[material] = prices
-                    
-                    new_concrete_prices = {}
-                    for _, row in concrete_df.iterrows():
-                        conc_type = row['Type']
-                        prices = {}
-                        for col in concrete_df.columns[1:]:
-                            thickness = int(col.replace('cm', ''))
-                            prices[thickness] = float(row[col])
-                        new_concrete_prices[conc_type] = prices
-                    
-                    new_base_prices = {}
-                    for _, row in base_df.iterrows():
-                        new_base_prices[row['Material']] = float(row['Price (Baht/cu.m)'])
-                    
-                    # อัพเดท session state
-                    st.session_state['price_library'] = {
-                        'ac_prices': new_ac_prices,
-                        'concrete_prices': new_concrete_prices,
-                        'base_prices': new_base_prices,
-                    }
-                    
-                    # ตั้ง flag ว่าเพิ่ง upload เสร็จ
-                    st.session_state['just_uploaded'] = True
-                    
-                    st.success("✅ อัพโหลดสำเร็จ! กำลังอัพเดทราคา...")
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"❌ เกิดข้อผิดพลาดในการอ่านไฟล์: {str(e)}")
-                    st.warning("⚠️ กรุณาตรวจสอบว่าไฟล์ Excel มีโครงสร้างตาม Template")
+        st.caption("📌 ดาวน์โหลด Template → แก้ไขราคา → Upload ใน Sidebar ด้านซ้าย")
         
         st.divider()
         
