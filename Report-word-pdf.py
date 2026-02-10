@@ -2,7 +2,7 @@
 """
 โปรแกรมรวมไฟล์ Word รายงานออกแบบโครงสร้างชั้นทาง
 Pavement Design Report Merger
-Version 2.0
+Version 2.1
 
 โดย: ภาควิชาครุศาสตร์โยธา มจพ.
 """
@@ -16,8 +16,10 @@ from docx.shared import Pt, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.section import WD_ORIENT
 from docx.oxml.ns import qn
-from docxcompose.composer import Composer
+from docx.oxml import OxmlElement
+from copy import deepcopy
 import io
+import re
 
 # ตั้งค่าหน้าเว็บ
 st.set_page_config(
@@ -123,29 +125,32 @@ def set_page_margins(section):
     section.footer_distance = Cm(1.25)
 
 
-def copy_table(source_table, target_doc):
-    """คัดลอกตารางจากเอกสารต้นทางไปยังเอกสารปลายทาง"""
-    rows = len(source_table.rows)
-    cols = len(source_table.columns)
-    new_table = target_doc.add_table(rows=rows, cols=cols)
+def append_document(master_doc, source_doc):
+    """
+    คัดลอกเนื้อหาจากเอกสารต้นทางไปยังเอกสารปลายทาง
+    รองรับรูปภาพ ตาราง และการจัดรูปแบบ
+    """
+    # คัดลอก relationships สำหรับรูปภาพ
+    if source_doc.part.rels:
+        for rel_id, rel in source_doc.part.rels.items():
+            if "image" in rel.reltype:
+                # คัดลอกรูปภาพไปยังเอกสารใหม่
+                try:
+                    image_part = rel.target_part
+                    # สร้าง relationship ใหม่ในเอกสารปลายทาง
+                    new_rel = master_doc.part.relate_to(image_part, rel.reltype)
+                except:
+                    pass
     
-    for i, row in enumerate(source_table.rows):
-        for j, cell in enumerate(row.cells):
-            new_cell = new_table.rows[i].cells[j]
-            for para in cell.paragraphs:
-                if para.text.strip():
-                    new_para = new_cell.paragraphs[0] if new_cell.paragraphs else new_cell.add_paragraph()
-                    new_para.clear()
-                    for run in para.runs:
-                        new_run = new_para.add_run(run.text)
-                        if run.font.bold:
-                            new_run.font.bold = run.font.bold
-                        if run.font.size:
-                            new_run.font.size = run.font.size
-                        if run.font.name:
-                            new_run.font.name = run.font.name
-    
-    return new_table
+    # คัดลอก elements จาก body
+    for element in source_doc.element.body:
+        # ข้าม sectPr (section properties)
+        if element.tag.endswith('sectPr'):
+            continue
+        
+        # คัดลอก element
+        new_element = deepcopy(element)
+        master_doc.element.body.append(new_element)
 
 
 def merge_documents(uploaded_files, section_titles, project_name, report_date):
@@ -205,15 +210,6 @@ def merge_documents(uploaded_files, section_titles, project_name, report_date):
     
     merged_doc.add_page_break()
     
-    # บันทึกเอกสารหลักชั่วคราว
-    temp_main = io.BytesIO()
-    merged_doc.save(temp_main)
-    temp_main.seek(0)
-    
-    # โหลดเอกสารหลักใหม่สำหรับ Composer
-    master_doc = Document(temp_main)
-    composer = Composer(master_doc)
-    
     # รวมเนื้อหาจากแต่ละไฟล์
     section_num = 1
     for key, file in uploaded_files.items():
@@ -221,39 +217,32 @@ def merge_documents(uploaded_files, section_titles, project_name, report_date):
             file_bytes = file.read()
             file.seek(0)
             
-            # สร้างเอกสารหัวข้อ
-            header_doc = Document()
-            
             # หัวข้อส่วน
-            section_title = header_doc.add_paragraph()
-            section_title.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            section_run = section_title.add_run(f"{section_num}. {section_titles[key]}")
+            section_title_para = merged_doc.add_paragraph()
+            section_title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            section_run = section_title_para.add_run(f"{section_num}. {section_titles[key]}")
             set_thai_font(section_run, font_size=18)
             section_run.font.bold = True
             
-            header_doc.add_paragraph()
+            merged_doc.add_paragraph()
             
-            # บันทึกหัวข้อชั่วคราว
-            temp_header = io.BytesIO()
-            header_doc.save(temp_header)
-            temp_header.seek(0)
-            
-            # เพิ่มหัวข้อ
-            composer.append(Document(temp_header))
-            
-            # เพิ่มเนื้อหาจากไฟล์ต้นฉบับ
+            # โหลดเอกสารต้นฉบับ
             source_doc = Document(io.BytesIO(file_bytes))
-            composer.append(source_doc)
             
+            # คัดลอกเนื้อหา
+            append_document(merged_doc, source_doc)
+            
+            # เพิ่ม page break
+            merged_doc.add_page_break()
             section_num += 1
     
-    return composer.doc
+    return merged_doc
 
 
 def main():
     # หัวข้อหลัก
     st.markdown('<div class="main-header">🛣️ โปรแกรมรวมรายงานออกแบบโครงสร้างชั้นทาง</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Pavement Structure Design Report Merger v2.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Pavement Structure Design Report Merger v2.1</div>', unsafe_allow_html=True)
     
     # ข้อมูลโครงการ
     st.markdown("### 📋 ข้อมูลโครงการ")
@@ -266,7 +255,7 @@ def main():
     
     st.markdown("---")
     
-    # คำอธิบายส่วนต่างๆ (ปรับปรุงใหม่)
+    # คำอธิบายส่วนต่างๆ
     section_titles = {
         'truck_factor': 'การคำนวณ Truck Factor',
         'esals_ac': 'การคำนวณ ESALs สำหรับผิวทางลาดยาง (Flexible Pavement)',
@@ -499,30 +488,28 @@ def main():
                         report_date_str
                     )
                     
-                    with tempfile.TemporaryDirectory() as temp_dir:
-                        base_filename = "รายงานออกแบบโครงสร้างชั้นทาง"
-                        if project_name:
-                            base_filename = f"รายงานออกแบบ_{project_name.replace(' ', '_')}"
-                        
-                        docx_path = os.path.join(temp_dir, f"{base_filename}.docx")
-                        
-                        merged_doc.save(docx_path)
-                        
-                        st.markdown('<div class="success-box">', unsafe_allow_html=True)
-                        st.success(f"✅ รวมไฟล์เรียบร้อยแล้ว! ({file_count} ไฟล์)")
-                        st.markdown('</div>', unsafe_allow_html=True)
-                        
-                        st.markdown("### 📥 ดาวน์โหลดรายงาน")
-                        
-                        with open(docx_path, 'rb') as f:
-                            docx_data = f.read()
-                        st.download_button(
-                            label="📄 ดาวน์โหลดไฟล์ Word (.docx)",
-                            data=docx_data,
-                            file_name=f"{base_filename}.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            use_container_width=True
-                        )
+                    # บันทึกไฟล์ลง BytesIO
+                    output = io.BytesIO()
+                    merged_doc.save(output)
+                    output.seek(0)
+                    
+                    base_filename = "รายงานออกแบบโครงสร้างชั้นทาง"
+                    if project_name:
+                        base_filename = f"รายงานออกแบบ_{project_name.replace(' ', '_')}"
+                    
+                    st.markdown('<div class="success-box">', unsafe_allow_html=True)
+                    st.success(f"✅ รวมไฟล์เรียบร้อยแล้ว! ({file_count} ไฟล์)")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    st.markdown("### 📥 ดาวน์โหลดรายงาน")
+                    
+                    st.download_button(
+                        label="📄 ดาวน์โหลดไฟล์ Word (.docx)",
+                        data=output.getvalue(),
+                        file_name=f"{base_filename}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True
+                    )
                 
                 except Exception as e:
                     st.error(f"❌ เกิดข้อผิดพลาด: {str(e)}")
@@ -532,9 +519,9 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style="text-align: center; color: #718096; font-size: 14px;">
-        <p>พัฒนาโดย รศ.ดร.อิทธิพล มีผล // ภาควิชาครุศาสตร์โยธา คณะครุศาสตร์อุตสาหกรรม </p>
+        <p>พัฒนาโดย ภาควิชาครุศาสตร์โยธา คณะครุศาสตร์อุตสาหกรรม</p>
         <p>มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ</p>
-        <p>© 2025 - Pavement Design Report Merger v2.0</p>
+        <p>© 2025 - Pavement Design Report Merger v2.1</p>
     </div>
     """, unsafe_allow_html=True)
 
