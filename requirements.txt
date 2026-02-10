@@ -8,8 +8,6 @@ python-docx>=0.8.11
 openpyxl>=3.1.0
 xlrd
 reportlab
-python-docx>=0.8.11
 Pillow>=10.0.0
-setuptools>=65
 docxcompose>=1.4.0
-setuptools
+setuptools>=65
