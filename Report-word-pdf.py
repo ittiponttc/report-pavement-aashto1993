@@ -2,7 +2,7 @@
 """
 โปรแกรมรวมไฟล์ Word รายงานออกแบบโครงสร้างชั้นทาง
 Pavement Design Report Merger
-Version 2.1
+Version 2.0
 
 โดย: ภาควิชาครุศาสตร์โยธา มจพ.
 """
@@ -16,10 +16,8 @@ from docx.shared import Pt, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.section import WD_ORIENT
 from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
-from copy import deepcopy
+from docxcompose.composer import Composer
 import io
-import re
 
 # ตั้งค่าหน้าเว็บ
 st.set_page_config(
@@ -125,34 +123,6 @@ def set_page_margins(section):
     section.footer_distance = Cm(1.25)
 
 
-def append_document(master_doc, source_doc):
-    """
-    คัดลอกเนื้อหาจากเอกสารต้นทางไปยังเอกสารปลายทาง
-    รองรับรูปภาพ ตาราง และการจัดรูปแบบ
-    """
-    # คัดลอก relationships สำหรับรูปภาพ
-    if source_doc.part.rels:
-        for rel_id, rel in source_doc.part.rels.items():
-            if "image" in rel.reltype:
-                # คัดลอกรูปภาพไปยังเอกสารใหม่
-                try:
-                    image_part = rel.target_part
-                    # สร้าง relationship ใหม่ในเอกสารปลายทาง
-                    new_rel = master_doc.part.relate_to(image_part, rel.reltype)
-                except:
-                    pass
-    
-    # คัดลอก elements จาก body
-    for element in source_doc.element.body:
-        # ข้าม sectPr (section properties)
-        if element.tag.endswith('sectPr'):
-            continue
-        
-        # คัดลอก element
-        new_element = deepcopy(element)
-        master_doc.element.body.append(new_element)
-
-
 def merge_documents(uploaded_files, section_titles, project_name, report_date):
     """รวมเอกสารทั้งหมดเป็นไฟล์เดียว (รองรับรูปภาพ ตาราง)"""
     
@@ -210,6 +180,15 @@ def merge_documents(uploaded_files, section_titles, project_name, report_date):
     
     merged_doc.add_page_break()
     
+    # บันทึกเอกสารหลักชั่วคราว
+    temp_main = io.BytesIO()
+    merged_doc.save(temp_main)
+    temp_main.seek(0)
+    
+    # โหลดเอกสารหลักใหม่สำหรับ Composer
+    master_doc = Document(temp_main)
+    composer = Composer(master_doc)
+    
     # รวมเนื้อหาจากแต่ละไฟล์
     section_num = 1
     for key, file in uploaded_files.items():
@@ -217,32 +196,39 @@ def merge_documents(uploaded_files, section_titles, project_name, report_date):
             file_bytes = file.read()
             file.seek(0)
             
+            # สร้างเอกสารหัวข้อ
+            header_doc = Document()
+            
             # หัวข้อส่วน
-            section_title_para = merged_doc.add_paragraph()
-            section_title_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            section_run = section_title_para.add_run(f"{section_num}. {section_titles[key]}")
+            section_title = header_doc.add_paragraph()
+            section_title.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            section_run = section_title.add_run(f"{section_num}. {section_titles[key]}")
             set_thai_font(section_run, font_size=18)
             section_run.font.bold = True
             
-            merged_doc.add_paragraph()
+            header_doc.add_paragraph()
             
-            # โหลดเอกสารต้นฉบับ
+            # บันทึกหัวข้อชั่วคราว
+            temp_header = io.BytesIO()
+            header_doc.save(temp_header)
+            temp_header.seek(0)
+            
+            # เพิ่มหัวข้อ
+            composer.append(Document(temp_header))
+            
+            # เพิ่มเนื้อหาจากไฟล์ต้นฉบับ
             source_doc = Document(io.BytesIO(file_bytes))
+            composer.append(source_doc)
             
-            # คัดลอกเนื้อหา
-            append_document(merged_doc, source_doc)
-            
-            # เพิ่ม page break
-            merged_doc.add_page_break()
             section_num += 1
     
-    return merged_doc
+    return composer.doc
 
 
 def main():
     # หัวข้อหลัก
     st.markdown('<div class="main-header">🛣️ โปรแกรมรวมรายงานออกแบบโครงสร้างชั้นทาง</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Pavement Structure Design Report Merger v2.1</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Pavement Structure Design Report Merger v2.0</div>', unsafe_allow_html=True)
     
     # ข้อมูลโครงการ
     st.markdown("### 📋 ข้อมูลโครงการ")
@@ -521,7 +507,7 @@ def main():
     <div style="text-align: center; color: #718096; font-size: 14px;">
         <p>พัฒนาโดย ภาควิชาครุศาสตร์โยธา คณะครุศาสตร์อุตสาหกรรม</p>
         <p>มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ</p>
-        <p>© 2025 - Pavement Design Report Merger v2.1</p>
+        <p>© 2025 - Pavement Design Report Merger v2.0</p>
     </div>
     """, unsafe_allow_html=True)
 
