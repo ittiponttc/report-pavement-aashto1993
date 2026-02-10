@@ -6,7 +6,7 @@ matplotlib>=3.7.0
 pandas>=2.0.0
 python-docx>=0.8.11
 openpyxl>=3.1.0
-xlrd
+xlrd>=2.0.1
 reportlab
 Pillow>=10.0.0
 docxcompose>=1.4.0
