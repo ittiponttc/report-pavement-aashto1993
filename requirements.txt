@@ -12,3 +12,4 @@ python-docx>=0.8.11
 Pillow>=10.0.0
 setuptools>=65
 docxcompose>=1.4.0
+setuptools
