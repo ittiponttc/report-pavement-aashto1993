@@ -429,8 +429,8 @@ def create_word_report(pavement_type, inputs, calculated_values, comparison_resu
     for cell in hdr_sym:
         run = cell.paragraphs[0].runs[0]
         run.bold = True
-        run.font.name = 'Times New Roman'
-        run.font.size = Pt(10)
+        run.font.name = 'TH SarabunPSK'
+        run.font.size = Pt(14)
 
     symbol_data = [
         ('W\u2081\u2088',        'จำนวนแกนเดี่ยว 18 kip ที่รองรับได้',     'ESALs'),
@@ -452,8 +452,8 @@ def create_word_report(pavement_type, inputs, calculated_values, comparison_resu
         row_s[2].text = unit
         for cell in row_s:
             run = cell.paragraphs[0].runs[0]
-            run.font.name = 'Times New Roman'
-            run.font.size = Pt(10)
+            run.font.name = 'TH SarabunPSK'
+            run.font.size = Pt(14)
 
     doc.add_paragraph()
 
