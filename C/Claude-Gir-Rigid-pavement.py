@@ -322,7 +322,145 @@ def create_word_report(pavement_type, inputs, calculated_values, comparison_resu
         row = table2.add_row().cells
         row[0].text, row[1].text, row[2].text, row[3].text = param, symbol, value, unit
     
-    doc.add_heading('5. ผลการเปรียบเทียบความหนา', level=1)
+    # --------------------------------------------------------
+    # 5. สมการออกแบบ AASHTO 1993
+    # --------------------------------------------------------
+    doc.add_heading('5. สมการออกแบบ AASHTO 1993', level=1)
+
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
+    def add_equation_line(document, parts):
+        """
+        เพิ่มย่อหน้าที่ประกอบด้วย runs หลายส่วน
+        parts = list of (text, bold, italic, subscript, superscript)
+        """
+        p = document.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        for text, bold, italic, is_sub, is_sup in parts:
+            run = p.add_run(text)
+            run.bold = bold
+            run.italic = italic
+            run.font.name = 'Times New Roman'
+            run.font.size = Pt(11)
+            if is_sub or is_sup:
+                rPr = run._r.get_or_add_rPr()
+                vertAlign = OxmlElement('w:vertAlign')
+                vertAlign.set(qn('w:val'), 'subscript' if is_sub else 'superscript')
+                rPr.append(vertAlign)
+        return p
+
+    def set_paragraph_indent(para, left_twips=360):
+        pPr = para._p.get_or_add_pPr()
+        ind = OxmlElement('w:ind')
+        ind.set(qn('w:left'), str(left_twips))
+        pPr.append(ind)
+
+    # คำอธิบาย
+    p_desc = doc.add_paragraph('สมการหลักที่ใช้ในการออกแบบความหนาถนนคอนกรีตตาม AASHTO 1993 มีดังนี้:')
+    p_desc.runs[0].font.name = 'TH SarabunPSK'
+    p_desc.runs[0].font.size = Pt(14)
+
+    # บรรทัดที่ 1: log10(W18) = ZR x So + 7.35 x log10(D+1) - 0.06
+    line1_parts = [
+        ('log', False, False, False, False),
+        ('10', False, False, True, False),
+        ('(W', False, False, False, False),
+        ('18', False, False, True, False),
+        (') = Z', False, False, False, False),
+        ('R', False, False, True, False),
+        (' x S', False, False, False, False),
+        ('o', False, False, True, False),
+        (' + 7.35 x log', False, False, False, False),
+        ('10', False, False, True, False),
+        ('(D+1) - 0.06', False, False, False, False),
+    ]
+    p1 = add_equation_line(doc, line1_parts)
+    set_paragraph_indent(p1, 360)
+
+    # บรรทัดที่ 2: + log10(ΔPSI/(4.5-1.5)) / (1 + 1.624x10^7/(D+1)^8.46)
+    line2_parts = [
+        ('        + log', False, False, False, False),
+        ('10', False, False, True, False),
+        ('(\u0394PSI/(4.5-1.5)) / (1 + 1.624\u00d710', False, False, False, False),
+        ('7', False, False, False, True),
+        ('/(D+1)', False, False, False, False),
+        ('8.46', False, False, False, True),
+        (')', False, False, False, False),
+    ]
+    p2 = add_equation_line(doc, line2_parts)
+    set_paragraph_indent(p2, 360)
+
+    # บรรทัดที่ 3: + (4.22 - 0.32xPt) x log10([ScxCdx(D^0.75-1.132)/(215.63xJx(D^0.75-18.42/(Ec/k)^0.25))])
+    line3_parts = [
+        ('        + (4.22 - 0.32\u00d7P', False, False, False, False),
+        ('t', False, False, True, False),
+        (') \u00d7 log', False, False, False, False),
+        ('10', False, False, True, False),
+        ('[(S', False, False, False, False),
+        ('c', False, False, True, False),
+        ('\u00d7C', False, False, False, False),
+        ('d', False, False, True, False),
+        ('\u00d7(D', False, False, False, False),
+        ('0.75', False, False, False, True),
+        ('-1.132))/(215.63\u00d7J\u00d7(D', False, False, False, False),
+        ('0.75', False, False, False, True),
+        (' - 18.42/(E', False, False, False, False),
+        ('c', False, False, True, False),
+        ('/k)', False, False, False, False),
+        ('0.25', False, False, False, True),
+        (')]', False, False, False, False),
+    ]
+    p3 = add_equation_line(doc, line3_parts)
+    set_paragraph_indent(p3, 360)
+
+    # ตารางสัญลักษณ์
+    doc.add_paragraph()
+    p_sym = doc.add_paragraph('โดยที่:')
+    p_sym.runs[0].font.name = 'TH SarabunPSK'
+    p_sym.runs[0].font.size = Pt(14)
+
+    tbl_sym = doc.add_table(rows=1, cols=3)
+    tbl_sym.style = 'Table Grid'
+    hdr_sym = tbl_sym.rows[0].cells
+    hdr_sym[0].text = 'สัญลักษณ์'
+    hdr_sym[1].text = 'ความหมาย'
+    hdr_sym[2].text = 'หน่วย'
+    for cell in hdr_sym:
+        run = cell.paragraphs[0].runs[0]
+        run.bold = True
+        run.font.name = 'TH SarabunPSK'
+        run.font.size = Pt(14)
+
+    symbol_data = [
+        ('W\u2081\u2088',        'จำนวนแกนเดี่ยว 18 kip ที่รองรับได้',     'ESALs'),
+        ('Z\u1D3F',              'Standard Normal Deviate ที่ความเชื่อมั่น R', '-'),
+        ('S\u2092',              'Overall Standard Deviation',               '-'),
+        ('D',                    'ความหนาแผ่นคอนกรีต',                        'นิ้ว'),
+        ('\u0394PSI',            'การสูญเสีย Serviceability (4.5 - P\u209C)',  '-'),
+        ('P\u209C',              'Terminal Serviceability Index',             '-'),
+        ('S\u1D9C',              'Modulus of Rupture ของคอนกรีต',            'psi'),
+        ('C\u1D48',              'Drainage Coefficient',                      '-'),
+        ('J',                    'Load Transfer Coefficient',                '-'),
+        ('E\u1D9C',              'Modulus of Elasticity ของคอนกรีต',         'psi'),
+        ('k',                    'Modulus of Subgrade Reaction',             'pci'),
+    ]
+    for sym, meaning, unit in symbol_data:
+        row_s = tbl_sym.add_row().cells
+        row_s[0].text = sym
+        row_s[1].text = meaning
+        row_s[2].text = unit
+        for cell in row_s:
+            run = cell.paragraphs[0].runs[0]
+            run.font.name = 'TH SarabunPSK'
+            run.font.size = Pt(14)
+
+    doc.add_paragraph()
+
+    # --------------------------------------------------------
+    # 6. ผลการเปรียบเทียบความหนา (เดิมคือหัวข้อ 5)
+    # --------------------------------------------------------
+    doc.add_heading('6. ผลการเปรียบเทียบความหนา', level=1)
     table3 = doc.add_table(rows=1, cols=6)
     table3.style = 'Table Grid'
     hdr = table3.rows[0].cells
@@ -336,8 +474,8 @@ def create_word_report(pavement_type, inputs, calculated_values, comparison_resu
         row[3].text = f"{r['w18']:,.0f}"
         row[4].text = f"{r['ratio']:.2f}"
         row[5].text = "ผ่าน ✓" if r['passed'] else "ไม่ผ่าน ✗"
-    
-    doc.add_heading('6. สรุปผล', level=1)
+
+    doc.add_heading('7. สรุปผล', level=1)
     passed, ratio = main_result
     w18_cap = None
     for r in comparison_results:
