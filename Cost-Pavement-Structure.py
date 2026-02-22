@@ -1029,10 +1029,10 @@ def generate_word_report_consultant(project_info, all_details, chapter_num="4", 
         except:
             return sec_str
 
-    sec_main    = section_start
-    sec_info    = _next_section(section_start, 0)
-    sec_detail  = _next_section(section_start, 1)
-    sec_summary = _next_section(section_start, 2)
+    sec_main    = section_start           # เช่น 4.7
+    sec_info    = f"{section_start}.1"    # 4.7.1
+    sec_detail  = f"{section_start}.2"    # 4.7.2
+    sec_summary = f"{section_start}.3"    # 4.7.3
 
     # หัวข้อหลัก
     _add_heading_para(
@@ -1042,7 +1042,7 @@ def generate_word_report_consultant(project_info, all_details, chapter_num="4", 
 
     # ข้อมูลโครงการ
     _add_heading_para(
-        f"{sec_info}.1 ข้อมูลของถนน",
+        f"{sec_info} ข้อมูลของถนน",
         size=16, bold=True, underline=True, space_before=8
     )
 
@@ -1920,44 +1920,6 @@ def main():
                 st.metric("📐 บาท/ตร.ม.", f"{cost_per_sqm:.2f}")
     
 
-        # ===== ส่งต้นทุนก่อสร้างไปยัง LCCA =====
-        st.divider()
-        st.subheader("📤 ส่งข้อมูลไปยัง LCCA")
-
-        # สร้าง preview ข้อมูลที่จะส่ง
-        send_data = {}
-        for key, name, cost_km, cost_sqm, life, show in all_structures:
-            if show:
-                send_data[key] = {
-                    'ชื่อ': name,
-                    'ต้นทุนก่อสร้าง': round(cost_sqm, 2),
-                    'รหัส': key,
-                }
-
-        if send_data:
-            preview_rows = [
-                {'รหัส': k, 'ชื่อโครงสร้าง': v['ชื่อ'],
-                 'ต้นทุนก่อสร้าง (บาท/ตร.ม.)': v['ต้นทุนก่อสร้าง']}
-                for k, v in send_data.items()
-            ]
-            st.dataframe(preview_rows, use_container_width=True, hide_index=True)
-
-            col_send, col_clear = st.columns(2)
-            with col_send:
-                if st.button("📤 ส่งต้นทุนก่อสร้างไป LCCA",
-                             type="primary", use_container_width=True,
-                             key="btn_send_to_lcca"):
-                    st.session_state['cost_to_lcca'] = send_data
-                    st.success(f"✅ เตรียมส่ง {len(send_data)} ทางเลือกไปยัง LCCA แล้ว")
-                    st.info("💡 เปิดหน้า **3 · LCCA** เพื่อยืนยันการรับข้อมูล")
-            with col_clear:
-                if st.button("🗑️ ล้างข้อมูลที่รอส่ง",
-                             use_container_width=True,
-                             key="btn_clear_lcca"):
-                    st.session_state.pop('cost_to_lcca', None)
-                    st.info("ล้างข้อมูลแล้ว")
-        else:
-            st.warning("⚠️ ไม่มีโครงสร้างที่เลือก 'แสดงในรายงาน' — กรุณาเลือกอย่างน้อย 1 โครงสร้าง")
 
 
     # ===== Tab 3: ค่าบำรุงรักษา =====
