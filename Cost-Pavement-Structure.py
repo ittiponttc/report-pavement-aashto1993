@@ -990,6 +990,201 @@ def generate_word_report_materials_only(project_info, all_details):
     return doc
 
 
+
+def generate_word_report_consultant(project_info, all_details, chapter_num="4", section_start="4.7", intro_text=""):
+    """สร้างรายงาน Word แบบที่ปรึกษา - มีหมายเลขหัวข้อและบทเกริ่นนำ"""
+    if not DOCX_AVAILABLE:
+        raise ImportError("python-docx ไม่สามารถใช้งานได้")
+
+    doc = Document()
+    style = doc.styles['Normal']
+    style.font.name = 'TH SarabunPSK'
+    style.font.size = Pt(16)
+
+    def _set_run_font(run, size=16, bold=False):
+        run.font.name = 'TH SarabunPSK'
+        run.font.size = Pt(size)
+        run.font.bold = bold
+        rPr = run._r.get_or_add_rPr()
+        rFonts = rPr.get_or_add_rFonts()
+        rFonts.set(qn('w:eastAsia'), 'TH SarabunPSK')
+        rFonts.set(qn('w:ascii'), 'TH SarabunPSK')
+        rFonts.set(qn('w:hAnsi'), 'TH SarabunPSK')
+
+    def _add_heading_para(text, size=16, bold=True, underline=False, space_before=6, space_after=3):
+        para = doc.add_paragraph()
+        para.paragraph_format.space_before = Pt(space_before)
+        para.paragraph_format.space_after = Pt(space_after)
+        run = para.add_run(text)
+        _set_run_font(run, size=size, bold=bold)
+        run.underline = underline
+        return para
+
+    def _next_section(sec_str, offset=0):
+        try:
+            parts = sec_str.strip().split('.')
+            major = int(parts[0])
+            minor = int(parts[1]) + offset if len(parts) > 1 else offset
+            return f"{major}.{minor}"
+        except:
+            return sec_str
+
+    sec_main    = section_start
+    sec_info    = _next_section(section_start, 0)
+    sec_detail  = _next_section(section_start, 1)
+    sec_summary = _next_section(section_start, 2)
+
+    # หัวข้อหลัก
+    _add_heading_para(
+        f"{sec_main} รายงานวัสดุและราคาโครงสร้างชั้นทาง",
+        size=18, bold=True, underline=True, space_before=12, space_after=6
+    )
+
+    # ข้อมูลโครงการ
+    _add_heading_para(
+        f"{sec_info}.1 ข้อมูลของถนน",
+        size=16, bold=True, underline=True, space_before=8
+    )
+
+    if intro_text:
+        para = doc.add_paragraph()
+        para.paragraph_format.first_line_indent = Cm(1.0)
+        para.paragraph_format.space_before = Pt(2)
+        para.paragraph_format.space_after = Pt(4)
+        run = para.add_run(intro_text)
+        _set_run_font(run, size=16)
+
+    fields = [
+        ("ความยาวถนน",     f"{project_info.get('length', 1):.2f} กม."),
+        ("ความกว้างรวม",   f"{project_info.get('total_width', 0):.2f} ม."),
+        ("จำนวนช่องจราจร", f"{project_info.get('num_lanes', 2)} ช่อง"),
+    ]
+    for label, value in fields:
+        para = doc.add_paragraph()
+        para.paragraph_format.first_line_indent = Cm(1.0)
+        para.paragraph_format.space_before = Pt(2)
+        para.paragraph_format.space_after = Pt(2)
+        run_label = para.add_run(f"{label}: ")
+        _set_run_font(run_label, size=16, bold=True)
+        run_value = para.add_run(value)
+        _set_run_font(run_value, size=16, bold=False)
+
+    # รายละเอียดวัสดุ
+    _add_heading_para(
+        f"{sec_detail} รายละเอียดวัสดุและราคา",
+        size=16, bold=True, underline=True, space_before=10
+    )
+
+    summary_data = []
+    length = project_info.get('length', 1)
+
+    for ptype, data in all_details.items():
+        structure_name = data.get('name', ptype)
+        details = data.get('details', [])
+        _add_heading_para(f"ผิวทางประเภท {structure_name}", size=16, bold=True, space_before=6, space_after=2)
+
+        if details:
+            table = doc.add_table(rows=len(details) + 2, cols=4)
+            table.style = 'Table Grid'
+            col_widths_t = [Cm(7), Cm(3), Cm(3.5), Cm(3.5)]
+            for row in table.rows:
+                for idx, cell in enumerate(row.cells):
+                    cell.width = col_widths_t[idx]
+
+            headers_t = ['รายการ', 'ปริมาณ', 'ราคา/หน่วย (บาท)', 'มูลค่า (บาท)']
+            for j, h in enumerate(headers_t):
+                cell = table.rows[0].cells[j]
+                cell.text = ''
+                p = cell.paragraphs[0]
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = p.add_run(h)
+                _set_run_font(run, size=15, bold=True)
+
+            subtotal = 0
+            for i, d in enumerate(details):
+                rc = table.rows[i + 1].cells
+                rc[0].text = ''
+                run = rc[0].paragraphs[0].add_run(str(d['รายการ']))
+                _set_run_font(run, size=15)
+                rc[1].text = ''
+                rc[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = rc[1].paragraphs[0].add_run(f"{d['ปริมาณ']:,.0f} {d['หน่วย']}")
+                _set_run_font(run, size=15)
+                rc[2].text = ''
+                rc[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                run = rc[2].paragraphs[0].add_run(f"{d['ราคา/หน่วย']:,.0f}")
+                _set_run_font(run, size=15)
+                rc[3].text = ''
+                rc[3].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                run = rc[3].paragraphs[0].add_run(f"{d['มูลค่า (บาท)']:,.0f}")
+                _set_run_font(run, size=15)
+                subtotal += d['มูลค่า (บาท)']
+
+            # แถวรวม
+            last_row = table.rows[len(details) + 1]
+            last_row.cells[0].merge(last_row.cells[2])
+            last_row.cells[0].text = ''
+            p_sum = last_row.cells[0].paragraphs[0]
+            p_sum.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run = p_sum.add_run(f"รวม {structure_name}")
+            _set_run_font(run, size=15, bold=True)
+            last_row.cells[3].text = ''
+            last_row.cells[3].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run = last_row.cells[3].paragraphs[0].add_run(f"{subtotal:,.0f}")
+            _set_run_font(run, size=15, bold=True)
+
+            doc.add_paragraph()
+            summary_data.append({
+                'name': structure_name,
+                'total_value': subtotal,
+                'cost_per_km_million': data.get('cost_per_km', 0),
+                'cost_per_sqm': data.get('cost_sqm', 0)
+            })
+
+    # สรุปค่าใช้จ่าย
+    _add_heading_para(f"{sec_summary} สรุปค่าใช้จ่าย", size=16, bold=True, underline=True, space_before=10)
+
+    if summary_data:
+        sum_table = doc.add_table(rows=len(summary_data) + 1, cols=4)
+        sum_table.style = 'Table Grid'
+        col_widths_s = [Cm(7), Cm(3.5), Cm(3), Cm(3.5)]
+        for row in sum_table.rows:
+            for idx, cell in enumerate(row.cells):
+                cell.width = col_widths_s[idx]
+
+        hdrs = ['ชนิดโครงสร้าง', 'มูลค่ารวม/กม. (บาท)', 'ราคา/กม. (ล้านบาท)', 'ราคา/ตร.ม. (บาท)']
+        for j, h in enumerate(hdrs):
+            cell = sum_table.rows[0].cells[j]
+            cell.text = ''
+            p = cell.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = p.add_run(h)
+            _set_run_font(run, size=15, bold=True)
+
+        for i, item in enumerate(summary_data):
+            total_per_km = item['total_value'] / length if length > 0 else 0
+            r = sum_table.rows[i + 1]
+            r.cells[0].text = ''
+            run = r.cells[0].paragraphs[0].add_run(item['name'])
+            _set_run_font(run, size=15)
+            for cidx, val in enumerate([
+                f"{total_per_km:,.0f}",
+                f"{item['cost_per_km_million']:.2f}",
+                f"{item['cost_per_sqm']:,.2f}"
+            ]):
+                r.cells[cidx + 1].text = ''
+                r.cells[cidx + 1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                run = r.cells[cidx + 1].paragraphs[0].add_run(val)
+                _set_run_font(run, size=15)
+
+    doc.add_paragraph()
+    footer_para = doc.add_paragraph()
+    footer_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    run = footer_para.add_run(f"รายงานสร้างเมื่อ: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    _set_run_font(run, size=14)
+
+    return doc
+
 # ===== Main Application =====
 
 @st.cache_data
@@ -1725,7 +1920,44 @@ def main():
                 st.metric("📐 บาท/ตร.ม.", f"{cost_per_sqm:.2f}")
     
 
+        # ===== ส่งต้นทุนก่อสร้างไปยัง LCCA =====
+        st.divider()
+        st.subheader("📤 ส่งข้อมูลไปยัง LCCA")
 
+        # สร้าง preview ข้อมูลที่จะส่ง
+        send_data = {}
+        for key, name, cost_km, cost_sqm, life, show in all_structures:
+            if show:
+                send_data[key] = {
+                    'ชื่อ': name,
+                    'ต้นทุนก่อสร้าง': round(cost_sqm, 2),
+                    'รหัส': key,
+                }
+
+        if send_data:
+            preview_rows = [
+                {'รหัส': k, 'ชื่อโครงสร้าง': v['ชื่อ'],
+                 'ต้นทุนก่อสร้าง (บาท/ตร.ม.)': v['ต้นทุนก่อสร้าง']}
+                for k, v in send_data.items()
+            ]
+            st.dataframe(preview_rows, use_container_width=True, hide_index=True)
+
+            col_send, col_clear = st.columns(2)
+            with col_send:
+                if st.button("📤 ส่งต้นทุนก่อสร้างไป LCCA",
+                             type="primary", use_container_width=True,
+                             key="btn_send_to_lcca"):
+                    st.session_state['cost_to_lcca'] = send_data
+                    st.success(f"✅ เตรียมส่ง {len(send_data)} ทางเลือกไปยัง LCCA แล้ว")
+                    st.info("💡 เปิดหน้า **3 · LCCA** เพื่อยืนยันการรับข้อมูล")
+            with col_clear:
+                if st.button("🗑️ ล้างข้อมูลที่รอส่ง",
+                             use_container_width=True,
+                             key="btn_clear_lcca"):
+                    st.session_state.pop('cost_to_lcca', None)
+                    st.info("ล้างข้อมูลแล้ว")
+        else:
+            st.warning("⚠️ ไม่มีโครงสร้างที่เลือก 'แสดงในรายงาน' — กรุณาเลือกอย่างน้อย 1 โครงสร้าง")
 
 
     # ===== Tab 3: ค่าบำรุงรักษา =====
@@ -1768,13 +2000,77 @@ def main():
                 
                 st.divider()
                 
-                # ปุ่มสร้างรายงาน
+                # ===== รายงานแบบที่ปรึกษา =====
+                st.subheader("📋 สร้างรายงานแบบที่ปรึกษา")
+                
+                with st.expander("⚙️ ตั้งค่ารายงาน", expanded=True):
+                    col_cfg1, col_cfg2 = st.columns(2)
+                    with col_cfg1:
+                        chapter_num = st.text_input(
+                            "หมายเลขบทหลัก (เช่น 4, 5)",
+                            value="4",
+                            key="rpt_chapter_num"
+                        )
+                    with col_cfg2:
+                        section_start = st.text_input(
+                            "หมายเลขหัวข้อเริ่มต้น (เช่น 4.7)",
+                            value="4.7",
+                            key="rpt_section_start"
+                        )
+                    
+                    _pi = st.session_state.get('project_info', {})
+                    _default_intro = (
+                        f"รายงานวิเคราะห์ต้นทุนค่าก่อสร้างโครงสร้างชั้นทางฉบับนี้ "
+                        f"จัดทำขึ้นเพื่อเปรียบเทียบทางเลือกโครงสร้างชั้นทางประเภทต่าง ๆ "
+                        f"สำหรับถนน {_pi.get('num_lanes', 4)} ช่องจราจร "
+                        f"ความกว้างรวม {_pi.get('total_width', 0):.2f} เมตร "
+                        f"ระยะทาง {_pi.get('length', 1):.2f} กิโลเมตร "
+                        f"โดยครอบคลุมทั้งผิวทางแอสฟัลต์คอนกรีตและผิวทางคอนกรีตซีเมนต์ (JPCP, JRCP, CRCP) "
+                        f"การวิเคราะห์อ้างอิงราคาวัสดุและค่าก่อสร้างตามมาตรฐานกรมทางหลวง "
+                        f"เพื่อใช้เป็นข้อมูลประกอบการตัดสินใจเลือกโครงสร้างชั้นทางที่เหมาะสมกับสภาพโครงการ"
+                    )
+                    intro_text = st.text_area(
+                        "บทเกริ่นนำ (แสดงใต้หัวข้อข้อมูลโครงการ)",
+                        value=_default_intro,
+                        height=120,
+                        key="rpt_intro_text"
+                    )
+                
+                if not DOCX_AVAILABLE:
+                    st.warning("⚠️ ไม่สามารถสร้างรายงาน Word ได้ เนื่องจาก python-docx ไม่สามารถใช้งานได้")
+                elif st.button("📋 สร้างรายงาน Word แบบที่ปรึกษา", type="primary", use_container_width=True, key="btn_consultant_report"):
+                    try:
+                        doc = generate_word_report_consultant(
+                            st.session_state['project_info'],
+                            all_details,
+                            chapter_num=chapter_num,
+                            section_start=section_start,
+                            intro_text=intro_text
+                        )
+                        buf = io.BytesIO()
+                        doc.save(buf)
+                        buf.seek(0)
+                        st.download_button(
+                            "⬇️ ดาวน์โหลด Word แบบที่ปรึกษา",
+                            data=buf,
+                            file_name=f"Consultant_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            use_container_width=True,
+                            key="dl_consultant_report"
+                        )
+                        st.success("✅ สร้างรายงานแบบที่ปรึกษาสำเร็จ!")
+                    except Exception as e:
+                        st.error(f"❌ เกิดข้อผิดพลาด: {str(e)}")
+                
+                st.divider()
+                
+                # ปุ่มสร้างรายงานแบบย่อ (เดิม) + JSON
                 c1, c2 = st.columns(2)
                 
                 with c1:
                     if not DOCX_AVAILABLE:
                         st.warning("⚠️ ไม่สามารถสร้างรายงาน Word ได้ เนื่องจาก python-docx ไม่สามารถใช้งานได้")
-                    elif st.button("📄 สร้างรายงาน Word", type="primary", use_container_width=True):
+                    elif st.button("📄 สร้างรายงาน Word แบบย่อ", use_container_width=True, key="btn_short_report"):
                         try:
                             doc = generate_word_report_materials_only(
                                 st.session_state['project_info'],
@@ -1785,10 +2081,11 @@ def main():
                             doc.save(buf)
                             buf.seek(0)
                             
-                            st.download_button("⬇️ ดาวน์โหลด Word", data=buf,
+                            st.download_button("⬇️ ดาวน์โหลด Word แบบย่อ", data=buf,
                                                file_name=f"Materials_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
                                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                               use_container_width=True)
+                                               use_container_width=True,
+                                               key="dl_short_report")
                             st.success("✅ สร้างรายงานสำเร็จ!")
                         except Exception as e:
                             st.error(f"❌ เกิดข้อผิดพลาดในการสร้างรายงาน: {str(e)}")
