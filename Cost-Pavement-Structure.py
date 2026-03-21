@@ -1633,27 +1633,43 @@ def main():
         loaded_project = st.session_state.get('loaded_project', {})
         loaded_info = loaded_project.get('project_info', {})
         
-        project_name = st.text_input("ชื่อโครงการ", value=loaded_info.get('name', "โครงการก่อสร้างทางหลวง"))
-        road_length = st.number_input("ความยาวถนน (กม.)", value=loaded_info.get('length', 1.0), min_value=0.1, step=0.1)
+        # ดึง json_version เพื่อใส่ใน key → force refresh เมื่อ load JSON ใหม่
+        v_sb = st.session_state.get('json_version', 0)
+
+        project_name = st.text_input("ชื่อโครงการ",
+            value=loaded_info.get('name', "โครงการก่อสร้างทางหลวง"),
+            key=f"sidebar_project_name_v{v_sb}")
+        road_length = st.number_input("ความยาวถนน (กม.)",
+            value=float(loaded_info.get('length', 1.0)),
+            min_value=0.1, step=0.1,
+            key=f"sidebar_road_length_v{v_sb}")
         
         st.divider()
         st.header("📐 ขนาดถนน")
-        lane_width = st.number_input("ความกว้างช่องจราจร (ม.)", value=loaded_info.get('lane_width', 3.5), min_value=2.5, max_value=4.0, step=0.25)
+        lane_width = st.number_input("ความกว้างช่องจราจร (ม.)",
+            value=float(loaded_info.get('lane_width', 3.5)),
+            min_value=2.5, max_value=4.0, step=0.25,
+            key=f"sidebar_lane_width_v{v_sb}")
         
         # หา index สำหรับ num_lanes_per_direction
-        # แปลงจาก num_lanes เดิม (รวม 2 ทิศทาง) เป็น lanes_per_direction
-        default_lanes_total = loaded_info.get('num_lanes', 4)  # default 4 (2 ช่อง/ทิศทาง)
+        default_lanes_total = loaded_info.get('num_lanes', 4)
         default_lanes_per_dir = default_lanes_total // 2
-        
         lanes_per_dir_options = [2, 3, 4]
         lanes_per_dir_idx = lanes_per_dir_options.index(default_lanes_per_dir) if default_lanes_per_dir in lanes_per_dir_options else 0
-        lanes_per_direction = st.selectbox("จำนวนช่องต่อทิศทาง (เลน/ทิศทาง)", options=lanes_per_dir_options, index=lanes_per_dir_idx)
+        lanes_per_direction = st.selectbox("จำนวนช่องต่อทิศทาง (เลน/ทิศทาง)",
+            options=lanes_per_dir_options, index=lanes_per_dir_idx,
+            key=f"sidebar_lanes_per_dir_v{v_sb}")
         
-        # คำนวณจำนวนช่องรวม (คูณ 2 สำหรับ 2 ทิศทาง)
         num_lanes = lanes_per_direction * 2
         
-        shoulder_left = st.number_input("ไหล่ทางซ้าย (ม.)", value=loaded_info.get('shoulder_left', 2.5), min_value=0.0, max_value=3.5, step=0.25)
-        shoulder_right = st.number_input("ไหล่ทางขวา (ม.)", value=loaded_info.get('shoulder_right', 1.5), min_value=0.0, max_value=3.5, step=0.25)
+        shoulder_left = st.number_input("ไหล่ทางซ้าย (ม.)",
+            value=float(loaded_info.get('shoulder_left', 2.5)),
+            min_value=0.0, max_value=3.5, step=0.25,
+            key=f"sidebar_shoulder_left_v{v_sb}")
+        shoulder_right = st.number_input("ไหล่ทางขวา (ม.)",
+            value=float(loaded_info.get('shoulder_right', 1.5)),
+            min_value=0.0, max_value=3.5, step=0.25,
+            key=f"sidebar_shoulder_right_v{v_sb}")
         
         # คำนวณความกว้างรวม
         # ความกว้างผิวจราจร = ช่องจราจร × จำนวนช่อง (รวม 2 ทิศทาง)
