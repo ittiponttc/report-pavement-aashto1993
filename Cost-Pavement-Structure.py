@@ -1886,7 +1886,16 @@ def main():
         
         with col3:
             jrcp1_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp1_show")
-            jrcp1_name = st.text_input("ชื่อโครงสร้าง JPCP/JRCP (1)", value="JPCP/JRCP (1): คอนกรีตบนดินซีเมนต์", key="jrcp1_name")
+            # อ่าน concrete type ที่เลือกจาก session_state เพื่อ prefix ชื่อ
+            _jrcp1_ctype = st.session_state.get(f"jrcp1_ctype_0_v{v}", 'JRCP')
+            _jrcp1_prefix = f"{_jrcp1_ctype} (1): "
+            _jrcp1_suffix = st.text_input(
+                f"ชื่อโครงสร้าง {_jrcp1_ctype} (1) — กรอกรายละเอียด",
+                value=st.session_state.get("jrcp1_name_suffix", "คอนกรีตบนดินซีเมนต์"),
+                key="jrcp1_name_suffix",
+                placeholder="เช่น คอนกรีตบนดินซีเมนต์"
+            )
+            jrcp1_name = _jrcp1_prefix + _jrcp1_suffix
             with st.expander(f"● {jrcp1_name}", expanded=True):
                 jrcp1_layers = render_layer_editor(get_default_jrcp1_layers(), "jrcp1", total_width, road_length, v=v)
                 jrcp1_layer_cost, jrcp1_layer_details = calculate_layer_cost(jrcp1_layers, road_length)
@@ -1911,7 +1920,15 @@ def main():
         
         with col4:
             jrcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp2_show")
-            jrcp2_name = st.text_input("ชื่อโครงสร้าง JPCP/JRCP (2)", value="JPCP/JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์", key="jrcp2_name")
+            _jrcp2_ctype = st.session_state.get(f"jrcp2_ctype_0_v{v}", 'JRCP')
+            _jrcp2_prefix = f"{_jrcp2_ctype} (2): "
+            _jrcp2_suffix = st.text_input(
+                f"ชื่อโครงสร้าง {_jrcp2_ctype} (2) — กรอกรายละเอียด",
+                value=st.session_state.get("jrcp2_name_suffix", "คอนกรีตบนหินคลุกผสมซีเมนต์"),
+                key="jrcp2_name_suffix",
+                placeholder="เช่น คอนกรีตบนหินคลุกผสมซีเมนต์"
+            )
+            jrcp2_name = _jrcp2_prefix + _jrcp2_suffix
             with st.expander(f"● {jrcp2_name}", expanded=True):
                 jrcp2_layers = render_layer_editor(get_default_jrcp2_layers(), "jrcp2", total_width, road_length, v=v)
                 jrcp2_layer_cost, jrcp2_layer_details = calculate_layer_cost(jrcp2_layers, road_length)
