@@ -221,6 +221,7 @@ def get_default_jrcp1_layers():
         if layers: return layers
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 28, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 800},
+        {'name': 'Wire Mesh (W6×6)', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Soil Cement Base', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'cu.m', 'unit_cost': 621},
         {'name': 'Sand Embankment', 'thickness': 60, 'unit': 'cm', 'quantity': 13200, 'qty_unit': 'cu.m', 'unit_cost': 361},
@@ -245,6 +246,7 @@ def get_default_jrcp2_layers():
         if layers: return layers
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 28, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 800},
+        {'name': 'Wire Mesh (W6×6)', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'cu.m', 'unit_cost': 914},
         {'name': 'Sand Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'cu.m', 'unit_cost': 361},
@@ -269,7 +271,7 @@ def get_default_crcp1_layers():
         if layers: return layers
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 25, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 850},
-        {'name': 'Steel Reinforcement', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 150},
+        {'name': 'Steel Reinforcement (CRCP Rebar)', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 200},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Soil Cement Base', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'cu.m', 'unit_cost': 621},
         {'name': 'Sand Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'cu.m', 'unit_cost': 361},
@@ -283,7 +285,7 @@ def get_default_crcp2_layers():
         if layers: return layers
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 25, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 850},
-        {'name': 'Steel Reinforcement', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 150},
+        {'name': 'Steel Reinforcement (CRCP Rebar)', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 200},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'cu.m', 'unit_cost': 914},
         {'name': 'Sand Embankment', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'cu.m', 'unit_cost': 361},
@@ -448,7 +450,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
         name_lower = layer['name'].lower()
         if any(x in name_lower for x in [
             'wearing', 'binder', 'asphalt', 'concrete', 'tack', 'prime',
-            'geotextile', 'steel',
+            'geotextile', 'steel', 'wire',
             'ac base',              # AC Base Course จาก JSON
             'ac wearing', 'ac binder',
         ]):
@@ -718,26 +720,71 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
 
 
 def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0):
-    """แสดง UI สำหรับแก้ไขรอยต่อ พร้อมแสดงราคา บาท/ตร.ม."""
+    """แสดง UI สำหรับแก้ไขรอยต่อ พร้อมแสดงราคา บาท/ตร.ม.
+    ตรวจสอบ session_state เพื่อรู้ชนิด concrete (JPCP/@4m หรือ JRCP/@10m)
+    """
     st.markdown("---")
     
+    # ตรวจสอบชนิด concrete จาก session_state
+    # key ที่ render_layer_editor บันทึก: f"{key_prefix}_ctype_{i}_v{v}"
+    concrete_type = None
+    for i in range(5):  # scan layer 0-4
+        ctype_key = f"{key_prefix}_ctype_{i}_v{v}"
+        if ctype_key in st.session_state:
+            concrete_type = st.session_state[ctype_key]
+            break
+
+    # fallback: ดูจาก joint name เดิม หรือ key_prefix
+    if concrete_type is None:
+        first_joint_name = joints[0].get('name', '') if joints else ''
+        if 'JPCP' in first_joint_name or '@4m' in first_joint_name:
+            concrete_type = 'JPCP'
+        elif 'crcp' in key_prefix.lower():
+            concrete_type = 'CRCP'
+        else:
+            # default: key_prefix ที่ขึ้นต้น jrcp → JRCP
+            concrete_type = 'JRCP'
+
+    # กำหนด joint spacing และ name ตามชนิด
+    if concrete_type == 'JPCP':
+        joint_spacing = 4   # เมตร
+        joint_label = '@4m'
+    else:
+        joint_spacing = 10  # เมตร
+        joint_label = '@10m'
+
+    # ปรับ joints เริ่มต้นให้ตรงกับชนิดที่เลือก
+    adjusted_joints = []
+    for j in joints:
+        jname = j['name']
+        # เปลี่ยน label spacing ให้ตรง (Transverse Joint @Xm)
+        if 'Transverse Joint' in jname:
+            jname = f"Transverse Joint {joint_label}"
+            # คำนวณปริมาณ: ความกว้างถนน (area_per_km/1000) × 1000/spacing
+            width_m = area_per_km / 1000
+            qty_auto = (road_length * 1000 / joint_spacing) * width_m
+            adj_qty = qty_auto
+        else:
+            adj_qty = j['quantity']
+        adjusted_joints.append({**j, 'name': jname, 'quantity': adj_qty})
+
     # Checkbox เลือกรวม/ไม่รวม Joints
     col_header = st.columns([3, 1])
     with col_header[0]:
-        st.markdown("**รอยต่อ (Joints)**")
+        st.markdown(f"**รอยต่อ (Joints) — {concrete_type} ระยะ {joint_spacing} ม.**")
     with col_header[1]:
         include_joints = st.checkbox("รวมราคา Joints", value=True, key=f"{key_prefix}_include_joints_v{v}")
     
     cols = st.columns([3, 1.5, 1.5, 1.5])
     cols[0].markdown("รายการ")
     cols[1].markdown("ปริมาณ (m)")
-    cols[2].markdown("ราคา/หน่วย")
+    cols[2].markdown("ราคา/ม. (บาท)")
     cols[3].markdown("ราคา (บาท/ตร.ม.)")
     
     updated_joints = []
     total_area = area_per_km * road_length
     
-    for i, joint in enumerate(joints):
+    for i, joint in enumerate(adjusted_joints):
         cols = st.columns([3, 1.5, 1.5, 1.5])
         
         with cols[0]:
@@ -800,7 +847,7 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     base_layers = []
     for layer in layers:
         name_lower = layer['name'].lower()
-        if any(x in name_lower for x in ['wearing', 'binder', 'asphalt', 'concrete', 'tack', 'prime', 'geotextile', 'steel', 'ac base', 'ac wearing', 'ac binder']):
+        if any(x in name_lower for x in ['wearing', 'binder', 'asphalt', 'concrete', 'tack', 'prime', 'geotextile', 'steel', 'wire', 'ac base', 'ac wearing', 'ac binder']):
             surface_layers.append(layer)
         else:
             base_layers.append(layer)
