@@ -497,7 +497,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
     cols = st.columns([3, 1, 1.5])
     cols[0].markdown("รายการ")
     cols[1].markdown("หนา (cm)")
-    cols[2].markdown("ราคา (บาท/ตร.ม.)")
+    cols[2].markdown("ราคา (บาท/ตร.ม.) ✏️")
     
     # ตัวเลือกวัสดุ
     wearing_options = ['AC Wearing Course', 'PMA Wearing Course']
@@ -622,9 +622,22 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
         
         # ใช้ราคาจาก Library หรือค่า default
         default_cost = lib_price if lib_price else layer['unit_cost']
-        
+
         with cols[2]:
-            st.markdown(f"**{default_cost:,.2f}**")
+            # วัสดุที่ราคาคงที่ (geotextile, wire mesh, steel rebar) → ให้แก้ไขได้
+            if is_concrete or is_wearing or is_binder or is_ac_base:
+                # ราคาดึงจาก Library อัตโนมัติ → แสดงแบบอ่านอย่างเดียว
+                st.markdown(f"**{default_cost:,.2f}**")
+            else:
+                # geotextile / wire mesh / steel / อื่นๆ → number_input แก้ไขได้
+                default_cost = st.number_input(
+                    "ราคา",
+                    value=float(default_cost),
+                    min_value=0.0,
+                    step=5.0,
+                    key=f"{key_prefix}_price_{i}_v{v}",
+                    label_visibility="collapsed"
+                )
         
         # เก็บชื่อที่ถูกต้อง
         if is_concrete:
