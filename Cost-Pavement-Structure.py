@@ -302,27 +302,57 @@ def calculate_quantity(thickness_cm, width_m, length_km, qty_unit):
 
 def calculate_layer_cost(layers, road_length_km=1.0):
     """คำนวณค่าก่อสร้างจากชั้นโครงสร้าง
-    ราคาทั้งหมดเป็น บาท/ตร.ม. × ปริมาณ (ตร.ม.)
+    - วัสดุผิวทาง/ผิวคอนกรีต/วัสดุอื่นๆ: qty_unit='sq.m' → หน่วย ตร.ม., ราคา/หน่วย = บาท/ตร.ม.
+    - วัสดุพื้นทาง/รองพื้นทาง: qty_unit='cu.m' → หน่วย ลบ.ม., ราคา/หน่วย = บาท/ลบ.ม.
     """
     total = 0
     details = []
-    
+
+    # คำนวณ unit_cost สำหรับวัสดุ cu.m:
+    # unit_cost ที่เก็บใน layer สำหรับ cu.m คือ บาท/ตร.ม. (= ราคา_ลบม × หนา_cm/100)
+    # แต่เราต้องการแสดง บาท/ลบ.ม. จริงๆ ดังนั้นต้องย้อนกลับ
+    BASE_KEYWORDS = ['crushed rock', 'soil aggregate', 'soil cement', 'cement modified',
+                     'cement treated', 'selected material', 'sand embankment']
+
     for layer in layers:
-        # ปริมาณเป็น ตร.ม. แล้ว (ไม่ต้องคูณ road_length อีก เพราะคำนวณไว้แล้ว)
         qty = layer['quantity']
-        # ราคาเป็น บาท/ตร.ม.
         cost = qty * layer['unit_cost']
         total += cost
-        
+
+        qty_unit = layer.get('qty_unit', 'sq.m')
+        if qty_unit == 'cu.m':
+            display_unit = 'ลบ.ม.'
+            # unit_cost ที่เก็บไว้คือ บาท/ตร.ม. (= ราคา_ลบม × t/100)
+            # ย้อนกลับเป็น บาท/ลบ.ม. = unit_cost / (thickness_cm/100)
+            # แต่ถ้า thickness = 0 หรือ unit ไม่ใช่ cm ให้ใช้ BASE_MATERIAL_PRICES โดยตรง
+            name_lower = layer['name'].lower()
+            is_base = any(kw in name_lower for kw in BASE_KEYWORDS)
+            if is_base:
+                thick_cm = float(layer.get('thickness', 1))
+                if thick_cm > 0 and layer['unit'].lower() in ('cm', 'ซม.', 'ซ.ม.'):
+                    price_per_cum = layer['unit_cost'] / (thick_cm / 100)
+                else:
+                    price_per_cum = layer['unit_cost']
+            else:
+                price_per_cum = layer['unit_cost']
+            display_unit_price = f"{price_per_cum:,.0f}"
+            display_price_label = 'บาท/ลบ.ม.'
+        else:
+            display_unit = 'ตร.ม.'
+            display_unit_price = f"{layer['unit_cost']:,.0f}"
+            display_price_label = 'บาท/ตร.ม.'
+
         details.append({
             'รายการ': layer['name'],
             'ความหนา': f"{layer['thickness']} {layer['unit']}",
             'ปริมาณ': qty,
-            'หน่วย': 'ตร.ม.',
+            'หน่วย': display_unit,
             'ราคา/หน่วย': layer['unit_cost'],
+            'ราคา/หน่วย (แสดง)': display_unit_price,
+            'หน่วยราคา': display_price_label,
             'มูลค่า (บาท)': cost
         })
-    
+
     return total, details
 
 
@@ -785,7 +815,30 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     
     row_idx = 1
     running_total = 0
-    
+
+    # helper: แปลง qty_unit เป็นภาษาไทยและคำนวณ unit_cost ที่แสดง (บาท/หน่วย)
+    BASE_KEYWORDS = ['crushed rock', 'soil aggregate', 'soil cement', 'cement modified',
+                     'cement treated', 'selected material', 'sand embankment']
+
+    def _unit_and_price(layer):
+        """คืน (หน่วยแสดง, ราคาแสดง, หมายเหตุหน่วยราคา) ตามชนิดวัสดุ"""
+        qty_unit = layer.get('qty_unit', 'sq.m')
+        if qty_unit == 'cu.m':
+            name_lower = layer['name'].lower()
+            is_base = any(kw in name_lower for kw in BASE_KEYWORDS)
+            if is_base:
+                thick_cm = float(layer.get('thickness', 1))
+                u = layer.get('unit', 'cm').lower()
+                if thick_cm > 0 and u in ('cm', 'ซม.', 'ซ.ม.'):
+                    price_cum = layer['unit_cost'] / (thick_cm / 100)
+                else:
+                    price_cum = layer['unit_cost']
+            else:
+                price_cum = layer['unit_cost']
+            return 'ลบ.ม.', f"{price_cum:,.0f}", 'บาท/ลบ.ม.'
+        else:
+            return 'ตร.ม.', f"{layer['unit_cost']:,.0f}", 'บาท/ตร.ม.'
+
     # กลุ่ม 1: ผิวทาง
     table.rows[row_idx].cells[0].text = '1'
     table.rows[row_idx].cells[1].text = 'ผิวทาง'
@@ -795,12 +848,13 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     for i, layer in enumerate(surface_layers, 1):
         qty = layer['quantity'] * road_length
         cost = qty * layer['unit_cost']
+        unit_th, price_str, price_lbl = _unit_and_price(layer)
         table.rows[row_idx].cells[0].text = f'1.{i}'
         table.rows[row_idx].cells[1].text = layer['name']
         table.rows[row_idx].cells[2].text = f"{layer['thickness']} {layer['unit']}"
         table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
-        table.rows[row_idx].cells[4].text = layer['qty_unit']
-        table.rows[row_idx].cells[5].text = f"{layer['unit_cost']:,.0f}"
+        table.rows[row_idx].cells[4].text = unit_th
+        table.rows[row_idx].cells[5].text = f"{price_str} ({price_lbl})"
         table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
         surface_total += cost
         row_idx += 1
@@ -823,8 +877,8 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
             table.rows[row_idx].cells[0].text = f'2.{i}'
             table.rows[row_idx].cells[1].text = joint['name']
             table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
-            table.rows[row_idx].cells[4].text = joint['qty_unit']
-            table.rows[row_idx].cells[5].text = f"{joint['unit_cost']:,.0f}"
+            table.rows[row_idx].cells[4].text = 'ม.'
+            table.rows[row_idx].cells[5].text = f"{joint['unit_cost']:,.0f} (บาท/ม.)"
             table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
             joint_total += cost
             row_idx += 1
@@ -846,12 +900,13 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     for i, layer in enumerate(base_layers, 1):
         qty = layer['quantity'] * road_length
         cost = qty * layer['unit_cost']
+        unit_th, price_str, price_lbl = _unit_and_price(layer)
         table.rows[row_idx].cells[0].text = f'{group_num}.{i}'
         table.rows[row_idx].cells[1].text = layer['name']
         table.rows[row_idx].cells[2].text = f"{layer['thickness']} {layer['unit']}"
         table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
-        table.rows[row_idx].cells[4].text = layer['qty_unit']
-        table.rows[row_idx].cells[5].text = f"{layer['unit_cost']:,.0f}"
+        table.rows[row_idx].cells[4].text = unit_th
+        table.rows[row_idx].cells[5].text = f"{price_str} ({price_lbl})"
         table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
         base_total += cost
         row_idx += 1
@@ -919,15 +974,14 @@ def generate_word_report_materials_only(project_info, all_details):
         
         doc.add_heading(structure_name, level=2)
         if details:
-            table = doc.add_table(rows=len(details)+1, cols=4)
+            table = doc.add_table(rows=len(details)+1, cols=5)
             table.style = 'Table Grid'
             
-            # Header
-            headers = ['รายการ', 'ปริมาณ', 'ราคา/หน่วย (บาท)', 'มูลค่า (บาท)']
+            # Header — เพิ่มคอลัมน์ "หน่วย" ระหว่าง ปริมาณ กับ ราคา/หน่วย
+            headers = ['รายการ', 'ปริมาณ', 'หน่วย', 'ราคา/หน่วย (บาท)', 'มูลค่า (บาท)']
             for j, h in enumerate(headers):
                 cell = table.rows[0].cells[j]
                 cell.text = h
-                # ทำให้ header เป็นตัวหนา
                 for paragraph in cell.paragraphs:
                     for run in paragraph.runs:
                         run.font.bold = True
@@ -935,10 +989,16 @@ def generate_word_report_materials_only(project_info, all_details):
             # Data rows
             subtotal = 0
             for i, d in enumerate(details):
+                # ดึงหน่วยราคาจาก key ใหม่ (ถ้ามี) หรือ fallback จากหน่วยปริมาณ
+                unit_display = d.get('หน่วย', 'ตร.ม.')
+                price_display = d.get('ราคา/หน่วย (แสดง)', f"{d['ราคา/หน่วย']:,.0f}")
+                price_label = d.get('หน่วยราคา', 'บาท/ตร.ม.')
+                
                 table.rows[i+1].cells[0].text = str(d['รายการ'])
-                table.rows[i+1].cells[1].text = f"{d['ปริมาณ']:,.0f} {d['หน่วย']}"
-                table.rows[i+1].cells[2].text = f"{d['ราคา/หน่วย']:,.0f}"
-                table.rows[i+1].cells[3].text = f"{d['มูลค่า (บาท)']:,.0f}"
+                table.rows[i+1].cells[1].text = f"{d['ปริมาณ']:,.0f}"
+                table.rows[i+1].cells[2].text = unit_display
+                table.rows[i+1].cells[3].text = f"{price_display} ({price_label})"
+                table.rows[i+1].cells[4].text = f"{d['มูลค่า (บาท)']:,.0f}"
                 subtotal += d['มูลค่า (บาท)']
             
             # แสดงยอดรวมย่อย
@@ -946,10 +1006,9 @@ def generate_word_report_materials_only(project_info, all_details):
             doc.add_paragraph()
             
             # เก็บข้อมูลสำหรับตารางสรุป
-            cost_per_km_million = data.get('cost_per_km', 0)  # ล้านบาท/กม.
-            cost_per_km_baht = cost_per_km_million * 1_000_000  # บาท/กม.
-            cost_per_sqm = data.get('cost_sqm', 0)  # บาท/ตร.ม.
-            total_value = subtotal  # มูลค่ารวม (บาท)
+            cost_per_km_million = data.get('cost_per_km', 0)
+            cost_per_sqm = data.get('cost_sqm', 0)
+            total_value = subtotal
             
             summary_data.append({
                 'name': structure_name,
@@ -976,7 +1035,6 @@ def generate_word_report_materials_only(project_info, all_details):
         
         # Data rows
         for i, item in enumerate(summary_data):
-            # มูลค่ารวมต่อ กม. = มูลค่ารวม / ความยาว
             total_per_km = item['total_value'] / length if length > 0 else 0
             
             table.rows[i+1].cells[0].text = item['name']
@@ -1084,14 +1142,14 @@ def generate_word_report_consultant(project_info, all_details, chapter_num="4", 
         _add_heading_para(f"ผิวทางประเภท {structure_name}", size=16, bold=True, space_before=6, space_after=2)
 
         if details:
-            table = doc.add_table(rows=len(details) + 2, cols=4)
+            table = doc.add_table(rows=len(details) + 2, cols=5)
             table.style = 'Table Grid'
-            col_widths_t = [Cm(7), Cm(3), Cm(3.5), Cm(3.5)]
+            col_widths_t = [Cm(6.5), Cm(2.5), Cm(1.8), Cm(3.5), Cm(3.5)]
             for row in table.rows:
                 for idx, cell in enumerate(row.cells):
                     cell.width = col_widths_t[idx]
 
-            headers_t = ['รายการ', 'ปริมาณ', 'ราคา/หน่วย (บาท)', 'มูลค่า (บาท)']
+            headers_t = ['รายการ', 'ปริมาณ', 'หน่วย', 'ราคา/หน่วย (บาท)', 'มูลค่า (บาท)']
             for j, h in enumerate(headers_t):
                 cell = table.rows[0].cells[j]
                 cell.text = ''
@@ -1103,34 +1161,49 @@ def generate_word_report_consultant(project_info, all_details, chapter_num="4", 
             subtotal = 0
             for i, d in enumerate(details):
                 rc = table.rows[i + 1].cells
+                # col 0: รายการ
                 rc[0].text = ''
                 run = rc[0].paragraphs[0].add_run(str(d['รายการ']))
                 _set_run_font(run, size=15)
+                # col 1: ปริมาณ
                 rc[1].text = ''
-                rc[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-                run = rc[1].paragraphs[0].add_run(f"{d['ปริมาณ']:,.0f} {d['หน่วย']}")
+                rc[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                run = rc[1].paragraphs[0].add_run(f"{d['ปริมาณ']:,.0f}")
                 _set_run_font(run, size=15)
+                # col 2: หน่วย (ตร.ม. หรือ ลบ.ม.)
+                unit_display = d.get('หน่วย', 'ตร.ม.')
                 rc[2].text = ''
-                rc[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                run = rc[2].paragraphs[0].add_run(f"{d['ราคา/หน่วย']:,.0f}")
+                rc[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = rc[2].paragraphs[0].add_run(unit_display)
                 _set_run_font(run, size=15)
+                # col 3: ราคา/หน่วย พร้อมหน่วยราคา
+                price_display = d.get('ราคา/หน่วย (แสดง)', f"{d['ราคา/หน่วย']:,.0f}")
+                price_label = d.get('หน่วยราคา', 'บาท/ตร.ม.')
                 rc[3].text = ''
                 rc[3].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                run = rc[3].paragraphs[0].add_run(f"{d['มูลค่า (บาท)']:,.0f}")
+                run = rc[3].paragraphs[0].add_run(f"{price_display}")
+                _set_run_font(run, size=15)
+                # แสดงหน่วยราคาเป็น superscript-style ด้วย run เล็กถัดไป
+                run2 = rc[3].paragraphs[0].add_run(f" ({price_label})")
+                _set_run_font(run2, size=12)
+                # col 4: มูลค่า
+                rc[4].text = ''
+                rc[4].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                run = rc[4].paragraphs[0].add_run(f"{d['มูลค่า (บาท)']:,.0f}")
                 _set_run_font(run, size=15)
                 subtotal += d['มูลค่า (บาท)']
 
-            # แถวรวม
+            # แถวรวม (merge 4 คอลัมน์แรก)
             last_row = table.rows[len(details) + 1]
-            last_row.cells[0].merge(last_row.cells[2])
+            last_row.cells[0].merge(last_row.cells[3])
             last_row.cells[0].text = ''
             p_sum = last_row.cells[0].paragraphs[0]
             p_sum.alignment = WD_ALIGN_PARAGRAPH.RIGHT
             run = p_sum.add_run(f"รวม {structure_name}")
             _set_run_font(run, size=15, bold=True)
-            last_row.cells[3].text = ''
-            last_row.cells[3].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
-            run = last_row.cells[3].paragraphs[0].add_run(f"{subtotal:,.0f}")
+            last_row.cells[4].text = ''
+            last_row.cells[4].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run = last_row.cells[4].paragraphs[0].add_run(f"{subtotal:,.0f}")
             _set_run_font(run, size=15, bold=True)
 
             doc.add_paragraph()
