@@ -470,11 +470,25 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
     binder_options = ['AC Binder Course']
     base_options = ['AC Base Course']
     concrete_options = ['JPCP', 'JRCP', 'CRCP']
-    
+
+    # ตรวจ concrete type จาก session_state เพื่อซ่อน Wire Mesh เมื่อ JPCP
+    _selected_concrete_type = None
+    for _ci in range(5):
+        _ck = f"{key_prefix}_ctype_{_ci}_v{v}"
+        if _ck in st.session_state:
+            _selected_concrete_type = st.session_state[_ck]
+            break
+    if _selected_concrete_type is None:
+        if 'crcp' in key_prefix.lower():
+            _selected_concrete_type = 'CRCP'
+        elif 'jrcp' in key_prefix.lower():
+            _selected_concrete_type = 'JRCP'
+        else:
+            _selected_concrete_type = 'JPCP'
+
     for i, layer in enumerate(surface_layers):
-        cols = st.columns([3, 1, 1.5])
         name_lower = layer['name'].lower()
-        
+
         # กำหนดว่าเป็นชั้นไหน
         is_wearing = 'wearing' in name_lower
         is_binder = 'binder' in name_lower
@@ -482,6 +496,13 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
                      ('ac base' in name_lower) or \
                      ('interlayer' in name_lower)
         is_concrete = 'concrete' in name_lower or 'ksc' in name_lower
+        is_wire_mesh = 'wire' in name_lower
+
+        # ซ่อน Wire Mesh เมื่อ JPCP (ไม่มีเหล็กในแผ่น)
+        if is_wire_mesh and _selected_concrete_type == 'JPCP':
+            continue
+
+        cols = st.columns([3, 1, 1.5])
         
         with cols[0]:
             if is_wearing:
@@ -793,14 +814,14 @@ def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0):
         with cols[1]:
             qty = st.number_input(
                 "ปริมาณ (m)", value=float(joint['quantity']),
-                key=f"{key_prefix}_jq_{i}_v{v}", label_visibility="collapsed",
+                key=f"{key_prefix}_jq_{i}_s{joint_spacing}_v{v}", label_visibility="collapsed",
                 min_value=0.0, step=100.0
             )
         
         with cols[2]:
             cost = st.number_input(
                 "ราคา/ม.", value=float(joint['unit_cost']),
-                key=f"{key_prefix}_jc_{i}_v{v}", label_visibility="collapsed",
+                key=f"{key_prefix}_jc_{i}_s{joint_spacing}_v{v}", label_visibility="collapsed",
                 min_value=0.0, step=10.0
             )
         
