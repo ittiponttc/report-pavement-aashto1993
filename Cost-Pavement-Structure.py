@@ -72,6 +72,36 @@ st.markdown("""
         border-left: 4px solid #2E86AB;
         margin: 10px 0;
     }
+
+    /* === Selectbox: เขียวอ่อน === */
+    div[data-baseweb="select"] > div {
+        background-color: #e8f5e9 !important;
+        border-color: #66bb6a !important;
+        border-radius: 8px !important;
+    }
+    div[data-baseweb="select"] > div:hover {
+        background-color: #c8e6c9 !important;
+        border-color: #43a047 !important;
+    }
+    div[data-baseweb="select"] svg {
+        fill: #2e7d32 !important;
+    }
+    /* Dropdown list items */
+    div[data-baseweb="menu"] {
+        background-color: #f1f8e9 !important;
+    }
+    div[data-baseweb="menu"] li {
+        background-color: #f1f8e9 !important;
+        color: #1b5e20 !important;
+    }
+    div[data-baseweb="menu"] li:hover {
+        background-color: #c8e6c9 !important;
+    }
+    /* ตัวอักษรใน selectbox */
+    div[data-baseweb="select"] span {
+        color: #1b5e20 !important;
+        font-weight: 500 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
