@@ -2367,7 +2367,7 @@ def main():
                             'saved_at': datetime.now().isoformat()
                         }
                         st.download_button("⬇️ ดาวน์โหลด JSON", data=json.dumps(data, ensure_ascii=False, indent=2),
-                                           file_name=f"Project_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+                                           file_name=f"Cost Est {st.session_state['project_info'].get('name', 'Project')}_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
                                            mime="application/json",
                                            use_container_width=True)
                         st.success("✅ บันทึกโครงการสำเร็จ!")
