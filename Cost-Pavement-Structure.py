@@ -1860,7 +1860,7 @@ def main():
         
         with col1:
             ac1_show = st.checkbox("แสดงในรายงาน", value=True, key="ac1_show")
-            ac1_name = st.text_input("ชื่อโครงสร้าง AC1", value="AC1: แอสฟัลต์บนหินคลุก", key="ac1_name")
+            ac1_name = st.text_input("ชื่อโครงสร้าง AC (1)", value="AC (1): แอสฟัลต์บนหินคลุก", key="ac1_name_input")
             with st.expander(f"● {ac1_name}", expanded=True):
                 ac1_layers = render_layer_editor(get_default_ac1_layers(), "ac1", total_width, road_length, v=v)
                 ac1_cost, ac1_details = calculate_layer_cost(ac1_layers, road_length)
@@ -1871,7 +1871,7 @@ def main():
         
         with col2:
             ac2_show = st.checkbox("แสดงในรายงาน", value=True, key="ac2_show")
-            ac2_name = st.text_input("ชื่อโครงสร้าง AC2", value="AC2: แอสฟัลต์บนหินคลุกผสมซีเมนต์", key="ac2_name")
+            ac2_name = st.text_input("ชื่อโครงสร้าง AC (2)", value="AC (2): แอสฟัลต์บนหินคลุกผสมซีเมนต์", key="ac2_name_input")
             with st.expander(f"● {ac2_name}", expanded=True):
                 ac2_layers = render_layer_editor(get_default_ac2_layers(), "ac2", total_width, road_length, v=v)
                 ac2_cost, ac2_details = calculate_layer_cost(ac2_layers, road_length)
@@ -1886,16 +1886,22 @@ def main():
         
         with col3:
             jrcp1_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp1_show")
-            # อ่าน concrete type ที่เลือกจาก session_state เพื่อ prefix ชื่อ
+            # ชื่อโครงสร้าง: อ่าน ctype จาก session_state เพื่อแสดง prefix ที่ถูกต้อง
+            # ctype_0 ถูกตั้งค่าจาก render_layer_editor ใน expander ด้านล่าง
+            # ใช้ session_state โดยตรงเพื่อหลีกเลี่ยงปัญหา render order
             _jrcp1_ctype = st.session_state.get(f"jrcp1_ctype_0_v{v}", 'JRCP')
-            _jrcp1_prefix = f"{_jrcp1_ctype} (1): "
-            _jrcp1_suffix = st.text_input(
-                f"ชื่อโครงสร้าง {_jrcp1_ctype} (1) — กรอกรายละเอียด",
-                value=st.session_state.get("jrcp1_name_suffix", "คอนกรีตบนดินซีเมนต์"),
-                key="jrcp1_name_suffix",
-                placeholder="เช่น คอนกรีตบนดินซีเมนต์"
+            # default name ตาม ctype ที่เลือก
+            _jrcp1_default_names = {
+                'JPCP': 'JPCP (1): คอนกรีตบนดินซีเมนต์',
+                'JRCP': 'JRCP (1): คอนกรีตบนดินซีเมนต์',
+                'CRCP': 'CRCP (1): คอนกรีตบนดินซีเมนต์',
+            }
+            jrcp1_name = st.text_input(
+                "ชื่อโครงสร้าง (1) — แก้ไขได้",
+                value=_jrcp1_default_names.get(_jrcp1_ctype, f"{_jrcp1_ctype} (1): คอนกรีตบนดินซีเมนต์"),
+                key=f"jrcp1_fullname_{_jrcp1_ctype}_v{v}",
+                placeholder="เช่น JPCP (1): คอนกรีตบนดินซีเมนต์"
             )
-            jrcp1_name = _jrcp1_prefix + _jrcp1_suffix
             with st.expander(f"● {jrcp1_name}", expanded=True):
                 jrcp1_layers = render_layer_editor(get_default_jrcp1_layers(), "jrcp1", total_width, road_length, v=v)
                 jrcp1_layer_cost, jrcp1_layer_details = calculate_layer_cost(jrcp1_layers, road_length)
@@ -1921,14 +1927,17 @@ def main():
         with col4:
             jrcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp2_show")
             _jrcp2_ctype = st.session_state.get(f"jrcp2_ctype_0_v{v}", 'JRCP')
-            _jrcp2_prefix = f"{_jrcp2_ctype} (2): "
-            _jrcp2_suffix = st.text_input(
-                f"ชื่อโครงสร้าง {_jrcp2_ctype} (2) — กรอกรายละเอียด",
-                value=st.session_state.get("jrcp2_name_suffix", "คอนกรีตบนหินคลุกผสมซีเมนต์"),
-                key="jrcp2_name_suffix",
-                placeholder="เช่น คอนกรีตบนหินคลุกผสมซีเมนต์"
+            _jrcp2_default_names = {
+                'JPCP': 'JPCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์',
+                'JRCP': 'JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์',
+                'CRCP': 'CRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์',
+            }
+            jrcp2_name = st.text_input(
+                "ชื่อโครงสร้าง (2) — แก้ไขได้",
+                value=_jrcp2_default_names.get(_jrcp2_ctype, f"{_jrcp2_ctype} (2): คอนกรีตบนหินคลุกผสมซีเมนต์"),
+                key=f"jrcp2_fullname_{_jrcp2_ctype}_v{v}",
+                placeholder="เช่น JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์"
             )
-            jrcp2_name = _jrcp2_prefix + _jrcp2_suffix
             with st.expander(f"● {jrcp2_name}", expanded=True):
                 jrcp2_layers = render_layer_editor(get_default_jrcp2_layers(), "jrcp2", total_width, road_length, v=v)
                 jrcp2_layer_cost, jrcp2_layer_details = calculate_layer_cost(jrcp2_layers, road_length)
@@ -1957,7 +1966,7 @@ def main():
         
         with col5:
             crcp1_show = st.checkbox("แสดงในรายงาน", value=True, key="crcp1_show")
-            crcp1_name = st.text_input("ชื่อโครงสร้าง CRCP1", value="CRCP1: คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์", key="crcp1_name")
+            crcp1_name = st.text_input("ชื่อโครงสร้าง CRCP (1)", value="CRCP (1): คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์", key="crcp1_name_input")
             with st.expander(f"● {crcp1_name}", expanded=True):
                 crcp1_layers = render_layer_editor(get_default_crcp1_layers(), "crcp1", total_width, road_length, v=v)
                 crcp1_cost, crcp1_details = calculate_layer_cost(crcp1_layers, road_length)
@@ -1968,7 +1977,7 @@ def main():
         
         with col6:
             crcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="crcp2_show")
-            crcp2_name = st.text_input("ชื่อโครงสร้าง CRCP2", value="CRCP2: คอนกรีตเสริมเหล็กต่อเนื่องบน CMCR", key="crcp2_name")
+            crcp2_name = st.text_input("ชื่อโครงสร้าง CRCP (2)", value="CRCP (2): คอนกรีตเสริมเหล็กต่อเนื่องบน CMCR", key="crcp2_name_input")
             with st.expander(f"● {crcp2_name}", expanded=True):
                 crcp2_layers = render_layer_editor(get_default_crcp2_layers(), "crcp2", total_width, road_length, v=v)
                 crcp2_cost, crcp2_details = calculate_layer_cost(crcp2_layers, road_length)
