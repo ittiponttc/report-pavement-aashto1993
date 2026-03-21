@@ -301,7 +301,6 @@ def get_default_crcp1_layers():
         if layers: return layers
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 25, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 850},
-        {'name': 'Steel Reinforcement (CRCP Rebar)', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 200},
         {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Soil Cement Base', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'cu.m', 'unit_cost': 621},
@@ -316,11 +315,33 @@ def get_default_crcp2_layers():
         if layers: return layers
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 25, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 850},
-        {'name': 'Steel Reinforcement (CRCP Rebar)', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 200},
         {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'cu.m', 'unit_cost': 914},
         {'name': 'Sand Embankment', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'cu.m', 'unit_cost': 361},
+    ]
+
+
+def get_default_crcp1_joints():
+    """รอยต่อ/เหล็กเสริมสำหรับ CRCP1 - ปริมาณต่อ 1 กม."""
+    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP1', {})
+    if _d.get('details'):
+        _, joints = _parse_json_details_to_layers(_d['details'])
+        if joints: return joints
+    return [
+        {'name': 'Steel Reinforcement (CRCP)', 'quantity': 1000, 'qty_unit': 'm', 'unit_cost': 200},
+        {'name': 'Transverse Joint', 'quantity': 4000, 'qty_unit': 'm', 'unit_cost': 120},
+    ]
+
+def get_default_crcp2_joints():
+    """รอยต่อ/เหล็กเสริมสำหรับ CRCP2 - ปริมาณต่อ 1 กม."""
+    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP2', {})
+    if _d.get('details'):
+        _, joints = _parse_json_details_to_layers(_d['details'])
+        if joints: return joints
+    return [
+        {'name': 'Steel Reinforcement (CRCP)', 'quantity': 1000, 'qty_unit': 'm', 'unit_cost': 200},
+        {'name': 'Transverse Joint', 'quantity': 4000, 'qty_unit': 'm', 'unit_cost': 120},
     ]
 
 
@@ -827,10 +848,13 @@ def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0):
     adjusted_joints = []
     for j in joints:
         jname = j['name']
-        # เปลี่ยน label spacing ให้ตรง (Transverse Joint @Xm)
-        if 'Transverse Joint' in jname:
+        if concrete_type == 'CRCP':
+            # CRCP: Steel Reinforcement และ Longitudinal Joint — ไม่มี Transverse Joint
+            # ปริมาณ = ความยาวถนน (ม.) ผู้ใช้กรอกเอง ใช้ค่า default จาก joints
+            adj_qty = j['quantity'] * road_length
+        elif 'Transverse Joint' in jname:
+            # JPCP/JRCP: คำนวณจาก spacing และความกว้างถนน
             jname = f"Transverse Joint {joint_label}"
-            # คำนวณปริมาณ: ความกว้างถนน (area_per_km/1000) × 1000/spacing
             width_m = area_per_km / 1000
             qty_auto = (road_length * 1000 / joint_spacing) * width_m
             adj_qty = qty_auto
@@ -841,9 +865,13 @@ def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0):
     # Checkbox เลือกรวม/ไม่รวม Joints
     col_header = st.columns([3, 1])
     with col_header[0]:
-        st.markdown(f"**รอยต่อ (Joints) — {concrete_type} ระยะ {joint_spacing} ม.**")
+        if concrete_type == 'CRCP':
+            st.markdown("**เหล็กเสริม & รอยต่อ (CRCP)**")
+        else:
+            st.markdown(f"**รอยต่อ (Joints) — {concrete_type} ระยะ {joint_spacing} ม.**")
     with col_header[1]:
-        include_joints = st.checkbox("รวมราคา Joints", value=True, key=f"{key_prefix}_include_joints_v{v}")
+        _cb_label = "รวมราคา Steel Rebar" if concrete_type == 'CRCP' else "รวมราคา Joints"
+        include_joints = st.checkbox(_cb_label, value=True, key=f"{key_prefix}_include_joints_v{v}")
     
     cols = st.columns([3, 1.5, 1.5, 1.5])
     cols[0].markdown("รายการ")
@@ -2020,22 +2048,46 @@ def main():
             crcp1_name = st.text_input("ชื่อโครงสร้าง CRCP (1)", value="CRCP (1): คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์", key="crcp1_name_input")
             with st.expander(f"● {crcp1_name}", expanded=True):
                 crcp1_layers = render_layer_editor(get_default_crcp1_layers(), "crcp1", total_width, road_length, v=v)
-                crcp1_cost, crcp1_details = calculate_layer_cost(crcp1_layers, road_length)
-                crcp1_cost_per_km = crcp1_cost / road_length / 1_000_000
-                crcp1_cost_per_sqm = crcp1_cost / (area_per_km * road_length)
+                crcp1_layer_cost, crcp1_layer_details = calculate_layer_cost(crcp1_layers, road_length)
+                crcp1_joints, crcp1_include_joints = render_joint_editor(get_default_crcp1_joints(), "crcp1", area_per_km, road_length, v=v)
+                crcp1_joint_cost, crcp1_joint_details = calculate_joint_cost(crcp1_joints, road_length)
+                crcp1_joints_sqm = sum(j.get('cost_per_sqm', 0) for j in crcp1_joints)
+                if crcp1_include_joints:
+                    crcp1_total = crcp1_layer_cost + crcp1_joint_cost
+                    crcp1_cost_per_sqm = crcp1_layer_cost / (area_per_km * road_length) + crcp1_joints_sqm
+                    crcp1_joints_note = "(รวม Steel Rebar)"
+                else:
+                    crcp1_total = crcp1_layer_cost + crcp1_joint_cost
+                    crcp1_cost_per_sqm = crcp1_layer_cost / (area_per_km * road_length)
+                    crcp1_joints_note = "(ไม่รวม Steel Rebar)"
+                crcp1_cost = crcp1_total
+                crcp1_cost_per_km = crcp1_total / road_length / 1_000_000
+                crcp1_details = crcp1_layer_details + crcp1_joint_details
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_sqm:.2f} บาท/ตร.ม. {crcp1_joints_note}</div>', unsafe_allow_html=True)
         
         with col6:
             crcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="crcp2_show")
             crcp2_name = st.text_input("ชื่อโครงสร้าง CRCP (2)", value="CRCP (2): คอนกรีตเสริมเหล็กต่อเนื่องบน CMCR", key="crcp2_name_input")
             with st.expander(f"● {crcp2_name}", expanded=True):
                 crcp2_layers = render_layer_editor(get_default_crcp2_layers(), "crcp2", total_width, road_length, v=v)
-                crcp2_cost, crcp2_details = calculate_layer_cost(crcp2_layers, road_length)
-                crcp2_cost_per_km = crcp2_cost / road_length / 1_000_000
-                crcp2_cost_per_sqm = crcp2_cost / (area_per_km * road_length)
+                crcp2_layer_cost, crcp2_layer_details = calculate_layer_cost(crcp2_layers, road_length)
+                crcp2_joints, crcp2_include_joints = render_joint_editor(get_default_crcp2_joints(), "crcp2", area_per_km, road_length, v=v)
+                crcp2_joint_cost, crcp2_joint_details = calculate_joint_cost(crcp2_joints, road_length)
+                crcp2_joints_sqm = sum(j.get('cost_per_sqm', 0) for j in crcp2_joints)
+                if crcp2_include_joints:
+                    crcp2_total = crcp2_layer_cost + crcp2_joint_cost
+                    crcp2_cost_per_sqm = crcp2_layer_cost / (area_per_km * road_length) + crcp2_joints_sqm
+                    crcp2_joints_note = "(รวม Steel Rebar)"
+                else:
+                    crcp2_total = crcp2_layer_cost + crcp2_joint_cost
+                    crcp2_cost_per_sqm = crcp2_layer_cost / (area_per_km * road_length)
+                    crcp2_joints_note = "(ไม่รวม Steel Rebar)"
+                crcp2_cost = crcp2_total
+                crcp2_cost_per_km = crcp2_total / road_length / 1_000_000
+                crcp2_details = crcp2_layer_details + crcp2_joint_details
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_sqm:.2f} บาท/ตร.ม. {crcp2_joints_note}</div>', unsafe_allow_html=True)
         
         # Store in session state
         st.session_state['construction'] = {
@@ -2043,8 +2095,8 @@ def main():
             'AC2': {'name': ac2_name, 'cost': ac2_cost_per_km, 'cost_sqm': ac2_cost_per_sqm, 'details': ac2_details, 'layers': ac2_layers, 'joints': None, 'show': ac2_show},
             'JRCP1': {'name': jrcp1_name, 'cost': jrcp1_cost_per_km, 'cost_sqm': jrcp1_cost_per_sqm, 'details': jrcp1_details, 'layers': jrcp1_layers, 'joints': jrcp1_joints, 'show': jrcp1_show},
             'JRCP2': {'name': jrcp2_name, 'cost': jrcp2_cost_per_km, 'cost_sqm': jrcp2_cost_per_sqm, 'details': jrcp2_details, 'layers': jrcp2_layers, 'joints': jrcp2_joints, 'show': jrcp2_show},
-            'CRCP1': {'name': crcp1_name, 'cost': crcp1_cost_per_km, 'cost_sqm': crcp1_cost_per_sqm, 'details': crcp1_details, 'layers': crcp1_layers, 'joints': None, 'show': crcp1_show},
-            'CRCP2': {'name': crcp2_name, 'cost': crcp2_cost_per_km, 'cost_sqm': crcp2_cost_per_sqm, 'details': crcp2_details, 'layers': crcp2_layers, 'joints': None, 'show': crcp2_show},
+            'CRCP1': {'name': crcp1_name, 'cost': crcp1_cost_per_km, 'cost_sqm': crcp1_cost_per_sqm, 'details': crcp1_details, 'layers': crcp1_layers, 'joints': crcp1_joints, 'show': crcp1_show},
+            'CRCP2': {'name': crcp2_name, 'cost': crcp2_cost_per_km, 'cost_sqm': crcp2_cost_per_sqm, 'details': crcp2_details, 'layers': crcp2_layers, 'joints': crcp2_joints, 'show': crcp2_show},
         }
         st.session_state['project_info'] = project_info
         st.session_state['area_per_km'] = area_per_km
