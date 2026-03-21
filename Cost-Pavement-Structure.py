@@ -405,12 +405,16 @@ def calculate_joint_cost(joints, road_length_km=1.0):
         cost = qty * joint['unit_cost']
         total += cost
         
+        # หน่วยปริมาณของ joint = 'm' → แสดง 'ม.' และราคา/ม.
+        unit_th = 'ม.' if joint.get('qty_unit', 'm') == 'm' else joint.get('qty_unit', 'm')
         details.append({
             'รายการ': joint['name'],
             'ความหนา': '-',
             'ปริมาณ': qty,
-            'หน่วย': joint['qty_unit'],
+            'หน่วย': unit_th,
             'ราคา/หน่วย': joint['unit_cost'],
+            'ราคา/หน่วย (แสดง)': f"{joint['unit_cost']:,.0f}",
+            'หน่วยราคา': 'บาท/ม.',
             'มูลค่า (บาท)': cost
         })
     
@@ -830,7 +834,7 @@ def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0):
     cols[0].markdown("รายการ")
     cols[1].markdown("ปริมาณ (m)")
     cols[2].markdown("ราคา/ม. (บาท)")
-    cols[3].markdown("ราคา (บาท/ตร.ม.)")
+    cols[3].markdown("ราคา (บาท/ตร.ม. รวม)")
     
     updated_joints = []
     total_area = area_per_km * road_length
@@ -1102,7 +1106,9 @@ def generate_word_report_materials_only(project_info, all_details):
                 # ดึงหน่วยราคาจาก key ใหม่ (ถ้ามี) หรือ fallback จากหน่วยปริมาณ
                 unit_display = d.get('หน่วย', 'ตร.ม.')
                 price_display = d.get('ราคา/หน่วย (แสดง)', f"{d['ราคา/หน่วย']:,.0f}")
-                price_label = d.get('หน่วยราคา', 'บาท/ตร.ม.')
+                # fallback หน่วยราคาตาม unit_display (ม.→บาท/ม., ลบ.ม.→บาท/ลบ.ม., อื่น→บาท/ตร.ม.)
+                _fallback_price_label = {'ม.': 'บาท/ม.', 'ลบ.ม.': 'บาท/ลบ.ม.'}.get(unit_display, 'บาท/ตร.ม.')
+                price_label = d.get('หน่วยราคา', _fallback_price_label)
                 
                 table.rows[i+1].cells[0].text = str(d['รายการ'])
                 table.rows[i+1].cells[1].text = f"{d['ปริมาณ']:,.0f}"
@@ -2107,7 +2113,7 @@ def main():
                         'รายการ': joint['name'],
                         'ความหนา': '-',
                         'ปริมาณ (ตร.ม.)': f"{joint['quantity']:,.0f}",
-                        'ราคา (บาท/ตร.ม.)': f"{joint['unit_cost']:,.2f}",
+                        'ราคา (บาท/ม.)': f"{joint['unit_cost']:,.2f}",
                         'มูลค่า (บาท)': f"{joint_cost:,.0f}"
                     })
             
