@@ -213,7 +213,9 @@ def _parse_json_details_to_layers(details):
 def get_default_ac1_layers():
     """AC1: แอสฟัลต์บนหินคลุก (ตารางที่ 5.3-18)"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('AC1', {})
-    if _d.get('details'):
+    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
+        return _d['layers']
+    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
@@ -230,7 +232,9 @@ def get_default_ac1_layers():
 def get_default_ac2_layers():
     """AC2: แอสฟัลต์บนหินคลุกผสมซีเมนต์ (ตารางที่ 5.3-20)"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('AC2', {})
-    if _d.get('details'):
+    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
+        return _d['layers']
+    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
@@ -246,7 +250,9 @@ def get_default_ac2_layers():
 def get_default_jrcp1_layers():
     """JPCP/JRCP (1): คอนกรีตบนดินซีเมนต์ (ตารางที่ 5.3-22)"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP1', {})
-    if _d.get('details'):
+    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
+        return _d['layers']
+    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
@@ -260,7 +266,9 @@ def get_default_jrcp1_layers():
 def get_default_jrcp1_joints():
     """รอยต่อสำหรับ JRCP1 - ปริมาณต่อ 1 กม."""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP1', {})
-    if _d.get('details'):
+    if _d.get('joints'):  # ใช้ raw joints ก่อน
+        return _d['joints']
+    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
         _, joints = _parse_json_details_to_layers(_d['details'])
         if joints: return joints
     return [
@@ -271,7 +279,9 @@ def get_default_jrcp1_joints():
 def get_default_jrcp2_layers():
     """JPCP/JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์ (ตารางที่ 5.3-24)"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP2', {})
-    if _d.get('details'):
+    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
+        return _d['layers']
+    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
@@ -285,7 +295,9 @@ def get_default_jrcp2_layers():
 def get_default_jrcp2_joints():
     """รอยต่อสำหรับ JRCP2 - ปริมาณต่อ 1 กม."""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP2', {})
-    if _d.get('details'):
+    if _d.get('joints'):  # ใช้ raw joints ก่อน
+        return _d['joints']
+    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
         _, joints = _parse_json_details_to_layers(_d['details'])
         if joints: return joints
     return [
@@ -296,7 +308,9 @@ def get_default_jrcp2_joints():
 def get_default_crcp1_layers():
     """CRCP1: คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP1', {})
-    if _d.get('details'):
+    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
+        return _d['layers']
+    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
@@ -310,7 +324,9 @@ def get_default_crcp1_layers():
 def get_default_crcp2_layers():
     """CRCP2: คอนกรีตเสริมเหล็กต่อเนื่องบนหินคลุกผสมซีเมนต์"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP2', {})
-    if _d.get('details'):
+    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
+        return _d['layers']
+    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
@@ -325,7 +341,9 @@ def get_default_crcp2_layers():
 def get_default_crcp1_joints():
     """รอยต่อ/เหล็กเสริมสำหรับ CRCP1 - ปริมาณต่อ 1 กม."""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP1', {})
-    if _d.get('details'):
+    if _d.get('joints'):  # ใช้ raw joints ก่อน
+        return _d['joints']
+    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
         _, joints = _parse_json_details_to_layers(_d['details'])
         if joints: return joints
     return [
@@ -336,7 +354,9 @@ def get_default_crcp1_joints():
 def get_default_crcp2_joints():
     """รอยต่อ/เหล็กเสริมสำหรับ CRCP2 - ปริมาณต่อ 1 กม."""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP2', {})
-    if _d.get('details'):
+    if _d.get('joints'):  # ใช้ raw joints ก่อน
+        return _d['joints']
+    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
         _, joints = _parse_json_details_to_layers(_d['details'])
         if joints: return joints
     return [
@@ -1524,7 +1544,17 @@ def main():
                             st.session_state['loaded_project'] = loaded_data
                             st.session_state['loaded_json_hash'] = file_hash
                             # เพิ่ม version → widget keys เปลี่ยน → Streamlit อ่าน value= ใหม่
-                            st.session_state['json_version'] = st.session_state.get('json_version', 0) + 1
+                            new_v = st.session_state.get('json_version', 0) + 1
+                            st.session_state['json_version'] = new_v
+                            # ล้าง session_state keys ที่ขึ้นกับ version เก่า
+                            # เพื่อป้องกัน UI เพี้ยน (ctype, fullname, name_suffix)
+                            keys_to_clear = [k for k in st.session_state.keys()
+                                             if any(p in k for p in [
+                                                 '_ctype_', '_fullname_', '_name_suffix_',
+                                                 'jrcp1_fullname', 'jrcp2_fullname',
+                                             ])]
+                            for k in keys_to_clear:
+                                del st.session_state[k]
                         st.rerun()
             except Exception as e:
                 st.error(f"❌ ไม่สามารถอ่านไฟล์ได้: {e}")
@@ -2361,7 +2391,9 @@ def main():
                             'construction': {
                                 k: {
                                     'cost': v.get('cost', 0),
-                                    'details': v.get('details', [])
+                                    'details': v.get('details', []),
+                                    'layers': v.get('layers', []),
+                                    'joints': v.get('joints') or [],
                                 } for k, v in st.session_state.get('construction', {}).items()
                             },
                             'saved_at': datetime.now().isoformat()
