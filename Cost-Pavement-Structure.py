@@ -302,53 +302,60 @@ def calculate_quantity(thickness_cm, width_m, length_km, qty_unit):
 
 def calculate_layer_cost(layers, road_length_km=1.0):
     """คำนวณค่าก่อสร้างจากชั้นโครงสร้าง
-    - วัสดุผิวทาง/ผิวคอนกรีต/วัสดุอื่นๆ: qty_unit='sq.m' → หน่วย ตร.ม., ราคา/หน่วย = บาท/ตร.ม.
-    - วัสดุพื้นทาง/รองพื้นทาง: qty_unit='cu.m' → หน่วย ลบ.ม., ราคา/หน่วย = บาท/ลบ.ม.
+    - วัสดุผิวทาง/ผิวคอนกรีต/วัสดุอื่นๆ: หน่วย ตร.ม., ราคา/หน่วย = บาท/ตร.ม.
+    - วัสดุพื้นทาง/รองพื้นทาง: หน่วย ลบ.ม., ราคา/หน่วย = บาท/ลบ.ม.
+      (ปริมาณที่เก็บเป็น ตร.ม. จะแปลงเป็น ลบ.ม. = qty × thick_cm/100)
     """
     total = 0
     details = []
 
-    # คำนวณ unit_cost สำหรับวัสดุ cu.m:
-    # unit_cost ที่เก็บใน layer สำหรับ cu.m คือ บาท/ตร.ม. (= ราคา_ลบม × หนา_cm/100)
-    # แต่เราต้องการแสดง บาท/ลบ.ม. จริงๆ ดังนั้นต้องย้อนกลับ
     BASE_KEYWORDS = ['crushed rock', 'soil aggregate', 'soil cement', 'cement modified',
                      'cement treated', 'selected material', 'sand embankment']
 
     for layer in layers:
-        qty = layer['quantity']
-        cost = qty * layer['unit_cost']
+        qty_raw = layer['quantity']   # เป็น ตร.ม. เสมอ (ตามที่ app เก็บไว้)
+        unit_cost = layer['unit_cost']  # บาท/ตร.ม. เสมอ
+        cost = qty_raw * unit_cost
         total += cost
 
-        qty_unit = layer.get('qty_unit', 'sq.m')
-        if qty_unit == 'cu.m':
-            display_unit = 'ลบ.ม.'
-            # unit_cost ที่เก็บไว้คือ บาท/ตร.ม. (= ราคา_ลบม × t/100)
-            # ย้อนกลับเป็น บาท/ลบ.ม. = unit_cost / (thickness_cm/100)
-            # แต่ถ้า thickness = 0 หรือ unit ไม่ใช่ cm ให้ใช้ BASE_MATERIAL_PRICES โดยตรง
-            name_lower = layer['name'].lower()
-            is_base = any(kw in name_lower for kw in BASE_KEYWORDS)
-            if is_base:
-                thick_cm = float(layer.get('thickness', 1))
-                if thick_cm > 0 and layer['unit'].lower() in ('cm', 'ซม.', 'ซ.ม.'):
-                    price_per_cum = layer['unit_cost'] / (thick_cm / 100)
-                else:
-                    price_per_cum = layer['unit_cost']
+        name_lower = layer['name'].lower()
+        is_base = any(kw in name_lower for kw in BASE_KEYWORDS)
+
+        if is_base:
+            # แสดงปริมาณเป็น ลบ.ม.
+            thick_cm = float(layer.get('thickness', 1))
+            u = layer.get('unit', 'cm').lower()
+            if thick_cm > 0 and u in ('cm', 'ซม.', 'ซ.ม.'):
+                qty_display = qty_raw * thick_cm / 100   # ตร.ม. → ลบ.ม.
             else:
-                price_per_cum = layer['unit_cost']
-            display_unit_price = f"{price_per_cum:,.0f}"
+                qty_display = qty_raw
+
+            # ราคา/ลบ.ม.: ใช้ cost_cum ที่ render_layer_editor เก็บไว้ก่อน
+            # ถ้าไม่มี ค่อยคำนวณย้อนกลับ
+            if 'cost_cum' in layer and layer['cost_cum']:
+                price_cum = layer['cost_cum']
+            elif thick_cm > 0 and u in ('cm', 'ซม.', 'ซ.ม.'):
+                price_cum = unit_cost / (thick_cm / 100)
+            else:
+                price_cum = unit_cost
+
+            display_unit = 'ลบ.ม.'
+            display_price_str = f"{price_cum:,.0f}"
             display_price_label = 'บาท/ลบ.ม.'
+            qty_show = qty_display
         else:
+            qty_show = qty_raw
             display_unit = 'ตร.ม.'
-            display_unit_price = f"{layer['unit_cost']:,.0f}"
+            display_price_str = f"{unit_cost:,.0f}"
             display_price_label = 'บาท/ตร.ม.'
 
         details.append({
             'รายการ': layer['name'],
             'ความหนา': f"{layer['thickness']} {layer['unit']}",
-            'ปริมาณ': qty,
+            'ปริมาณ': qty_show,
             'หน่วย': display_unit,
-            'ราคา/หน่วย': layer['unit_cost'],
-            'ราคา/หน่วย (แสดง)': display_unit_price,
+            'ราคา/หน่วย': unit_cost,
+            'ราคา/หน่วย (แสดง)': display_price_str,
             'หน่วยราคา': display_price_label,
             'มูลค่า (บาท)': cost
         })
@@ -817,27 +824,32 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     running_total = 0
 
     # helper: แปลง qty_unit เป็นภาษาไทยและคำนวณ unit_cost ที่แสดง (บาท/หน่วย)
-    BASE_KEYWORDS = ['crushed rock', 'soil aggregate', 'soil cement', 'cement modified',
-                     'cement treated', 'selected material', 'sand embankment']
+    BASE_KEYWORDS_T = ['crushed rock', 'soil aggregate', 'soil cement', 'cement modified',
+                       'cement treated', 'selected material', 'sand embankment']
 
     def _unit_and_price(layer):
         """คืน (หน่วยแสดง, ราคาแสดง, หมายเหตุหน่วยราคา) ตามชนิดวัสดุ"""
-        qty_unit = layer.get('qty_unit', 'sq.m')
-        if qty_unit == 'cu.m':
-            name_lower = layer['name'].lower()
-            is_base = any(kw in name_lower for kw in BASE_KEYWORDS)
-            if is_base:
-                thick_cm = float(layer.get('thickness', 1))
-                u = layer.get('unit', 'cm').lower()
-                if thick_cm > 0 and u in ('cm', 'ซม.', 'ซ.ม.'):
-                    price_cum = layer['unit_cost'] / (thick_cm / 100)
-                else:
-                    price_cum = layer['unit_cost']
+        name_lower = layer['name'].lower()
+        is_base = any(kw in name_lower for kw in BASE_KEYWORDS_T)
+        if is_base:
+            thick_cm = float(layer.get('thickness', 1))
+            u = layer.get('unit', 'cm').lower()
+            # ใช้ cost_cum ที่เก็บไว้ก่อน
+            if 'cost_cum' in layer and layer['cost_cum']:
+                price_cum = layer['cost_cum']
+            elif thick_cm > 0 and u in ('cm', 'ซม.', 'ซ.ม.'):
+                price_cum = layer['unit_cost'] / (thick_cm / 100)
             else:
                 price_cum = layer['unit_cost']
-            return 'ลบ.ม.', f"{price_cum:,.0f}", 'บาท/ลบ.ม.'
+            # ปริมาณแสดงเป็น ลบ.ม.
+            qty_raw = layer['quantity']
+            if thick_cm > 0 and u in ('cm', 'ซม.', 'ซ.ม.'):
+                qty_display = qty_raw * thick_cm / 100
+            else:
+                qty_display = qty_raw
+            return 'ลบ.ม.', f"{price_cum:,.0f}", 'บาท/ลบ.ม.', qty_display
         else:
-            return 'ตร.ม.', f"{layer['unit_cost']:,.0f}", 'บาท/ตร.ม.'
+            return 'ตร.ม.', f"{layer['unit_cost']:,.0f}", 'บาท/ตร.ม.', layer['quantity']
 
     # กลุ่ม 1: ผิวทาง
     table.rows[row_idx].cells[0].text = '1'
@@ -846,13 +858,13 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     
     surface_total = 0
     for i, layer in enumerate(surface_layers, 1):
-        qty = layer['quantity'] * road_length
-        cost = qty * layer['unit_cost']
-        unit_th, price_str, price_lbl = _unit_and_price(layer)
+        qty_raw = layer['quantity'] * road_length
+        cost = qty_raw * layer['unit_cost']
+        unit_th, price_str, price_lbl, qty_disp = _unit_and_price(layer)
         table.rows[row_idx].cells[0].text = f'1.{i}'
         table.rows[row_idx].cells[1].text = layer['name']
         table.rows[row_idx].cells[2].text = f"{layer['thickness']} {layer['unit']}"
-        table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
+        table.rows[row_idx].cells[3].text = f"{qty_disp * road_length:,.0f}"
         table.rows[row_idx].cells[4].text = unit_th
         table.rows[row_idx].cells[5].text = f"{price_str} ({price_lbl})"
         table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
@@ -898,13 +910,13 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     
     base_total = 0
     for i, layer in enumerate(base_layers, 1):
-        qty = layer['quantity'] * road_length
-        cost = qty * layer['unit_cost']
-        unit_th, price_str, price_lbl = _unit_and_price(layer)
+        qty_raw = layer['quantity'] * road_length
+        cost = qty_raw * layer['unit_cost']
+        unit_th, price_str, price_lbl, qty_disp = _unit_and_price(layer)
         table.rows[row_idx].cells[0].text = f'{group_num}.{i}'
         table.rows[row_idx].cells[1].text = layer['name']
         table.rows[row_idx].cells[2].text = f"{layer['thickness']} {layer['unit']}"
-        table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
+        table.rows[row_idx].cells[3].text = f"{qty_disp * road_length:,.0f}"
         table.rows[row_idx].cells[4].text = unit_th
         table.rows[row_idx].cells[5].text = f"{price_str} ({price_lbl})"
         table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
