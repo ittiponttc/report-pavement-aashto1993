@@ -670,6 +670,12 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
         else:
             final_name = layer['name']
         
+        # ข้าม layer ที่ผู้ใช้ตั้งใจไม่ใช้:
+        # - unit='cm': ข้ามเมื่อ thickness=0
+        # - unit='ชั้น'/'Layer': ข้ามเมื่อ thickness=0 (ไม่ว่า cost จะเป็นเท่าไหร่)
+        _unit_lower = layer.get('unit', 'cm').lower()
+        if thick == 0:
+            continue
         updated_layers.append({
             'name': final_name, 'thickness': thick, 'unit': layer['unit'],
             'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': default_cost,
@@ -800,6 +806,9 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
             # แสดงราคาที่คำนวณแล้ว บาท/ตร.ม. (อัพเดทตามความหนาอัตโนมัติ)
             st.markdown(f"**{cost_per_sqm:,.2f}**")
         
+        # ข้าม base layer ที่ thickness=0 (ผู้ใช้ตั้งใจไม่ใช้)
+        if thick == 0:
+            continue
         updated_layers.append({
             'name': selected, 'thickness': thick, 'unit': 'cm',
             'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': cost_per_sqm,
@@ -849,9 +858,14 @@ def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0):
     for j in joints:
         jname = j['name']
         if concrete_type == 'CRCP':
-            # CRCP: Steel Reinforcement และ Longitudinal Joint — ไม่มี Transverse Joint
-            # ปริมาณ = ความยาวถนน (ม.) ผู้ใช้กรอกเอง ใช้ค่า default จาก joints
-            adj_qty = j['quantity'] * road_length
+            # CRCP: คำนวณปริมาณเหมือน Longitudinal Joint ของ JPCP
+            # = จำนวนเส้นรอยต่อตามยาว × ความยาวถนน (ม.)
+            # จำนวนเส้น = (ความกว้างถนนรวม / ความกว้างช่องจราจร) - 1
+            _pi = st.session_state.get('project_info', {})
+            _lane_w = _pi.get('lane_width', 3.5)
+            _width_m = area_per_km / 1000
+            _num_joints = max(1, round(_width_m / _lane_w) - 1)
+            adj_qty = _num_joints * road_length * 1000  # ม.
         elif 'Transverse Joint' in jname:
             # JPCP/JRCP: คำนวณจาก spacing และความกว้างถนน
             jname = f"Transverse Joint {joint_label}"
