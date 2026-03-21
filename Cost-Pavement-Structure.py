@@ -609,7 +609,13 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
                 key=f"{key_prefix}_st_{i}_v{v}", label_visibility="collapsed", min_value=0.0, step=1.0)
         
         # คำนวณปริมาณอัตโนมัติ (ตร.ม.)
-        auto_qty = area_per_km * road_length
+        # unit='Layer'/'ชั้น': ปริมาณ = พื้นที่ × จำนวนชั้น (thick)
+        # unit='cm' และอื่นๆ: ปริมาณ = พื้นที่ คงที่ (ความหนาไม่กระทบ quantity)
+        _unit_low = layer.get('unit', 'cm').lower()
+        if _unit_low in ('layer',) and thick > 1:
+            auto_qty = area_per_km * road_length * thick
+        else:
+            auto_qty = area_per_km * road_length
         
         # ดึงราคาจาก Library (บาท/ตร.ม.) ตามวัสดุและความหนาที่เลือก
         lib_price = None
