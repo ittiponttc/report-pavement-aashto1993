@@ -1616,10 +1616,9 @@ def main():
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
 
-    # ===== Tab 2: โครงสร้างชั้นทาง =====
+    # ===== Tab 2: โครงสร้างชั้นทาง (v6 — 2 ชุด) =====
     with tab2:
         st.header("กำหนดโครงสร้างชั้นทาง")
-        st.info("💡 แก้ไขชื่อ ความหนา และราคาต่อหน่วยได้ตามต้องการ | ✅ เลือกโครงสร้างที่ต้องการแสดงในรายงาน")
 
         v = st.session_state.get('json_version', 0)
 
@@ -1629,218 +1628,221 @@ def main():
 
         area_per_km = total_width * 1000
 
-        # ===== AC Pavement =====
-        st.subheader("🔵 ผิวทางแอสฟัลต์คอนกรีต (AC)")
-        col1, col2 = st.columns(2)
-
-        with col1:
-            ac1_show = st.checkbox("แสดงในรายงาน", value=True, key="ac1_show")
-            ac1_name = st.text_input("ชื่อโครงสร้าง AC (1)", value="AC (1): แอสฟัลต์บนหินคลุก", key="ac1_name_input")
-            with st.expander(f"● {ac1_name}", expanded=True):
-                ac1_layers = render_layer_editor(get_default_ac1_layers(), "ac1", total_width, road_length, v=v)
-                ac1_cost, ac1_details = calculate_layer_cost(ac1_layers, road_length)
-                ac1_cost_per_km = ac1_cost / road_length / 1_000_000
-                ac1_cost_per_sqm = ac1_cost / (area_per_km * road_length)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ac1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ac1_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
-
-        with col2:
-            ac2_show = st.checkbox("แสดงในรายงาน", value=True, key="ac2_show")
-            ac2_name = st.text_input("ชื่อโครงสร้าง AC (2)", value="AC (2): แอสฟัลต์บนหินคลุกผสมซีเมนต์", key="ac2_name_input")
-            with st.expander(f"● {ac2_name}", expanded=True):
-                ac2_layers = render_layer_editor(get_default_ac2_layers(), "ac2", total_width, road_length, v=v)
-                ac2_cost, ac2_details = calculate_layer_cost(ac2_layers, road_length)
-                ac2_cost_per_km = ac2_cost / road_length / 1_000_000
-                ac2_cost_per_sqm = ac2_cost / (area_per_km * road_length)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ac2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {ac2_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
-
-        # ===== JRCP/JPCP =====
-        st.subheader("🟠 ผิวทางคอนกรีตเสริมเหล็ก (JRCP/JPCP)")
-        col3, col4 = st.columns(2)
-
-        with col3:
-            jrcp1_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp1_show")
-            _jrcp1_ctype = st.session_state.get(f"jrcp1_ctype_0_v{v}", 'JRCP')
-            _jrcp1_default_names = {
-                'JPCP': 'JPCP (1): คอนกรีตบนดินซีเมนต์',
-                'JRCP': 'JRCP (1): คอนกรีตบนดินซีเมนต์',
-                'CRCP': 'CRCP (1): คอนกรีตบนดินซีเมนต์',
-            }
-            jrcp1_name = st.text_input(
-                "ชื่อโครงสร้าง (1) — แก้ไขได้",
-                value=_jrcp1_default_names.get(_jrcp1_ctype, f"{_jrcp1_ctype} (1): คอนกรีตบนดินซีเมนต์"),
-                key=f"jrcp1_fullname_{_jrcp1_ctype}_v{v}",
-                placeholder="เช่น JPCP (1): คอนกรีตบนดินซีเมนต์"
+        # ===== Toggle ชุดที่ 2 =====
+        col_hdr1, col_hdr2 = st.columns([3, 1])
+        with col_hdr1:
+            st.markdown(
+                "**ชุดที่ 1** = โครงสร้างหลักสำหรับโครงการ &nbsp;|&nbsp; "
+                "**ชุดที่ 2** = เปรียบเทียบ (เปิด/ปิดได้)"
             )
-            with st.expander(f"● {jrcp1_name}", expanded=True):
-                jrcp1_layers = render_layer_editor(get_default_jrcp1_layers(), "jrcp1", total_width, road_length, v=v)
-                jrcp1_layer_cost, jrcp1_layer_details = calculate_layer_cost(jrcp1_layers, road_length)
-                jrcp1_joints, jrcp1_include_joints = render_joint_editor(get_default_jrcp1_joints(), "jrcp1", area_per_km, road_length, v=v)
-                jrcp1_joint_cost, jrcp1_joint_details = calculate_joint_cost(jrcp1_joints, road_length)
+        with col_hdr2:
+            show_set2 = st.toggle("แสดงชุดที่ 2", value=False, key="toggle_set2")
 
-                jrcp1_joints_sqm = sum(j.get('cost_per_sqm', 0) for j in jrcp1_joints)
-                if jrcp1_include_joints:
-                    jrcp1_total = jrcp1_layer_cost + jrcp1_joint_cost
-                    jrcp1_cost_per_sqm = jrcp1_layer_cost / (area_per_km * road_length) + jrcp1_joints_sqm
-                    joints_note = "(รวม Joints)"
-                else:
-                    jrcp1_total = jrcp1_layer_cost + jrcp1_joint_cost
-                    jrcp1_cost_per_sqm = jrcp1_layer_cost / (area_per_km * road_length)
-                    joints_note = "(ไม่รวม Joints)"
+        st.divider()
 
-                jrcp1_cost_per_km = jrcp1_total / road_length / 1_000_000
-                jrcp1_details = jrcp1_layer_details + jrcp1_joint_details
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp1_cost_per_sqm:.2f} บาท/ตร.ม. {joints_note}</div>', unsafe_allow_html=True)
+        # ── helper: render 1 โครงสร้าง (AC/JPCP/JRCP/CRCP) ──────────────────
+        def _render_structure(ptype, suffix, default_layers_fn, default_joints_fn,
+                              label, color, set_label, v=0):
+            """
+            ptype       : 'AC' | 'JPCP' | 'JRCP' | 'CRCP'
+            suffix      : 'a' (ชุด1) | 'b' (ชุด2)
+            label       : ชื่อย่อแสดงใน expander
+            color       : สีกล่อง CSS hex
+            set_label   : 'ชุดที่ 1' | 'ชุดที่ 2'
+            คืนค่า: (name, cost_per_km, cost_per_sqm, details, layers, joints, show)
+            """
+            key_prefix = f"{ptype.lower()}_{suffix}"
+            is_concrete = ptype in ('JPCP', 'JRCP', 'CRCP')
 
-        with col4:
-            jrcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp2_show")
-            _jrcp2_ctype = st.session_state.get(f"jrcp2_ctype_0_v{v}", 'JRCP')
-            _jrcp2_default_names = {
-                'JPCP': 'JPCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์',
-                'JRCP': 'JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์',
-                'CRCP': 'CRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์',
-            }
-            jrcp2_name = st.text_input(
-                "ชื่อโครงสร้าง (2) — แก้ไขได้",
-                value=_jrcp2_default_names.get(_jrcp2_ctype, f"{_jrcp2_ctype} (2): คอนกรีตบนหินคลุกผสมซีเมนต์"),
-                key=f"jrcp2_fullname_{_jrcp2_ctype}_v{v}",
-                placeholder="เช่น JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์"
+            # ── badge + ชื่อโครงสร้าง ──
+            badge_color = '#E6F1FB' if suffix == 'a' else '#EAF3DE'
+            badge_text_color = '#0C447C' if suffix == 'a' else '#3B6D11'
+            st.markdown(
+                f'<span style="background:{badge_color};color:{badge_text_color};'
+                f'font-size:11px;font-weight:600;padding:2px 8px;'
+                f'border-radius:99px;margin-right:6px;">{set_label}</span>'
+                f'<span style="font-size:13px;color:#666;">{label}</span>',
+                unsafe_allow_html=True
             )
-            with st.expander(f"● {jrcp2_name}", expanded=True):
-                jrcp2_layers = render_layer_editor(get_default_jrcp2_layers(), "jrcp2", total_width, road_length, v=v)
-                jrcp2_layer_cost, jrcp2_layer_details = calculate_layer_cost(jrcp2_layers, road_length)
-                jrcp2_joints, jrcp2_include_joints = render_joint_editor(get_default_jrcp2_joints(), "jrcp2", area_per_km, road_length, v=v)
-                jrcp2_joint_cost, jrcp2_joint_details = calculate_joint_cost(jrcp2_joints, road_length)
 
-                jrcp2_joints_sqm = sum(j.get('cost_per_sqm', 0) for j in jrcp2_joints)
-                if jrcp2_include_joints:
-                    jrcp2_total = jrcp2_layer_cost + jrcp2_joint_cost
-                    jrcp2_cost_per_sqm = jrcp2_layer_cost / (area_per_km * road_length) + jrcp2_joints_sqm
-                    joints_note2 = "(รวม Joints)"
+            # default name สำหรับ concrete (ดึง ctype จาก session_state)
+            if is_concrete:
+                _ctype = st.session_state.get(f"{key_prefix}_ctype_0_v{v}", ptype)
+                _default_name = f"{_ctype}: {label}"
+            else:
+                _default_name = f"AC: {label}"
+
+            struct_name = st.text_input(
+                "ชื่อโครงสร้าง",
+                value=_default_name,
+                key=f"{key_prefix}_name_v{v}",
+                label_visibility="collapsed"
+            )
+            show_flag = st.checkbox(
+                "รวมในรายงาน", value=True,
+                key=f"{key_prefix}_show"
+            )
+
+            with st.expander(f"▶ {struct_name}", expanded=True):
+                layers = render_layer_editor(
+                    default_layers_fn(), key_prefix, total_width, road_length, v=v
+                )
+                layer_cost, layer_details = calculate_layer_cost(layers, road_length)
+
+                if is_concrete and default_joints_fn is not None:
+                    joints, include_joints = render_joint_editor(
+                        default_joints_fn(), key_prefix, area_per_km, road_length, v=v
+                    )
+                    joint_cost, joint_details = calculate_joint_cost(joints, road_length)
+                    joints_sqm = sum(j.get('cost_per_sqm', 0) for j in joints)
+                    total_cost = layer_cost + joint_cost
+                    if include_joints:
+                        cost_sqm = layer_cost / (area_per_km * road_length) + joints_sqm
+                        note = "(รวม Joints)" if ptype != 'CRCP' else "(รวม Steel Rebar)"
+                    else:
+                        cost_sqm = layer_cost / (area_per_km * road_length)
+                        note = "(ไม่รวม Joints)" if ptype != 'CRCP' else "(ไม่รวม Steel Rebar)"
+                    all_details = layer_details + joint_details
                 else:
-                    jrcp2_total = jrcp2_layer_cost + jrcp2_joint_cost
-                    jrcp2_cost_per_sqm = jrcp2_layer_cost / (area_per_km * road_length)
-                    joints_note2 = "(ไม่รวม Joints)"
+                    joints = None
+                    total_cost = layer_cost
+                    cost_sqm = layer_cost / (area_per_km * road_length)
+                    note = ""
+                    all_details = layer_details
 
-                jrcp2_cost_per_km = jrcp2_total / road_length / 1_000_000
-                jrcp2_details = jrcp2_layer_details + jrcp2_joint_details
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {jrcp2_cost_per_sqm:.2f} บาท/ตร.ม. {joints_note2}</div>', unsafe_allow_html=True)
+                cost_per_km = total_cost / road_length / 1_000_000
 
-        # ===== CRCP =====
-        st.subheader("🔴 ผิวทางคอนกรีตเสริมเหล็กต่อเนื่อง (CRCP)")
-        col5, col6 = st.columns(2)
+                st.markdown(
+                    f'<div class="cost-box" style="border-left-color:{color};">'
+                    f'💰 <b>{cost_per_km:.2f}</b> ล้านบาท/กม. &nbsp;|&nbsp; '
+                    f'<b>{cost_sqm:.2f}</b> บาท/ตร.ม. {note}</div>',
+                    unsafe_allow_html=True
+                )
 
-        with col5:
-            crcp1_show = st.checkbox("แสดงในรายงาน", value=True, key="crcp1_show")
-            crcp1_name = st.text_input("ชื่อโครงสร้าง CRCP (1)", value="CRCP (1): คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์", key="crcp1_name_input")
-            with st.expander(f"● {crcp1_name}", expanded=True):
-                crcp1_layers = render_layer_editor(get_default_crcp1_layers(), "crcp1", total_width, road_length, v=v)
-                crcp1_layer_cost, crcp1_layer_details = calculate_layer_cost(crcp1_layers, road_length)
-                crcp1_joints, crcp1_include_joints = render_joint_editor(get_default_crcp1_joints(), "crcp1", area_per_km, road_length, v=v)
-                crcp1_joint_cost, crcp1_joint_details = calculate_joint_cost(crcp1_joints, road_length)
-                crcp1_joints_sqm = sum(j.get('cost_per_sqm', 0) for j in crcp1_joints)
-                if crcp1_include_joints:
-                    crcp1_total = crcp1_layer_cost + crcp1_joint_cost
-                    crcp1_cost_per_sqm = crcp1_layer_cost / (area_per_km * road_length) + crcp1_joints_sqm
-                    crcp1_joints_note = "(รวม Steel Rebar)"
-                else:
-                    crcp1_total = crcp1_layer_cost + crcp1_joint_cost
-                    crcp1_cost_per_sqm = crcp1_layer_cost / (area_per_km * road_length)
-                    crcp1_joints_note = "(ไม่รวม Steel Rebar)"
-                crcp1_cost = crcp1_total
-                crcp1_cost_per_km = crcp1_total / road_length / 1_000_000
-                crcp1_details = crcp1_layer_details + crcp1_joint_details
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_sqm:.2f} บาท/ตร.ม. {crcp1_joints_note}</div>', unsafe_allow_html=True)
+            return struct_name, cost_per_km, cost_sqm, all_details, layers, joints, show_flag
 
-        with col6:
-            crcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="crcp2_show")
-            crcp2_name = st.text_input("ชื่อโครงสร้าง CRCP (2)", value="CRCP (2): คอนกรีตเสริมเหล็กต่อเนื่องบน CMCR", key="crcp2_name_input")
-            with st.expander(f"● {crcp2_name}", expanded=True):
-                crcp2_layers = render_layer_editor(get_default_crcp2_layers(), "crcp2", total_width, road_length, v=v)
-                crcp2_layer_cost, crcp2_layer_details = calculate_layer_cost(crcp2_layers, road_length)
-                crcp2_joints, crcp2_include_joints = render_joint_editor(get_default_crcp2_joints(), "crcp2", area_per_km, road_length, v=v)
-                crcp2_joint_cost, crcp2_joint_details = calculate_joint_cost(crcp2_joints, road_length)
-                crcp2_joints_sqm = sum(j.get('cost_per_sqm', 0) for j in crcp2_joints)
-                if crcp2_include_joints:
-                    crcp2_total = crcp2_layer_cost + crcp2_joint_cost
-                    crcp2_cost_per_sqm = crcp2_layer_cost / (area_per_km * road_length) + crcp2_joints_sqm
-                    crcp2_joints_note = "(รวม Steel Rebar)"
-                else:
-                    crcp2_total = crcp2_layer_cost + crcp2_joint_cost
-                    crcp2_cost_per_sqm = crcp2_layer_cost / (area_per_km * road_length)
-                    crcp2_joints_note = "(ไม่รวม Steel Rebar)"
-                crcp2_cost = crcp2_total
-                crcp2_cost_per_km = crcp2_total / road_length / 1_000_000
-                crcp2_details = crcp2_layer_details + crcp2_joint_details
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_sqm:.2f} บาท/ตร.ม. {crcp2_joints_note}</div>', unsafe_allow_html=True)
+        # ── ตารางสำหรับเก็บผลลัพธ์ทั้งหมด ──────────────────────────────────
+        construction = {}
 
-        # Store in session state — FIX: เพิ่ม 'show' และ 'cost_sqm' เพื่อให้ Save/Load JSON ครบถ้วน
+        # ── ตัวกำหนด default layers/joints ต่อประเภท ──
+        STRUCT_CONFIG = {
+            'AC':   (get_default_ac1_layers,   None,                  'แอสฟัลต์คอนกรีต',             '#378ADD', 20),
+            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'JPCP (คอนกรีตรอยต่อทุก 4 ม.)', '#E29A30', 25),
+            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'JRCP (คอนกรีตรอยต่อทุก 10 ม.)', '#E29A30', 25),
+            'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'CRCP (คอนกรีตเสริมเหล็กต่อเนื่อง)', '#C94040', 30),
+        }
+        # ชุดที่ 2 ใช้ default layers ชุดที่ 2
+        STRUCT_CONFIG_B = {
+            'AC':   (get_default_ac2_layers,   None,                  'แอสฟัลต์คอนกรีต (เปรียบเทียบ)',  '#378ADD', 20),
+            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'JPCP (เปรียบเทียบ)',            '#E29A30', 25),
+            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'JRCP (เปรียบเทียบ)',            '#E29A30', 25),
+            'CRCP': (get_default_crcp2_layers, get_default_crcp2_joints, 'CRCP (เปรียบเทียบ)',            '#C94040', 30),
+        }
+
+        ptypes = ['AC', 'JPCP', 'JRCP', 'CRCP']
+        type_icons = {'AC': '🔵', 'JPCP': '🟠', 'JRCP': '🟠', 'CRCP': '🔴'}
+
+        for ptype in ptypes:
+            layers_fn_a, joints_fn_a, label_a, color_a, life_a = STRUCT_CONFIG[ptype]
+            layers_fn_b, joints_fn_b, label_b, color_b, _      = STRUCT_CONFIG_B[ptype]
+
+            st.subheader(f"{type_icons[ptype]} {ptype}")
+
+            if show_set2:
+                col_a, col_b = st.columns(2)
+            else:
+                col_a = st.container()
+
+            with col_a:
+                (name_a, cpk_a, csqm_a, det_a, lay_a, jnt_a, show_a) = _render_structure(
+                    ptype, 'a', layers_fn_a, joints_fn_a, label_a, color_a, 'ชุดที่ 1', v=v
+                )
+            construction[f'{ptype}_A'] = {
+                'name': name_a, 'cost': cpk_a, 'cost_sqm': csqm_a,
+                'details': det_a, 'layers': lay_a, 'joints': jnt_a,
+                'show': show_a, 'life': life_a, 'set': 1,
+            }
+
+            if show_set2:
+                with col_b:
+                    (name_b, cpk_b, csqm_b, det_b, lay_b, jnt_b, show_b) = _render_structure(
+                        ptype, 'b', layers_fn_b, joints_fn_b, label_b, color_b, 'ชุดที่ 2', v=v
+                    )
+                construction[f'{ptype}_B'] = {
+                    'name': name_b, 'cost': cpk_b, 'cost_sqm': csqm_b,
+                    'details': det_b, 'layers': lay_b, 'joints': jnt_b,
+                    'show': show_b, 'life': life_a, 'set': 2,
+                }
+            else:
+                # ชุดที่ 2 ไม่ได้เปิด → เก็บ placeholder ไว้ (show=False)
+                construction[f'{ptype}_B'] = {
+                    'name': f"{ptype} (ชุดที่ 2)", 'cost': 0, 'cost_sqm': 0,
+                    'details': [], 'layers': [], 'joints': None,
+                    'show': False, 'life': life_a, 'set': 2,
+                }
+
+            st.divider()
+
+        # ── บันทึก session_state ──
+        # รักษา key เดิม (AC1/AC2/JRCP1/JRCP2/CRCP1/CRCP2) สำหรับ Tab 3 / JSON
         st.session_state['construction'] = {
-            'AC1':   {'name': ac1_name,   'cost': ac1_cost_per_km,   'cost_sqm': ac1_cost_per_sqm,   'details': ac1_details,   'layers': ac1_layers,   'joints': None,          'show': ac1_show},
-            'AC2':   {'name': ac2_name,   'cost': ac2_cost_per_km,   'cost_sqm': ac2_cost_per_sqm,   'details': ac2_details,   'layers': ac2_layers,   'joints': None,          'show': ac2_show},
-            'JRCP1': {'name': jrcp1_name, 'cost': jrcp1_cost_per_km, 'cost_sqm': jrcp1_cost_per_sqm, 'details': jrcp1_details, 'layers': jrcp1_layers, 'joints': jrcp1_joints,  'show': jrcp1_show},
-            'JRCP2': {'name': jrcp2_name, 'cost': jrcp2_cost_per_km, 'cost_sqm': jrcp2_cost_per_sqm, 'details': jrcp2_details, 'layers': jrcp2_layers, 'joints': jrcp2_joints,  'show': jrcp2_show},
-            'CRCP1': {'name': crcp1_name, 'cost': crcp1_cost_per_km, 'cost_sqm': crcp1_cost_per_sqm, 'details': crcp1_details, 'layers': crcp1_layers, 'joints': crcp1_joints,  'show': crcp1_show},
-            'CRCP2': {'name': crcp2_name, 'cost': crcp2_cost_per_km, 'cost_sqm': crcp2_cost_per_sqm, 'details': crcp2_details, 'layers': crcp2_layers, 'joints': crcp2_joints,  'show': crcp2_show},
+            'AC1':   construction['AC_A'],
+            'AC2':   construction['AC_B'],
+            'JRCP1': construction['JPCP_A'],
+            'JRCP2': construction['JPCP_B'],
+            'CRCP1': construction['CRCP_A'],
+            'CRCP2': construction['CRCP_B'],
+            # CRCP เก็บไว้ด้วยสำหรับรายงาน
+            'CRCP_A': construction['CRCP_A'],
+            'CRCP_B': construction['CRCP_B'],
         }
         st.session_state['project_info'] = project_info
-        st.session_state['area_per_km'] = area_per_km
+        st.session_state['area_per_km']  = area_per_km
 
         # ===== Summary Tables =====
-        st.divider()
-        st.subheader("📊 สรุปค่าก่อสร้าง")
+        st.subheader("📊 สรุปค่าก่อสร้างทุกโครงสร้าง")
 
-        all_structures = [
-            ('AC1',   ac1_name,   ac1_cost_per_km,   ac1_cost_per_sqm,   20, ac1_show),
-            ('AC2',   ac2_name,   ac2_cost_per_km,   ac2_cost_per_sqm,   20, ac2_show),
-            ('JRCP1', jrcp1_name, jrcp1_cost_per_km, jrcp1_cost_per_sqm, 25, jrcp1_show),
-            ('JRCP2', jrcp2_name, jrcp2_cost_per_km, jrcp2_cost_per_sqm, 25, jrcp2_show),
-            ('CRCP1', crcp1_name, crcp1_cost_per_km, crcp1_cost_per_sqm, 30, crcp1_show),
-            ('CRCP2', crcp2_name, crcp2_cost_per_km, crcp2_cost_per_sqm, 30, crcp2_show),
-        ]
+        summary_rows = []
+        for key, data in construction.items():
+            if data['layers']:   # แสดงเฉพาะที่มีข้อมูล
+                summary_rows.append({
+                    'ชุด': f"ชุดที่ {data['set']}",
+                    'รหัส': key,
+                    'ชื่อโครงสร้าง': data['name'],
+                    'ค่าก่อสร้าง (ล้านบาท/กม.)': data['cost'],
+                    'ค่าก่อสร้าง (บาท/ตร.ม.)': data['cost_sqm'],
+                    'อายุออกแบบ (ปี)': data['life'],
+                    'รายงาน': '✅' if data['show'] else '❌',
+                })
 
-        summary_data = []
-        for key, name, cost_km, cost_sqm, life, show in all_structures:
-            summary_data.append({
-                'รหัส': key,
-                'ประเภท': name,
-                'ค่าก่อสร้าง (ล้านบาท/กม.)': cost_km,
-                'ค่าก่อสร้าง (บาท/ตร.ม.)': cost_sqm,
-                'อายุออกแบบ (ปี)': life,
-                'แสดงในรายงาน': '✅' if show else '❌',
-            })
-
-        summary_df = pd.DataFrame(summary_data)
-        st.dataframe(
-            summary_df.style.format({
-                'ค่าก่อสร้าง (ล้านบาท/กม.)': '{:.2f}',
-                'ค่าก่อสร้าง (บาท/ตร.ม.)': '{:.2f}',
-            }),
-            use_container_width=True, hide_index=True
-        )
+        if summary_rows:
+            summary_df = pd.DataFrame(summary_rows)
+            st.dataframe(
+                summary_df.style.format({
+                    'ค่าก่อสร้าง (ล้านบาท/กม.)': '{:.2f}',
+                    'ค่าก่อสร้าง (บาท/ตร.ม.)': '{:.2f}',
+                }),
+                use_container_width=True, hide_index=True
+            )
 
         st.divider()
         st.subheader("📋 รายละเอียดราคาแต่ละโครงสร้าง")
 
-        selected_structure = st.selectbox(
-            "เลือกดูรายละเอียด",
-            options=['AC1', 'AC2', 'JRCP1', 'JRCP2', 'CRCP1', 'CRCP2'],
-            format_func=lambda x: st.session_state['construction'][x]['name']
-        )
+        # สร้างรายการ options เฉพาะที่มีข้อมูล
+        detail_options = [k for k, d in construction.items() if d['layers']]
+        if detail_options:
+            selected_structure = st.selectbox(
+                "เลือกดูรายละเอียด",
+                options=detail_options,
+                format_func=lambda x: f"[ชุดที่ {construction[x]['set']}] {construction[x]['name']}"
+            )
 
-        if selected_structure:
-            struct = st.session_state['construction'][selected_structure]
+            struct = construction[selected_structure]
             layers = struct['layers']
             joints = struct.get('joints')
 
             detail_data = []
             total_cost = 0
-
             st.markdown(f"**{struct['name']}**")
 
             for i, layer in enumerate(layers):
@@ -1868,21 +1870,19 @@ def main():
                         'มูลค่า (บาท)': f"{joint_cost:,.0f}",
                     })
 
-            detail_df = pd.DataFrame(detail_data)
-            st.dataframe(detail_df, use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(detail_data), use_container_width=True, hide_index=True)
 
-            area_km = st.session_state.get('area_per_km', 22000) * road_length
-            cost_per_sqm = total_cost / area_km if area_km > 0 else 0
-
-            col_sum1, col_sum2, col_sum3, col_sum4 = st.columns(4)
-            with col_sum1:
+            area_km = area_per_km * road_length
+            cost_per_sqm_det = total_cost / area_km if area_km > 0 else 0
+            col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+            with col_s1:
                 st.metric("💰 ราคารวม", f"{total_cost:,.0f} บาท")
-            with col_sum2:
+            with col_s2:
                 st.metric("📏 ราคาต่อ กม.", f"{total_cost / road_length:,.0f} บาท/กม.")
-            with col_sum3:
+            with col_s3:
                 st.metric("📊 ล้านบาท/กม.", f"{total_cost / road_length / 1_000_000:.2f}")
-            with col_sum4:
-                st.metric("📐 บาท/ตร.ม.", f"{cost_per_sqm:.2f}")
+            with col_s4:
+                st.metric("📐 บาท/ตร.ม.", f"{cost_per_sqm_det:.2f}")
 
     # ===== Tab 3: รายงาน =====
     with tab3:
