@@ -938,10 +938,15 @@ def generate_word_report_materials_only(project_info, all_details):
     length = project_info.get('length', 1)
 
     for ptype, data in all_details.items():
-        structure_name = data.get('name', ptype)
+        structure_name = data.get('name', ptype)          # ชื่อสั้น: AC / JPCP / JRCP / CRCP
+        name_detail    = data.get('name_detail', '')      # ชื่อยาว: รายละเอียด
         details = data.get('details', [])
 
         doc.add_heading(structure_name, level=2)
+        if name_detail and name_detail != structure_name:
+            p_sub = doc.add_paragraph(name_detail)
+            p_sub.runs[0].italic = True
+            p_sub.runs[0].font.size = Pt(13)
         if details:
             table = doc.add_table(rows=len(details) + 1, cols=5)
             table.style = 'Table Grid'
@@ -1084,9 +1089,20 @@ def generate_word_report_consultant(project_info, all_details, chapter_num="4", 
     length = project_info.get('length', 1)
 
     for ptype, data in all_details.items():
-        structure_name = data.get('name', ptype)
+        structure_name = data.get('name', ptype)          # ชื่อสั้น: AC / JPCP / JRCP / CRCP
+        name_detail    = data.get('name_detail', '')      # ชื่อยาว: รายละเอียด
         details = data.get('details', [])
+
+        # header: ชื่อสั้น เช่น "JPCP (ชุดที่ 1)"
         _add_heading_para(f"ผิวทางประเภท {structure_name}", size=16, bold=True, space_before=6, space_after=2)
+        # subtitle: ชื่อยาว (ถ้ามี)
+        if name_detail and name_detail != structure_name:
+            _sub = doc.add_paragraph()
+            _sub.paragraph_format.space_before = Pt(0)
+            _sub.paragraph_format.space_after  = Pt(4)
+            _run = _sub.add_run(name_detail)
+            _set_run_font(_run, size=14, bold=False)
+            _run.italic = True
 
         if details:
             table = doc.add_table(rows=len(details) + 2, cols=5)
@@ -1909,23 +1925,35 @@ def main():
         if 'construction' in st.session_state and st.session_state['construction']:
             constr = st.session_state.get('construction', {})
 
+            # map key → ชื่อสั้นแสดงใน Tab 3
+            _short_name = {
+                'AC1': 'AC (ชุดที่ 1)', 'AC2': 'AC (ชุดที่ 2)',
+                'JPCP1': 'JPCP (ชุดที่ 1)', 'JPCP2': 'JPCP (ชุดที่ 2)',
+                'JRCP1': 'JRCP (ชุดที่ 1)', 'JRCP2': 'JRCP (ชุดที่ 2)',
+                'CRCP1': 'CRCP (ชุดที่ 1)', 'CRCP2': 'CRCP (ชุดที่ 2)',
+            }
+
             all_details = {}
             for k, v_data in constr.items():
-                if v_data.get('show', True):
+                if v_data.get('show', True) and v_data.get('details'):
                     all_details[k] = {
-                        'name': v_data.get('name', k),
-                        'details': v_data.get('details', []),
-                        'cost_per_km': v_data.get('cost', 0),
-                        'cost_sqm': v_data.get('cost_sqm', 0),
+                        'name':         _short_name.get(k, k),          # ชื่อสั้น: AC / JPCP / JRCP / CRCP
+                        'name_detail':  v_data.get('name', k),           # ชื่อยาว: เก็บไว้ใช้ใน Word report
+                        'details':      v_data.get('details', []),
+                        'cost_per_km':  v_data.get('cost', 0),
+                        'cost_sqm':     v_data.get('cost_sqm', 0),
                     }
 
             if not all_details:
                 st.warning("⚠️ กรุณาเลือกอย่างน้อย 1 โครงสร้างที่ต้องการแสดงในรายงาน (tick ✅ แสดงในรายงาน ใน Tab 2)")
             else:
                 st.subheader("📊 ข้อมูลที่จะรวมในรายงาน")
-                for ptype, data in all_details.items():
+                for k, data in all_details.items():
                     if data['details']:
                         with st.expander(f"🔍 {data['name']}"):
+                            # แสดงชื่อยาวเป็น caption
+                            if data.get('name_detail') and data['name_detail'] != data['name']:
+                                st.caption(f"รายละเอียด: {data['name_detail']}")
                             df_preview = pd.DataFrame(data['details'])
                             st.dataframe(df_preview, use_container_width=True, hide_index=True)
 
