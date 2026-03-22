@@ -255,8 +255,9 @@ def get_default_ac2_layers():
     ]
 
 def get_default_jrcp1_layers():
-    """JPCP/JRCP (1): คอนกรีตบนดินซีเมนต์"""
-    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP1', {})
+    """JPCP ชุดที่ 1 (key v6: JPCP1, key เก่า: JRCP1)"""
+    _c = st.session_state.get('loaded_project', {}).get('construction', {})
+    _d = _c.get('JPCP1') or _c.get('JRCP1') or {}  # รองรับทั้ง key v6 และ key เก่า
     if _d.get('layers'):
         return _d['layers']
     if _d.get('details'):
@@ -271,7 +272,8 @@ def get_default_jrcp1_layers():
     ]
 
 def get_default_jrcp1_joints():
-    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP1', {})
+    _c = st.session_state.get('loaded_project', {}).get('construction', {})
+    _d = _c.get('JPCP1') or _c.get('JRCP1') or {}
     if _d.get('joints'):
         return _d['joints']
     if _d.get('details'):
@@ -283,8 +285,9 @@ def get_default_jrcp1_joints():
     ]
 
 def get_default_jrcp2_layers():
-    """JPCP/JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์"""
-    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP2', {})
+    """JRCP ชุดที่ 1 (key v6: JRCP1, key เก่า: JRCP2)"""
+    _c = st.session_state.get('loaded_project', {}).get('construction', {})
+    _d = _c.get('JRCP1') or _c.get('JRCP2') or {}
     if _d.get('layers'):
         return _d['layers']
     if _d.get('details'):
@@ -299,7 +302,8 @@ def get_default_jrcp2_layers():
     ]
 
 def get_default_jrcp2_joints():
-    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP2', {})
+    _c = st.session_state.get('loaded_project', {}).get('construction', {})
+    _d = _c.get('JRCP1') or _c.get('JRCP2') or {}
     if _d.get('joints'):
         return _d['joints']
     if _d.get('details'):
@@ -311,8 +315,9 @@ def get_default_jrcp2_joints():
     ]
 
 def get_default_crcp1_layers():
-    """CRCP1: คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์"""
-    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP1', {})
+    """CRCP ชุดที่ 1 (key v6: CRCP1)"""
+    _c = st.session_state.get('loaded_project', {}).get('construction', {})
+    _d = _c.get('CRCP1') or {}
     if _d.get('layers'):
         return _d['layers']
     if _d.get('details'):
@@ -327,8 +332,9 @@ def get_default_crcp1_layers():
     ]
 
 def get_default_crcp2_layers():
-    """CRCP2: คอนกรีตเสริมเหล็กต่อเนื่องบนหินคลุกผสมซีเมนต์"""
-    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP2', {})
+    """CRCP ชุดที่ 2 (key v6: CRCP2)"""
+    _c = st.session_state.get('loaded_project', {}).get('construction', {})
+    _d = _c.get('CRCP2') or {}
     if _d.get('layers'):
         return _d['layers']
     if _d.get('details'):
@@ -343,7 +349,8 @@ def get_default_crcp2_layers():
     ]
 
 def get_default_crcp1_joints():
-    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP1', {})
+    _c = st.session_state.get('loaded_project', {}).get('construction', {})
+    _d = _c.get('CRCP1') or {}
     if _d.get('joints'):
         return _d['joints']
     if _d.get('details'):
@@ -355,7 +362,8 @@ def get_default_crcp1_joints():
     ]
 
 def get_default_crcp2_joints():
-    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP2', {})
+    _c = st.session_state.get('loaded_project', {}).get('construction', {})
+    _d = _c.get('CRCP2') or {}
     if _d.get('joints'):
         return _d['joints']
     if _d.get('details'):
