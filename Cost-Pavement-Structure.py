@@ -1298,10 +1298,18 @@ def main():
                             st.session_state['loaded_json_hash'] = file_hash
                             new_v = st.session_state.get('json_version', 0) + 1
                             st.session_state['json_version'] = new_v
+                            # ล้าง widget keys ทั้งหมดที่ขึ้นกับ version
+                            # ครอบคลุม: ความหนาผิวทาง (_st_), ความหนาพื้นทาง (_bt_),
+                            # วัสดุพื้นทาง (_bm_), จำนวนชั้น (_num_base_),
+                            # ราคา (_price_), ชื่อโครงสร้าง (_name_), AC interlayer (_acil_)
                             keys_to_clear = [k for k in st.session_state.keys()
                                              if any(p in k for p in [
                                                  '_ctype_', '_fullname_', '_name_suffix_',
                                                  'jrcp1_fullname', 'jrcp2_fullname',
+                                                 '_bt_', '_bm_', '_st_',
+                                                 '_num_base_', '_price_',
+                                                 '_name_v', '_acil_',
+                                                 '_mat_', '_show',
                                              ])]
                             for k in keys_to_clear:
                                 del st.session_state[k]
