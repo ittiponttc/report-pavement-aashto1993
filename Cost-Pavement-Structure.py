@@ -554,11 +554,42 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
         is_ac_base  = ('asphalt' in name_lower and 'base' in name_lower) or \
                       ('ac base' in name_lower) or ('interlayer' in name_lower)
         is_concrete = 'concrete' in name_lower or 'ksc' in name_lower
-        is_wire_mesh = 'wire' in name_lower
+        is_geotextile = 'geotextile' in name_lower
+        is_wire_mesh  = 'wire' in name_lower
 
         # JPCP ไม่มี Wire Mesh
         if is_wire_mesh and ptype == 'JPCP':
             continue
+
+        # Non Woven Geotextile — แสดงเป็น checkbox แยกออกมา
+        if is_geotextile:
+            geo_cols = st.columns([2.5, 1, 1.5])
+            with geo_cols[0]:
+                use_geo = st.checkbox(
+                    "Non Woven Geotextile",
+                    value=True,
+                    key=f"{key_prefix}_use_geo_{i}_v{v}",
+                )
+            if not use_geo:
+                continue   # ไม่ใส่ → ข้ามไปเลย
+            with geo_cols[1]:
+                st.markdown("**1 ชั้น**")   # ปริมาณ 1 ตร.ม. เสมอ
+            with geo_cols[2]:
+                geo_cost = st.number_input(
+                    "ราคา (บาท/ตร.ม.)",
+                    value=float(layer['unit_cost']),
+                    min_value=0.0, step=5.0,
+                    key=f"{key_prefix}_geo_price_{i}_v{v}",
+                    label_visibility="collapsed",
+                )
+            auto_qty = area_per_km * road_length
+            updated_layers.append({
+                'name': 'Non Woven Geotextile',
+                'thickness': 1, 'unit': 'ชั้น',
+                'quantity': auto_qty, 'qty_unit': 'sq.m',
+                'unit_cost': geo_cost, 'cost_per_sqm': geo_cost,
+            })
+            continue   # จัดการครบแล้ว ข้ามไป loop ถัดไป
 
         cols = st.columns([3, 1, 1.5])
 
