@@ -2071,9 +2071,10 @@ def main():
                         buf = io.BytesIO()
                         doc.save(buf)
                         buf.seek(0)
+                        _proj_name = st.session_state.get('project_info', {}).get('name', 'Project')
                         st.download_button(
                             "⬇️ ดาวน์โหลด Word แบบที่ปรึกษา", data=buf,
-                            file_name=f"Consultant_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
+                            file_name=f"Cost Est {_proj_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                             use_container_width=True, key="dl_consultant_report"
                         )
