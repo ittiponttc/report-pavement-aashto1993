@@ -502,10 +502,21 @@ def get_price_from_library(layer_name, thickness):
     return None
 
 
-def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
-    """แสดง UI สำหรับแก้ไขโครงสร้างชั้นทาง พร้อมคำนวณปริมาณอัตโนมัติ"""
+def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype='AC'):
+    """แสดง UI สำหรับแก้ไขโครงสร้างชั้นทาง พร้อมคำนวณปริมาณอัตโนมัติ
+
+    ptype : 'AC' | 'JPCP' | 'JRCP' | 'CRCP'
+            ใช้กำหนดชื่อ concrete layer แบบตายตัว (ไม่มี dropdown อีกต่อไป)
+    การเปลี่ยนแปลง v6.1:
+      - ลบ dropdown concrete_options ออก → แสดงชื่อตายตัวตาม ptype
+      - Wearing course ยังเลือก AC/PMA ได้ (เป็นทางเลือกจริง)
+      - Binder / AC Base แสดงชื่อตายตัว (ไม่มีทางเลือกอื่น)
+    """
     updated_layers = []
-    area_per_km = total_width * 1000  # ตร.ม./กม.
+    area_per_km = total_width * 1000
+
+    # concrete_label ตายตัวตาม ptype
+    concrete_label = f"350 Ksc. Cubic Type Concrete ({ptype})"
 
     surface_layers = []
     base_layers = []
@@ -524,143 +535,102 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
     cols = st.columns([3, 1, 1.5])
     cols[0].markdown("รายการ")
     cols[1].markdown("หนา (cm)")
-    cols[2].markdown("ราคา (บาท/ตร.ม.) ✏️")
+    cols[2].markdown("ราคา (บาท/ตร.ม.)")
 
     wearing_options = ['AC Wearing Course', 'PMA Wearing Course']
-    binder_options = ['AC Binder Course']
-    base_options = ['AC Base Course']
-    concrete_options = ['JPCP', 'JRCP', 'CRCP']
-
-    _selected_concrete_type = None
-    for _ci in range(5):
-        _ck = f"{key_prefix}_ctype_{_ci}_v{v}"
-        if _ck in st.session_state:
-            _selected_concrete_type = st.session_state[_ck]
-            break
-    if _selected_concrete_type is None:
-        if 'crcp' in key_prefix.lower():
-            _selected_concrete_type = 'CRCP'
-        elif 'jrcp' in key_prefix.lower():
-            _selected_concrete_type = 'JRCP'
-        else:
-            _selected_concrete_type = 'JPCP'
 
     for i, layer in enumerate(surface_layers):
         name_lower = layer['name'].lower()
-        is_wearing = 'wearing' in name_lower
-        is_binder = 'binder' in name_lower
-        is_ac_base = ('asphalt' in name_lower and 'base' in name_lower) or \
-                     ('ac base' in name_lower) or ('interlayer' in name_lower)
+        is_wearing  = 'wearing' in name_lower
+        is_binder   = 'binder' in name_lower
+        is_ac_base  = ('asphalt' in name_lower and 'base' in name_lower) or \
+                      ('ac base' in name_lower) or ('interlayer' in name_lower)
         is_concrete = 'concrete' in name_lower or 'ksc' in name_lower
         is_wire_mesh = 'wire' in name_lower
 
-        if is_wire_mesh and _selected_concrete_type == 'JPCP':
+        # JPCP ไม่มี Wire Mesh
+        if is_wire_mesh and ptype == 'JPCP':
             continue
 
         cols = st.columns([3, 1, 1.5])
 
         with cols[0]:
             if is_wearing:
+                # Wearing: ยังเลือก AC/PMA ได้ (ทางเลือกจริง)
                 default_idx = 1 if 'pma' in name_lower else 0
                 selected_material = st.selectbox(
                     "วัสดุ", wearing_options, index=default_idx,
                     key=f"{key_prefix}_mat_{i}_v{v}", label_visibility="collapsed"
                 )
-            elif is_binder:
-                selected_material = st.selectbox(
-                    "วัสดุ", binder_options, index=0,
-                    key=f"{key_prefix}_mat_{i}_v{v}", label_visibility="collapsed"
-                )
-            elif is_ac_base:
-                selected_material = st.selectbox(
-                    "วัสดุ", base_options, index=0,
-                    key=f"{key_prefix}_mat_{i}_v{v}", label_visibility="collapsed"
-                )
             elif is_concrete:
-                name_upper = layer['name'].upper()
-                if 'JPCP' in name_upper:
-                    default_idx = 0
-                elif 'JRCP' in name_upper:
-                    default_idx = 1
-                elif 'CRCP' in name_upper:
-                    default_idx = 2
-                elif 'jrcp' in key_prefix:
-                    default_idx = 1
-                elif 'crcp' in key_prefix:
-                    default_idx = 2
-                else:
-                    default_idx = 0
-                selected_type = st.selectbox(
-                    "ชนิด", concrete_options, index=default_idx,
-                    key=f"{key_prefix}_ctype_{i}_v{v}", label_visibility="collapsed"
-                )
-                selected_material = f"350 Ksc. Cubic Type Concrete ({selected_type})"
+                # Concrete: ชื่อตายตัวตาม ptype — ไม่มี dropdown
+                st.markdown(f"**{concrete_label}**")
+                selected_material = concrete_label
+            elif is_binder:
+                st.markdown("**AC Binder Course**")
+                selected_material = 'AC Binder Course'
+            elif is_ac_base:
+                st.markdown("**AC Base Course**")
+                selected_material = 'AC Base Course'
             else:
                 st.text(layer['name'])
                 selected_material = layer['name']
 
         with cols[1]:
-            thick = st.number_input("หนา", value=float(layer['thickness']),
+            thick = st.number_input(
+                "หนา", value=float(layer['thickness']),
                 key=f"{key_prefix}_st_{i}_v{v}", label_visibility="collapsed",
-                min_value=0.0, step=1.0)
+                min_value=0.0, step=1.0
+            )
 
         _unit_low = layer.get('unit', 'cm').lower()
-        if _unit_low in ('layer',) and thick > 1:
-            auto_qty = area_per_km * road_length * thick
-        else:
-            auto_qty = area_per_km * road_length
+        auto_qty = area_per_km * road_length * thick if _unit_low == 'layer' and thick > 1 \
+                   else area_per_km * road_length
 
+        # ดึงราคาจาก Library
         lib_price = None
         if 'price_library' in st.session_state:
             lib = st.session_state['price_library']
             if is_wearing:
                 prices = lib['ac_prices'].get(selected_material, {})
-                lib_price = prices.get(thick)
-                if lib_price is None and prices:
-                    closest = min(prices.keys(), key=lambda x: abs(x - thick))
-                    lib_price = prices.get(closest)
+                lib_price = prices.get(thick) or (
+                    lib['ac_prices'][selected_material].get(
+                        min(prices.keys(), key=lambda x: abs(x - thick))
+                    ) if prices else None
+                )
             elif is_binder:
                 prices = lib['ac_prices'].get('AC Binder Course', {})
-                lib_price = prices.get(thick)
-                if lib_price is None and prices:
-                    closest = min(prices.keys(), key=lambda x: abs(x - thick))
-                    lib_price = prices.get(closest)
+                lib_price = prices.get(thick) or (
+                    prices.get(min(prices.keys(), key=lambda x: abs(x - thick))) if prices else None
+                )
             elif is_ac_base:
                 prices = lib['ac_prices'].get('AC Base Course', {})
-                lib_price = prices.get(thick)
-                if lib_price is None and prices:
-                    closest = min(prices.keys(), key=lambda x: abs(x - thick))
-                    lib_price = prices.get(closest)
+                lib_price = prices.get(thick) or (
+                    prices.get(min(prices.keys(), key=lambda x: abs(x - thick))) if prices else None
+                )
             elif is_concrete:
-                concrete_type = selected_type if 'selected_type' in dir() else 'JPCP'
-                prices = lib['concrete_prices'].get(concrete_type, {})
-                lib_price = prices.get(int(thick))
-                if lib_price is None and prices:
-                    closest = min(prices.keys(), key=lambda x: abs(x - thick))
-                    lib_price = prices.get(closest)
+                prices = lib['concrete_prices'].get(ptype, {})
+                lib_price = prices.get(int(thick)) or (
+                    prices.get(min(prices.keys(), key=lambda x: abs(x - thick))) if prices else None
+                )
 
         default_cost = lib_price if lib_price else layer['unit_cost']
 
         with cols[2]:
             if is_concrete or is_wearing or is_binder or is_ac_base:
+                # ราคาดึงจาก Library อัตโนมัติ → อ่านอย่างเดียว
                 st.markdown(f"**{default_cost:,.2f}**")
             else:
+                # geotextile / wire mesh / tack / prime → แก้ไขได้
                 default_cost = st.number_input(
                     "ราคา", value=float(default_cost), min_value=0.0, step=5.0,
                     key=f"{key_prefix}_price_{i}_v{v}", label_visibility="collapsed"
                 )
 
-        if is_concrete:
-            final_name = selected_material
-        elif is_wearing or is_binder or is_ac_base:
-            final_name = selected_material
-        else:
-            final_name = layer['name']
-
         if thick == 0:
             continue
         updated_layers.append({
-            'name': final_name, 'thickness': thick, 'unit': layer['unit'],
+            'name': selected_material, 'thickness': thick, 'unit': layer['unit'],
             'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': default_cost,
             'cost_per_sqm': default_cost,
         })
@@ -791,28 +761,15 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
 #   → ตอน first render อาจยังไม่มี → _lane_w = 3.5 (ยัง OK เพราะมี default)
 #   แต่ปัญหาจริงคือ width_m ควรใช้ area_per_km ที่รับมาเป็น param โดยตรง
 # แก้: คำนวณ width_m = area_per_km / 1000 (ซึ่งถูกส่งมาแล้ว) แทนการอ่าน session_state
-def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0):
+def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0, ptype='JRCP'):
     """แสดง UI สำหรับแก้ไขรอยต่อ
 
-    FIX v5.1 (Bug 3): CRCP lane_width ใช้ area_per_km param แทน session_state ที่อาจยังไม่ถูก set
+    v6.1: รับ ptype param โดยตรง — ไม่ต้องอ่าน ctype จาก session_state อีกต่อไป
+    ptype : 'JPCP' | 'JRCP' | 'CRCP'
     """
     st.markdown("---")
 
-    concrete_type = None
-    for i in range(5):
-        ctype_key = f"{key_prefix}_ctype_{i}_v{v}"
-        if ctype_key in st.session_state:
-            concrete_type = st.session_state[ctype_key]
-            break
-
-    if concrete_type is None:
-        first_joint_name = joints[0].get('name', '') if joints else ''
-        if 'JPCP' in first_joint_name or '@4m' in first_joint_name:
-            concrete_type = 'JPCP'
-        elif 'crcp' in key_prefix.lower():
-            concrete_type = 'CRCP'
-        else:
-            concrete_type = 'JRCP'
+    concrete_type = ptype  # ← ใช้ param โดยตรง แทนการ scan session_state
 
     if concrete_type == 'JPCP':
         joint_spacing = 4
@@ -825,9 +782,10 @@ def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0):
     for j in joints:
         jname = j['name']
         if concrete_type == 'CRCP':
-            # FIX: ใช้ area_per_km (param) แทน session_state
-            width_m = area_per_km / 1000  # ← FIX: เดิมใช้ _pi.get('lane_width', 3.5) ซึ่งอาจผิด
-            # หา lane_width: ลอง session_state ก่อน ถ้าไม่มีใช้ 3.5
+            width_m = area_per_km / 1000
+            lane_w = st.session_state.get('project_info', {}).get('lane_width', 3.5)
+            if not lane_w or lane_w <= 0:
+                lane_w = 3.5
             lane_w = st.session_state.get('project_info', {}).get('lane_width', 3.5)
             if lane_w is None or lane_w <= 0:
                 lane_w = 3.5
@@ -1654,23 +1612,18 @@ def main():
             key_prefix = f"{ptype.lower()}_{suffix}"
             is_concrete = ptype in ('JPCP', 'JRCP', 'CRCP')
 
-            # ── badge + ชื่อโครงสร้าง ──
-            badge_color = '#E6F1FB' if suffix == 'a' else '#EAF3DE'
+            # ── badge ──
+            badge_color      = '#E6F1FB' if suffix == 'a' else '#EAF3DE'
             badge_text_color = '#0C447C' if suffix == 'a' else '#3B6D11'
             st.markdown(
                 f'<span style="background:{badge_color};color:{badge_text_color};'
                 f'font-size:11px;font-weight:600;padding:2px 8px;'
-                f'border-radius:99px;margin-right:6px;">{set_label}</span>'
-                f'<span style="font-size:13px;color:#666;">{label}</span>',
+                f'border-radius:99px;margin-right:6px;">{set_label}</span>',
                 unsafe_allow_html=True
             )
 
-            # default name สำหรับ concrete (ดึง ctype จาก session_state)
-            if is_concrete:
-                _ctype = st.session_state.get(f"{key_prefix}_ctype_0_v{v}", ptype)
-                _default_name = f"{_ctype}: {label}"
-            else:
-                _default_name = f"AC: {label}"
+            # default name — เรียบง่าย ไม่ซ้ำซ้อน
+            _default_name = label
 
             struct_name = st.text_input(
                 "ชื่อโครงสร้าง",
@@ -1684,14 +1637,18 @@ def main():
             )
 
             with st.expander(f"▶ {struct_name}", expanded=True):
+                # ส่ง ptype ไป render_layer_editor เพื่อกำหนดชื่อ concrete ตายตัว
                 layers = render_layer_editor(
-                    default_layers_fn(), key_prefix, total_width, road_length, v=v
+                    default_layers_fn(), key_prefix, total_width, road_length, v=v,
+                    ptype=ptype
                 )
                 layer_cost, layer_details = calculate_layer_cost(layers, road_length)
 
                 if is_concrete and default_joints_fn is not None:
+                    # ส่ง ptype ไป render_joint_editor เพื่อกำหนด spacing ตายตัว
                     joints, include_joints = render_joint_editor(
-                        default_joints_fn(), key_prefix, area_per_km, road_length, v=v
+                        default_joints_fn(), key_prefix, area_per_km, road_length, v=v,
+                        ptype=ptype
                     )
                     joint_cost, joint_details = calculate_joint_cost(joints, road_length)
                     joints_sqm = sum(j.get('cost_per_sqm', 0) for j in joints)
@@ -1726,17 +1683,16 @@ def main():
 
         # ── ตัวกำหนด default layers/joints ต่อประเภท ──
         STRUCT_CONFIG = {
-            'AC':   (get_default_ac1_layers,   None,                  'แอสฟัลต์คอนกรีต',             '#378ADD', 20),
-            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'JPCP (คอนกรีตรอยต่อทุก 4 ม.)', '#E29A30', 25),
-            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'JRCP (คอนกรีตรอยต่อทุก 10 ม.)', '#E29A30', 25),
-            'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'CRCP (คอนกรีตเสริมเหล็กต่อเนื่อง)', '#C94040', 30),
+            'AC':   (get_default_ac1_layers,   None,                     'แอสฟัลต์คอนกรีต บนหินคลุก',           '#378ADD', 20),
+            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต บนดินซีเมนต์',                 '#E29A30', 25),
+            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต บนหินคลุกผสมซีเมนต์',          '#E29A30', 25),
+            'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บนดินซีเมนต์', '#C94040', 30),
         }
-        # ชุดที่ 2 ใช้ default layers ชุดที่ 2
         STRUCT_CONFIG_B = {
-            'AC':   (get_default_ac2_layers,   None,                  'แอสฟัลต์คอนกรีต (เปรียบเทียบ)',  '#378ADD', 20),
-            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'JPCP (เปรียบเทียบ)',            '#E29A30', 25),
-            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'JRCP (เปรียบเทียบ)',            '#E29A30', 25),
-            'CRCP': (get_default_crcp2_layers, get_default_crcp2_joints, 'CRCP (เปรียบเทียบ)',            '#C94040', 30),
+            'AC':   (get_default_ac2_layers,   None,                     'แอสฟัลต์คอนกรีต บนหินคลุกผสมซีเมนต์',  '#378ADD', 20),
+            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต บนดินซีเมนต์ (เปรียบเทียบ)',   '#E29A30', 25),
+            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต บนหินคลุกผสมซีเมนต์ (เปรียบเทียบ)', '#E29A30', 25),
+            'CRCP': (get_default_crcp2_layers, get_default_crcp2_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บน CMCR',   '#C94040', 30),
         }
 
         ptypes = ['AC', 'JPCP', 'JRCP', 'CRCP']
