@@ -72,36 +72,6 @@ st.markdown("""
         border-left: 4px solid #2E86AB;
         margin: 10px 0;
     }
-
-    /* === Selectbox: เขียวอ่อน === */
-    div[data-baseweb="select"] > div {
-        background-color: #e8f5e9 !important;
-        border-color: #66bb6a !important;
-        border-radius: 8px !important;
-    }
-    div[data-baseweb="select"] > div:hover {
-        background-color: #c8e6c9 !important;
-        border-color: #43a047 !important;
-    }
-    div[data-baseweb="select"] svg {
-        fill: #2e7d32 !important;
-    }
-    /* Dropdown list items */
-    div[data-baseweb="menu"] {
-        background-color: #f1f8e9 !important;
-    }
-    div[data-baseweb="menu"] li {
-        background-color: #f1f8e9 !important;
-        color: #1b5e20 !important;
-    }
-    div[data-baseweb="menu"] li:hover {
-        background-color: #c8e6c9 !important;
-    }
-    /* ตัวอักษรใน selectbox */
-    div[data-baseweb="select"] span {
-        color: #1b5e20 !important;
-        font-weight: 500 !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -213,9 +183,7 @@ def _parse_json_details_to_layers(details):
 def get_default_ac1_layers():
     """AC1: แอสฟัลต์บนหินคลุก (ตารางที่ 5.3-18)"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('AC1', {})
-    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
-        return _d['layers']
-    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
+    if _d.get('details'):
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
@@ -232,9 +200,7 @@ def get_default_ac1_layers():
 def get_default_ac2_layers():
     """AC2: แอสฟัลต์บนหินคลุกผสมซีเมนต์ (ตารางที่ 5.3-20)"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('AC2', {})
-    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
-        return _d['layers']
-    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
+    if _d.get('details'):
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
@@ -250,14 +216,11 @@ def get_default_ac2_layers():
 def get_default_jrcp1_layers():
     """JPCP/JRCP (1): คอนกรีตบนดินซีเมนต์ (ตารางที่ 5.3-22)"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP1', {})
-    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
-        return _d['layers']
-    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
+    if _d.get('details'):
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 28, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 800},
-        {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Soil Cement Base', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'cu.m', 'unit_cost': 621},
         {'name': 'Sand Embankment', 'thickness': 60, 'unit': 'cm', 'quantity': 13200, 'qty_unit': 'cu.m', 'unit_cost': 361},
@@ -266,9 +229,7 @@ def get_default_jrcp1_layers():
 def get_default_jrcp1_joints():
     """รอยต่อสำหรับ JRCP1 - ปริมาณต่อ 1 กม."""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP1', {})
-    if _d.get('joints'):  # ใช้ raw joints ก่อน
-        return _d['joints']
-    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
+    if _d.get('details'):
         _, joints = _parse_json_details_to_layers(_d['details'])
         if joints: return joints
     return [
@@ -279,14 +240,11 @@ def get_default_jrcp1_joints():
 def get_default_jrcp2_layers():
     """JPCP/JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์ (ตารางที่ 5.3-24)"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP2', {})
-    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
-        return _d['layers']
-    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
+    if _d.get('details'):
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 28, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 800},
-        {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'cu.m', 'unit_cost': 914},
         {'name': 'Sand Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'cu.m', 'unit_cost': 361},
@@ -295,9 +253,7 @@ def get_default_jrcp2_layers():
 def get_default_jrcp2_joints():
     """รอยต่อสำหรับ JRCP2 - ปริมาณต่อ 1 กม."""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('JRCP2', {})
-    if _d.get('joints'):  # ใช้ raw joints ก่อน
-        return _d['joints']
-    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
+    if _d.get('details'):
         _, joints = _parse_json_details_to_layers(_d['details'])
         if joints: return joints
     return [
@@ -308,14 +264,12 @@ def get_default_jrcp2_joints():
 def get_default_crcp1_layers():
     """CRCP1: คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP1', {})
-    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
-        return _d['layers']
-    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
+    if _d.get('details'):
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 25, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 850},
-        {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
+        {'name': 'Steel Reinforcement', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 150},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Soil Cement Base', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'cu.m', 'unit_cost': 621},
         {'name': 'Sand Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'cu.m', 'unit_cost': 361},
@@ -324,44 +278,15 @@ def get_default_crcp1_layers():
 def get_default_crcp2_layers():
     """CRCP2: คอนกรีตเสริมเหล็กต่อเนื่องบนหินคลุกผสมซีเมนต์"""
     _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP2', {})
-    if _d.get('layers'):  # ใช้ raw layers ก่อน (ถูกต้องกว่า details)
-        return _d['layers']
-    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
+    if _d.get('details'):
         layers, _ = _parse_json_details_to_layers(_d['details'])
         if layers: return layers
     return [
         {'name': '350 Ksc. Cubic Type Concrete', 'thickness': 25, 'unit': 'cm', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 850},
-        {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
+        {'name': 'Steel Reinforcement', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 150},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'cu.m', 'unit_cost': 914},
         {'name': 'Sand Embankment', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'cu.m', 'unit_cost': 361},
-    ]
-
-
-def get_default_crcp1_joints():
-    """รอยต่อ/เหล็กเสริมสำหรับ CRCP1 - ปริมาณต่อ 1 กม."""
-    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP1', {})
-    if _d.get('joints'):  # ใช้ raw joints ก่อน
-        return _d['joints']
-    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
-        _, joints = _parse_json_details_to_layers(_d['details'])
-        if joints: return joints
-    return [
-        {'name': 'Steel Reinforcement (CRCP)', 'quantity': 1000, 'qty_unit': 'm', 'unit_cost': 200},
-        {'name': 'Transverse Joint', 'quantity': 4000, 'qty_unit': 'm', 'unit_cost': 120},
-    ]
-
-def get_default_crcp2_joints():
-    """รอยต่อ/เหล็กเสริมสำหรับ CRCP2 - ปริมาณต่อ 1 กม."""
-    _d = st.session_state.get('loaded_project', {}).get('construction', {}).get('CRCP2', {})
-    if _d.get('joints'):  # ใช้ raw joints ก่อน
-        return _d['joints']
-    if _d.get('details'):  # fallback: parse จาก details (JSON เก่า)
-        _, joints = _parse_json_details_to_layers(_d['details'])
-        if joints: return joints
-    return [
-        {'name': 'Steel Reinforcement (CRCP)', 'quantity': 1000, 'qty_unit': 'm', 'unit_cost': 200},
-        {'name': 'Transverse Joint', 'quantity': 4000, 'qty_unit': 'm', 'unit_cost': 120},
     ]
 
 
@@ -377,64 +302,27 @@ def calculate_quantity(thickness_cm, width_m, length_km, qty_unit):
 
 def calculate_layer_cost(layers, road_length_km=1.0):
     """คำนวณค่าก่อสร้างจากชั้นโครงสร้าง
-    - วัสดุผิวทาง/ผิวคอนกรีต/วัสดุอื่นๆ: หน่วย ตร.ม., ราคา/หน่วย = บาท/ตร.ม.
-    - วัสดุพื้นทาง/รองพื้นทาง: หน่วย ลบ.ม., ราคา/หน่วย = บาท/ลบ.ม.
-      (ปริมาณที่เก็บเป็น ตร.ม. จะแปลงเป็น ลบ.ม. = qty × thick_cm/100)
+    ราคาทั้งหมดเป็น บาท/ตร.ม. × ปริมาณ (ตร.ม.)
     """
     total = 0
     details = []
-
-    BASE_KEYWORDS = ['crushed rock', 'soil aggregate', 'soil cement', 'cement modified',
-                     'cement treated', 'selected material', 'sand embankment']
-
+    
     for layer in layers:
-        qty_raw = layer['quantity']   # เป็น ตร.ม. เสมอ (ตามที่ app เก็บไว้)
-        unit_cost = layer['unit_cost']  # บาท/ตร.ม. เสมอ
-        cost = qty_raw * unit_cost
+        # ปริมาณเป็น ตร.ม. แล้ว (ไม่ต้องคูณ road_length อีก เพราะคำนวณไว้แล้ว)
+        qty = layer['quantity']
+        # ราคาเป็น บาท/ตร.ม.
+        cost = qty * layer['unit_cost']
         total += cost
-
-        name_lower = layer['name'].lower()
-        is_base = any(kw in name_lower for kw in BASE_KEYWORDS)
-
-        if is_base:
-            # แสดงปริมาณเป็น ลบ.ม.
-            thick_cm = float(layer.get('thickness', 1))
-            u = layer.get('unit', 'cm').lower()
-            if thick_cm > 0 and u in ('cm', 'ซม.', 'ซ.ม.'):
-                qty_display = qty_raw * thick_cm / 100   # ตร.ม. → ลบ.ม.
-            else:
-                qty_display = qty_raw
-
-            # ราคา/ลบ.ม.: ใช้ cost_cum ที่ render_layer_editor เก็บไว้ก่อน
-            # ถ้าไม่มี ค่อยคำนวณย้อนกลับ
-            if 'cost_cum' in layer and layer['cost_cum']:
-                price_cum = layer['cost_cum']
-            elif thick_cm > 0 and u in ('cm', 'ซม.', 'ซ.ม.'):
-                price_cum = unit_cost / (thick_cm / 100)
-            else:
-                price_cum = unit_cost
-
-            display_unit = 'ลบ.ม.'
-            display_price_str = f"{price_cum:,.0f}"
-            display_price_label = 'บาท/ลบ.ม.'
-            qty_show = qty_display
-        else:
-            qty_show = qty_raw
-            display_unit = 'ตร.ม.'
-            display_price_str = f"{unit_cost:,.0f}"
-            display_price_label = 'บาท/ตร.ม.'
-
+        
         details.append({
             'รายการ': layer['name'],
             'ความหนา': f"{layer['thickness']} {layer['unit']}",
-            'ปริมาณ': qty_show,
-            'หน่วย': display_unit,
-            'ราคา/หน่วย': unit_cost,
-            'ราคา/หน่วย (แสดง)': display_price_str,
-            'หน่วยราคา': display_price_label,
+            'ปริมาณ': qty,
+            'หน่วย': 'ตร.ม.',
+            'ราคา/หน่วย': layer['unit_cost'],
             'มูลค่า (บาท)': cost
         })
-
+    
     return total, details
 
 
@@ -448,16 +336,12 @@ def calculate_joint_cost(joints, road_length_km=1.0):
         cost = qty * joint['unit_cost']
         total += cost
         
-        # หน่วยปริมาณของ joint = 'm' → แสดง 'ม.' และราคา/ม.
-        unit_th = 'ม.' if joint.get('qty_unit', 'm') == 'm' else joint.get('qty_unit', 'm')
         details.append({
             'รายการ': joint['name'],
             'ความหนา': '-',
             'ปริมาณ': qty,
-            'หน่วย': unit_th,
+            'หน่วย': joint['qty_unit'],
             'ราคา/หน่วย': joint['unit_cost'],
-            'ราคา/หน่วย (แสดง)': f"{joint['unit_cost']:,.0f}",
-            'หน่วยราคา': 'บาท/ม.',
             'มูลค่า (บาท)': cost
         })
     
@@ -527,7 +411,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
         name_lower = layer['name'].lower()
         if any(x in name_lower for x in [
             'wearing', 'binder', 'asphalt', 'concrete', 'tack', 'prime',
-            'geotextile', 'steel', 'wire',
+            'geotextile', 'steel',
             'ac base',              # AC Base Course จาก JSON
             'ac wearing', 'ac binder',
         ]):
@@ -540,32 +424,18 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
     cols = st.columns([3, 1, 1.5])
     cols[0].markdown("รายการ")
     cols[1].markdown("หนา (cm)")
-    cols[2].markdown("ราคา (บาท/ตร.ม.) ✏️")
+    cols[2].markdown("ราคา (บาท/ตร.ม.)")
     
     # ตัวเลือกวัสดุ
     wearing_options = ['AC Wearing Course', 'PMA Wearing Course']
     binder_options = ['AC Binder Course']
     base_options = ['AC Base Course']
     concrete_options = ['JPCP', 'JRCP', 'CRCP']
-
-    # ตรวจ concrete type จาก session_state เพื่อซ่อน Wire Mesh เมื่อ JPCP
-    _selected_concrete_type = None
-    for _ci in range(5):
-        _ck = f"{key_prefix}_ctype_{_ci}_v{v}"
-        if _ck in st.session_state:
-            _selected_concrete_type = st.session_state[_ck]
-            break
-    if _selected_concrete_type is None:
-        if 'crcp' in key_prefix.lower():
-            _selected_concrete_type = 'CRCP'
-        elif 'jrcp' in key_prefix.lower():
-            _selected_concrete_type = 'JRCP'
-        else:
-            _selected_concrete_type = 'JPCP'
-
+    
     for i, layer in enumerate(surface_layers):
+        cols = st.columns([3, 1, 1.5])
         name_lower = layer['name'].lower()
-
+        
         # กำหนดว่าเป็นชั้นไหน
         is_wearing = 'wearing' in name_lower
         is_binder = 'binder' in name_lower
@@ -573,13 +443,6 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
                      ('ac base' in name_lower) or \
                      ('interlayer' in name_lower)
         is_concrete = 'concrete' in name_lower or 'ksc' in name_lower
-        is_wire_mesh = 'wire' in name_lower
-
-        # ซ่อน Wire Mesh เมื่อ JPCP (ไม่มีเหล็กในแผ่น)
-        if is_wire_mesh and _selected_concrete_type == 'JPCP':
-            continue
-
-        cols = st.columns([3, 1, 1.5])
         
         with cols[0]:
             if is_wearing:
@@ -629,13 +492,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
                 key=f"{key_prefix}_st_{i}_v{v}", label_visibility="collapsed", min_value=0.0, step=1.0)
         
         # คำนวณปริมาณอัตโนมัติ (ตร.ม.)
-        # unit='Layer'/'ชั้น': ปริมาณ = พื้นที่ × จำนวนชั้น (thick)
-        # unit='cm' และอื่นๆ: ปริมาณ = พื้นที่ คงที่ (ความหนาไม่กระทบ quantity)
-        _unit_low = layer.get('unit', 'cm').lower()
-        if _unit_low in ('layer',) and thick > 1:
-            auto_qty = area_per_km * road_length * thick
-        else:
-            auto_qty = area_per_km * road_length
+        auto_qty = area_per_km * road_length
         
         # ดึงราคาจาก Library (บาท/ตร.ม.) ตามวัสดุและความหนาที่เลือก
         lib_price = None
@@ -671,22 +528,9 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
         
         # ใช้ราคาจาก Library หรือค่า default
         default_cost = lib_price if lib_price else layer['unit_cost']
-
+        
         with cols[2]:
-            # วัสดุที่ราคาคงที่ (geotextile, wire mesh, steel rebar) → ให้แก้ไขได้
-            if is_concrete or is_wearing or is_binder or is_ac_base:
-                # ราคาดึงจาก Library อัตโนมัติ → แสดงแบบอ่านอย่างเดียว
-                st.markdown(f"**{default_cost:,.2f}**")
-            else:
-                # geotextile / wire mesh / steel / อื่นๆ → number_input แก้ไขได้
-                default_cost = st.number_input(
-                    "ราคา",
-                    value=float(default_cost),
-                    min_value=0.0,
-                    step=5.0,
-                    key=f"{key_prefix}_price_{i}_v{v}",
-                    label_visibility="collapsed"
-                )
+            st.markdown(f"**{default_cost:,.2f}**")
         
         # เก็บชื่อที่ถูกต้อง
         if is_concrete:
@@ -696,12 +540,6 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
         else:
             final_name = layer['name']
         
-        # ข้าม layer ที่ผู้ใช้ตั้งใจไม่ใช้:
-        # - unit='cm': ข้ามเมื่อ thickness=0
-        # - unit='ชั้น'/'Layer': ข้ามเมื่อ thickness=0 (ไม่ว่า cost จะเป็นเท่าไหร่)
-        _unit_lower = layer.get('unit', 'cm').lower()
-        if thick == 0:
-            continue
         updated_layers.append({
             'name': final_name, 'thickness': thick, 'unit': layer['unit'],
             'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': default_cost,
@@ -832,9 +670,6 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
             # แสดงราคาที่คำนวณแล้ว บาท/ตร.ม. (อัพเดทตามความหนาอัตโนมัติ)
             st.markdown(f"**{cost_per_sqm:,.2f}**")
         
-        # ข้าม base layer ที่ thickness=0 (ผู้ใช้ตั้งใจไม่ใช้)
-        if thick == 0:
-            continue
         updated_layers.append({
             'name': selected, 'thickness': thick, 'unit': 'cm',
             'quantity': auto_qty, 'qty_unit': 'sq.m', 'unit_cost': cost_per_sqm,
@@ -846,83 +681,26 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0):
 
 
 def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0):
-    """แสดง UI สำหรับแก้ไขรอยต่อ พร้อมแสดงราคา บาท/ตร.ม.
-    ตรวจสอบ session_state เพื่อรู้ชนิด concrete (JPCP/@4m หรือ JRCP/@10m)
-    """
+    """แสดง UI สำหรับแก้ไขรอยต่อ พร้อมแสดงราคา บาท/ตร.ม."""
     st.markdown("---")
     
-    # ตรวจสอบชนิด concrete จาก session_state
-    # key ที่ render_layer_editor บันทึก: f"{key_prefix}_ctype_{i}_v{v}"
-    concrete_type = None
-    for i in range(5):  # scan layer 0-4
-        ctype_key = f"{key_prefix}_ctype_{i}_v{v}"
-        if ctype_key in st.session_state:
-            concrete_type = st.session_state[ctype_key]
-            break
-
-    # fallback: ดูจาก joint name เดิม หรือ key_prefix
-    if concrete_type is None:
-        first_joint_name = joints[0].get('name', '') if joints else ''
-        if 'JPCP' in first_joint_name or '@4m' in first_joint_name:
-            concrete_type = 'JPCP'
-        elif 'crcp' in key_prefix.lower():
-            concrete_type = 'CRCP'
-        else:
-            # default: key_prefix ที่ขึ้นต้น jrcp → JRCP
-            concrete_type = 'JRCP'
-
-    # กำหนด joint spacing และ name ตามชนิด
-    if concrete_type == 'JPCP':
-        joint_spacing = 4   # เมตร
-        joint_label = '@4m'
-    else:
-        joint_spacing = 10  # เมตร
-        joint_label = '@10m'
-
-    # ปรับ joints เริ่มต้นให้ตรงกับชนิดที่เลือก
-    adjusted_joints = []
-    for j in joints:
-        jname = j['name']
-        if concrete_type == 'CRCP':
-            # CRCP: คำนวณปริมาณเหมือน Longitudinal Joint ของ JPCP
-            # = จำนวนเส้นรอยต่อตามยาว × ความยาวถนน (ม.)
-            # จำนวนเส้น = (ความกว้างถนนรวม / ความกว้างช่องจราจร) - 1
-            _pi = st.session_state.get('project_info', {})
-            _lane_w = _pi.get('lane_width', 3.5)
-            _width_m = area_per_km / 1000
-            _num_joints = max(1, round(_width_m / _lane_w) - 1)
-            adj_qty = _num_joints * road_length * 1000  # ม.
-        elif 'Transverse Joint' in jname:
-            # JPCP/JRCP: คำนวณจาก spacing และความกว้างถนน
-            jname = f"Transverse Joint {joint_label}"
-            width_m = area_per_km / 1000
-            qty_auto = (road_length * 1000 / joint_spacing) * width_m
-            adj_qty = qty_auto
-        else:
-            adj_qty = j['quantity']
-        adjusted_joints.append({**j, 'name': jname, 'quantity': adj_qty})
-
     # Checkbox เลือกรวม/ไม่รวม Joints
     col_header = st.columns([3, 1])
     with col_header[0]:
-        if concrete_type == 'CRCP':
-            st.markdown("**เหล็กเสริม & รอยต่อ (CRCP)**")
-        else:
-            st.markdown(f"**รอยต่อ (Joints) — {concrete_type} ระยะ {joint_spacing} ม.**")
+        st.markdown("**รอยต่อ (Joints)**")
     with col_header[1]:
-        _cb_label = "รวมราคา Steel Rebar" if concrete_type == 'CRCP' else "รวมราคา Joints"
-        include_joints = st.checkbox(_cb_label, value=True, key=f"{key_prefix}_include_joints_v{v}")
+        include_joints = st.checkbox("รวมราคา Joints", value=True, key=f"{key_prefix}_include_joints_v{v}")
     
     cols = st.columns([3, 1.5, 1.5, 1.5])
     cols[0].markdown("รายการ")
     cols[1].markdown("ปริมาณ (m)")
-    cols[2].markdown("ราคา/ม. (บาท)")
-    cols[3].markdown("ราคา (บาท/ตร.ม. รวม)")
+    cols[2].markdown("ราคา/หน่วย")
+    cols[3].markdown("ราคา (บาท/ตร.ม.)")
     
     updated_joints = []
     total_area = area_per_km * road_length
     
-    for i, joint in enumerate(adjusted_joints):
+    for i, joint in enumerate(joints):
         cols = st.columns([3, 1.5, 1.5, 1.5])
         
         with cols[0]:
@@ -931,14 +709,14 @@ def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0):
         with cols[1]:
             qty = st.number_input(
                 "ปริมาณ (m)", value=float(joint['quantity']),
-                key=f"{key_prefix}_jq_{i}_s{joint_spacing}_v{v}", label_visibility="collapsed",
+                key=f"{key_prefix}_jq_{i}_v{v}", label_visibility="collapsed",
                 min_value=0.0, step=100.0
             )
         
         with cols[2]:
             cost = st.number_input(
                 "ราคา/ม.", value=float(joint['unit_cost']),
-                key=f"{key_prefix}_jc_{i}_s{joint_spacing}_v{v}", label_visibility="collapsed",
+                key=f"{key_prefix}_jc_{i}_v{v}", label_visibility="collapsed",
                 min_value=0.0, step=10.0
             )
         
@@ -985,7 +763,7 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     base_layers = []
     for layer in layers:
         name_lower = layer['name'].lower()
-        if any(x in name_lower for x in ['wearing', 'binder', 'asphalt', 'concrete', 'tack', 'prime', 'geotextile', 'steel', 'wire', 'ac base', 'ac wearing', 'ac binder']):
+        if any(x in name_lower for x in ['wearing', 'binder', 'asphalt', 'concrete', 'tack', 'prime', 'geotextile', 'steel', 'ac base', 'ac wearing', 'ac binder']):
             surface_layers.append(layer)
         else:
             base_layers.append(layer)
@@ -1007,35 +785,7 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     
     row_idx = 1
     running_total = 0
-
-    # helper: แปลง qty_unit เป็นภาษาไทยและคำนวณ unit_cost ที่แสดง (บาท/หน่วย)
-    BASE_KEYWORDS_T = ['crushed rock', 'soil aggregate', 'soil cement', 'cement modified',
-                       'cement treated', 'selected material', 'sand embankment']
-
-    def _unit_and_price(layer):
-        """คืน (หน่วยแสดง, ราคาแสดง, หมายเหตุหน่วยราคา) ตามชนิดวัสดุ"""
-        name_lower = layer['name'].lower()
-        is_base = any(kw in name_lower for kw in BASE_KEYWORDS_T)
-        if is_base:
-            thick_cm = float(layer.get('thickness', 1))
-            u = layer.get('unit', 'cm').lower()
-            # ใช้ cost_cum ที่เก็บไว้ก่อน
-            if 'cost_cum' in layer and layer['cost_cum']:
-                price_cum = layer['cost_cum']
-            elif thick_cm > 0 and u in ('cm', 'ซม.', 'ซ.ม.'):
-                price_cum = layer['unit_cost'] / (thick_cm / 100)
-            else:
-                price_cum = layer['unit_cost']
-            # ปริมาณแสดงเป็น ลบ.ม.
-            qty_raw = layer['quantity']
-            if thick_cm > 0 and u in ('cm', 'ซม.', 'ซ.ม.'):
-                qty_display = qty_raw * thick_cm / 100
-            else:
-                qty_display = qty_raw
-            return 'ลบ.ม.', f"{price_cum:,.0f}", 'บาท/ลบ.ม.', qty_display
-        else:
-            return 'ตร.ม.', f"{layer['unit_cost']:,.0f}", 'บาท/ตร.ม.', layer['quantity']
-
+    
     # กลุ่ม 1: ผิวทาง
     table.rows[row_idx].cells[0].text = '1'
     table.rows[row_idx].cells[1].text = 'ผิวทาง'
@@ -1043,15 +793,14 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     
     surface_total = 0
     for i, layer in enumerate(surface_layers, 1):
-        qty_raw = layer['quantity'] * road_length
-        cost = qty_raw * layer['unit_cost']
-        unit_th, price_str, price_lbl, qty_disp = _unit_and_price(layer)
+        qty = layer['quantity'] * road_length
+        cost = qty * layer['unit_cost']
         table.rows[row_idx].cells[0].text = f'1.{i}'
         table.rows[row_idx].cells[1].text = layer['name']
         table.rows[row_idx].cells[2].text = f"{layer['thickness']} {layer['unit']}"
-        table.rows[row_idx].cells[3].text = f"{qty_disp * road_length:,.0f}"
-        table.rows[row_idx].cells[4].text = unit_th
-        table.rows[row_idx].cells[5].text = f"{price_str} ({price_lbl})"
+        table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
+        table.rows[row_idx].cells[4].text = layer['qty_unit']
+        table.rows[row_idx].cells[5].text = f"{layer['unit_cost']:,.0f}"
         table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
         surface_total += cost
         row_idx += 1
@@ -1074,8 +823,8 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
             table.rows[row_idx].cells[0].text = f'2.{i}'
             table.rows[row_idx].cells[1].text = joint['name']
             table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
-            table.rows[row_idx].cells[4].text = 'ม.'
-            table.rows[row_idx].cells[5].text = f"{joint['unit_cost']:,.0f} (บาท/ม.)"
+            table.rows[row_idx].cells[4].text = joint['qty_unit']
+            table.rows[row_idx].cells[5].text = f"{joint['unit_cost']:,.0f}"
             table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
             joint_total += cost
             row_idx += 1
@@ -1095,15 +844,14 @@ def generate_word_report_table(project_info, structure_type, structure_name, cbr
     
     base_total = 0
     for i, layer in enumerate(base_layers, 1):
-        qty_raw = layer['quantity'] * road_length
-        cost = qty_raw * layer['unit_cost']
-        unit_th, price_str, price_lbl, qty_disp = _unit_and_price(layer)
+        qty = layer['quantity'] * road_length
+        cost = qty * layer['unit_cost']
         table.rows[row_idx].cells[0].text = f'{group_num}.{i}'
         table.rows[row_idx].cells[1].text = layer['name']
         table.rows[row_idx].cells[2].text = f"{layer['thickness']} {layer['unit']}"
-        table.rows[row_idx].cells[3].text = f"{qty_disp * road_length:,.0f}"
-        table.rows[row_idx].cells[4].text = unit_th
-        table.rows[row_idx].cells[5].text = f"{price_str} ({price_lbl})"
+        table.rows[row_idx].cells[3].text = f"{qty:,.0f}"
+        table.rows[row_idx].cells[4].text = layer['qty_unit']
+        table.rows[row_idx].cells[5].text = f"{layer['unit_cost']:,.0f}"
         table.rows[row_idx].cells[6].text = f"{cost:,.0f}"
         base_total += cost
         row_idx += 1
@@ -1171,14 +919,15 @@ def generate_word_report_materials_only(project_info, all_details):
         
         doc.add_heading(structure_name, level=2)
         if details:
-            table = doc.add_table(rows=len(details)+1, cols=5)
+            table = doc.add_table(rows=len(details)+1, cols=4)
             table.style = 'Table Grid'
             
-            # Header — เพิ่มคอลัมน์ "หน่วย" ระหว่าง ปริมาณ กับ ราคา/หน่วย
-            headers = ['รายการ', 'ปริมาณ', 'หน่วย', 'ราคา/หน่วย (บาท)', 'มูลค่า (บาท)']
+            # Header
+            headers = ['รายการ', 'ปริมาณ', 'ราคา/หน่วย (บาท)', 'มูลค่า (บาท)']
             for j, h in enumerate(headers):
                 cell = table.rows[0].cells[j]
                 cell.text = h
+                # ทำให้ header เป็นตัวหนา
                 for paragraph in cell.paragraphs:
                     for run in paragraph.runs:
                         run.font.bold = True
@@ -1186,18 +935,10 @@ def generate_word_report_materials_only(project_info, all_details):
             # Data rows
             subtotal = 0
             for i, d in enumerate(details):
-                # ดึงหน่วยราคาจาก key ใหม่ (ถ้ามี) หรือ fallback จากหน่วยปริมาณ
-                unit_display = d.get('หน่วย', 'ตร.ม.')
-                price_display = d.get('ราคา/หน่วย (แสดง)', f"{d['ราคา/หน่วย']:,.0f}")
-                # fallback หน่วยราคาตาม unit_display (ม.→บาท/ม., ลบ.ม.→บาท/ลบ.ม., อื่น→บาท/ตร.ม.)
-                _fallback_price_label = {'ม.': 'บาท/ม.', 'ลบ.ม.': 'บาท/ลบ.ม.'}.get(unit_display, 'บาท/ตร.ม.')
-                price_label = d.get('หน่วยราคา', _fallback_price_label)
-                
                 table.rows[i+1].cells[0].text = str(d['รายการ'])
-                table.rows[i+1].cells[1].text = f"{d['ปริมาณ']:,.0f}"
-                table.rows[i+1].cells[2].text = unit_display
-                table.rows[i+1].cells[3].text = f"{price_display} ({price_label})"
-                table.rows[i+1].cells[4].text = f"{d['มูลค่า (บาท)']:,.0f}"
+                table.rows[i+1].cells[1].text = f"{d['ปริมาณ']:,.0f} {d['หน่วย']}"
+                table.rows[i+1].cells[2].text = f"{d['ราคา/หน่วย']:,.0f}"
+                table.rows[i+1].cells[3].text = f"{d['มูลค่า (บาท)']:,.0f}"
                 subtotal += d['มูลค่า (บาท)']
             
             # แสดงยอดรวมย่อย
@@ -1205,9 +946,10 @@ def generate_word_report_materials_only(project_info, all_details):
             doc.add_paragraph()
             
             # เก็บข้อมูลสำหรับตารางสรุป
-            cost_per_km_million = data.get('cost_per_km', 0)
-            cost_per_sqm = data.get('cost_sqm', 0)
-            total_value = subtotal
+            cost_per_km_million = data.get('cost_per_km', 0)  # ล้านบาท/กม.
+            cost_per_km_baht = cost_per_km_million * 1_000_000  # บาท/กม.
+            cost_per_sqm = data.get('cost_sqm', 0)  # บาท/ตร.ม.
+            total_value = subtotal  # มูลค่ารวม (บาท)
             
             summary_data.append({
                 'name': structure_name,
@@ -1234,6 +976,7 @@ def generate_word_report_materials_only(project_info, all_details):
         
         # Data rows
         for i, item in enumerate(summary_data):
+            # มูลค่ารวมต่อ กม. = มูลค่ารวม / ความยาว
             total_per_km = item['total_value'] / length if length > 0 else 0
             
             table.rows[i+1].cells[0].text = item['name']
@@ -1341,14 +1084,14 @@ def generate_word_report_consultant(project_info, all_details, chapter_num="4", 
         _add_heading_para(f"ผิวทางประเภท {structure_name}", size=16, bold=True, space_before=6, space_after=2)
 
         if details:
-            table = doc.add_table(rows=len(details) + 2, cols=5)
+            table = doc.add_table(rows=len(details) + 2, cols=4)
             table.style = 'Table Grid'
-            col_widths_t = [Cm(6.5), Cm(2.5), Cm(1.8), Cm(3.5), Cm(3.5)]
+            col_widths_t = [Cm(7), Cm(3), Cm(3.5), Cm(3.5)]
             for row in table.rows:
                 for idx, cell in enumerate(row.cells):
                     cell.width = col_widths_t[idx]
 
-            headers_t = ['รายการ', 'ปริมาณ', 'หน่วย', 'ราคา/หน่วย (บาท)', 'มูลค่า (บาท)']
+            headers_t = ['รายการ', 'ปริมาณ', 'ราคา/หน่วย (บาท)', 'มูลค่า (บาท)']
             for j, h in enumerate(headers_t):
                 cell = table.rows[0].cells[j]
                 cell.text = ''
@@ -1360,49 +1103,34 @@ def generate_word_report_consultant(project_info, all_details, chapter_num="4", 
             subtotal = 0
             for i, d in enumerate(details):
                 rc = table.rows[i + 1].cells
-                # col 0: รายการ
                 rc[0].text = ''
                 run = rc[0].paragraphs[0].add_run(str(d['รายการ']))
                 _set_run_font(run, size=15)
-                # col 1: ปริมาณ
                 rc[1].text = ''
-                rc[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                run = rc[1].paragraphs[0].add_run(f"{d['ปริมาณ']:,.0f}")
+                rc[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = rc[1].paragraphs[0].add_run(f"{d['ปริมาณ']:,.0f} {d['หน่วย']}")
                 _set_run_font(run, size=15)
-                # col 2: หน่วย (ตร.ม. หรือ ลบ.ม.)
-                unit_display = d.get('หน่วย', 'ตร.ม.')
                 rc[2].text = ''
-                rc[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-                run = rc[2].paragraphs[0].add_run(unit_display)
+                rc[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                run = rc[2].paragraphs[0].add_run(f"{d['ราคา/หน่วย']:,.0f}")
                 _set_run_font(run, size=15)
-                # col 3: ราคา/หน่วย พร้อมหน่วยราคา
-                price_display = d.get('ราคา/หน่วย (แสดง)', f"{d['ราคา/หน่วย']:,.0f}")
-                price_label = d.get('หน่วยราคา', 'บาท/ตร.ม.')
                 rc[3].text = ''
                 rc[3].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                run = rc[3].paragraphs[0].add_run(f"{price_display}")
-                _set_run_font(run, size=15)
-                # แสดงหน่วยราคาเป็น superscript-style ด้วย run เล็กถัดไป
-                run2 = rc[3].paragraphs[0].add_run(f" ({price_label})")
-                _set_run_font(run2, size=12)
-                # col 4: มูลค่า
-                rc[4].text = ''
-                rc[4].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                run = rc[4].paragraphs[0].add_run(f"{d['มูลค่า (บาท)']:,.0f}")
+                run = rc[3].paragraphs[0].add_run(f"{d['มูลค่า (บาท)']:,.0f}")
                 _set_run_font(run, size=15)
                 subtotal += d['มูลค่า (บาท)']
 
-            # แถวรวม (merge 4 คอลัมน์แรก)
+            # แถวรวม
             last_row = table.rows[len(details) + 1]
-            last_row.cells[0].merge(last_row.cells[3])
+            last_row.cells[0].merge(last_row.cells[2])
             last_row.cells[0].text = ''
             p_sum = last_row.cells[0].paragraphs[0]
             p_sum.alignment = WD_ALIGN_PARAGRAPH.RIGHT
             run = p_sum.add_run(f"รวม {structure_name}")
             _set_run_font(run, size=15, bold=True)
-            last_row.cells[4].text = ''
-            last_row.cells[4].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
-            run = last_row.cells[4].paragraphs[0].add_run(f"{subtotal:,.0f}")
+            last_row.cells[3].text = ''
+            last_row.cells[3].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run = last_row.cells[3].paragraphs[0].add_run(f"{subtotal:,.0f}")
             _set_run_font(run, size=15, bold=True)
 
             doc.add_paragraph()
@@ -1544,17 +1272,7 @@ def main():
                             st.session_state['loaded_project'] = loaded_data
                             st.session_state['loaded_json_hash'] = file_hash
                             # เพิ่ม version → widget keys เปลี่ยน → Streamlit อ่าน value= ใหม่
-                            new_v = st.session_state.get('json_version', 0) + 1
-                            st.session_state['json_version'] = new_v
-                            # ล้าง session_state keys ที่ขึ้นกับ version เก่า
-                            # เพื่อป้องกัน UI เพี้ยน (ctype, fullname, name_suffix)
-                            keys_to_clear = [k for k in st.session_state.keys()
-                                             if any(p in k for p in [
-                                                 '_ctype_', '_fullname_', '_name_suffix_',
-                                                 'jrcp1_fullname', 'jrcp2_fullname',
-                                             ])]
-                            for k in keys_to_clear:
-                                del st.session_state[k]
+                            st.session_state['json_version'] = st.session_state.get('json_version', 0) + 1
                         st.rerun()
             except Exception as e:
                 st.error(f"❌ ไม่สามารถอ่านไฟล์ได้: {e}")
@@ -1633,43 +1351,27 @@ def main():
         loaded_project = st.session_state.get('loaded_project', {})
         loaded_info = loaded_project.get('project_info', {})
         
-        # ดึง json_version เพื่อใส่ใน key → force refresh เมื่อ load JSON ใหม่
-        v_sb = st.session_state.get('json_version', 0)
-
-        project_name = st.text_input("ชื่อโครงการ",
-            value=loaded_info.get('name', "โครงการก่อสร้างทางหลวง"),
-            key=f"sidebar_project_name_v{v_sb}")
-        road_length = st.number_input("ความยาวถนน (กม.)",
-            value=float(loaded_info.get('length', 1.0)),
-            min_value=0.1, step=0.1,
-            key=f"sidebar_road_length_v{v_sb}")
+        project_name = st.text_input("ชื่อโครงการ", value=loaded_info.get('name', "โครงการก่อสร้างทางหลวง"))
+        road_length = st.number_input("ความยาวถนน (กม.)", value=loaded_info.get('length', 1.0), min_value=0.1, step=0.1)
         
         st.divider()
         st.header("📐 ขนาดถนน")
-        lane_width = st.number_input("ความกว้างช่องจราจร (ม.)",
-            value=float(loaded_info.get('lane_width', 3.5)),
-            min_value=2.5, max_value=4.0, step=0.25,
-            key=f"sidebar_lane_width_v{v_sb}")
+        lane_width = st.number_input("ความกว้างช่องจราจร (ม.)", value=loaded_info.get('lane_width', 3.5), min_value=2.5, max_value=4.0, step=0.25)
         
         # หา index สำหรับ num_lanes_per_direction
-        default_lanes_total = loaded_info.get('num_lanes', 4)
+        # แปลงจาก num_lanes เดิม (รวม 2 ทิศทาง) เป็น lanes_per_direction
+        default_lanes_total = loaded_info.get('num_lanes', 4)  # default 4 (2 ช่อง/ทิศทาง)
         default_lanes_per_dir = default_lanes_total // 2
+        
         lanes_per_dir_options = [2, 3, 4]
         lanes_per_dir_idx = lanes_per_dir_options.index(default_lanes_per_dir) if default_lanes_per_dir in lanes_per_dir_options else 0
-        lanes_per_direction = st.selectbox("จำนวนช่องต่อทิศทาง (เลน/ทิศทาง)",
-            options=lanes_per_dir_options, index=lanes_per_dir_idx,
-            key=f"sidebar_lanes_per_dir_v{v_sb}")
+        lanes_per_direction = st.selectbox("จำนวนช่องต่อทิศทาง (เลน/ทิศทาง)", options=lanes_per_dir_options, index=lanes_per_dir_idx)
         
+        # คำนวณจำนวนช่องรวม (คูณ 2 สำหรับ 2 ทิศทาง)
         num_lanes = lanes_per_direction * 2
         
-        shoulder_left = st.number_input("ไหล่ทางซ้าย (ม.)",
-            value=float(loaded_info.get('shoulder_left', 2.5)),
-            min_value=0.0, max_value=3.5, step=0.25,
-            key=f"sidebar_shoulder_left_v{v_sb}")
-        shoulder_right = st.number_input("ไหล่ทางขวา (ม.)",
-            value=float(loaded_info.get('shoulder_right', 1.5)),
-            min_value=0.0, max_value=3.5, step=0.25,
-            key=f"sidebar_shoulder_right_v{v_sb}")
+        shoulder_left = st.number_input("ไหล่ทางซ้าย (ม.)", value=loaded_info.get('shoulder_left', 2.5), min_value=0.0, max_value=3.5, step=0.25)
+        shoulder_right = st.number_input("ไหล่ทางขวา (ม.)", value=loaded_info.get('shoulder_right', 1.5), min_value=0.0, max_value=3.5, step=0.25)
         
         # คำนวณความกว้างรวม
         # ความกว้างผิวจราจร = ช่องจราจร × จำนวนช่อง (รวม 2 ทิศทาง)
@@ -2005,7 +1707,7 @@ def main():
         
         with col1:
             ac1_show = st.checkbox("แสดงในรายงาน", value=True, key="ac1_show")
-            ac1_name = st.text_input("ชื่อโครงสร้าง AC (1)", value="AC (1): แอสฟัลต์บนหินคลุก", key="ac1_name_input")
+            ac1_name = st.text_input("ชื่อโครงสร้าง AC1", value="AC1: แอสฟัลต์บนหินคลุก", key="ac1_name")
             with st.expander(f"● {ac1_name}", expanded=True):
                 ac1_layers = render_layer_editor(get_default_ac1_layers(), "ac1", total_width, road_length, v=v)
                 ac1_cost, ac1_details = calculate_layer_cost(ac1_layers, road_length)
@@ -2016,7 +1718,7 @@ def main():
         
         with col2:
             ac2_show = st.checkbox("แสดงในรายงาน", value=True, key="ac2_show")
-            ac2_name = st.text_input("ชื่อโครงสร้าง AC (2)", value="AC (2): แอสฟัลต์บนหินคลุกผสมซีเมนต์", key="ac2_name_input")
+            ac2_name = st.text_input("ชื่อโครงสร้าง AC2", value="AC2: แอสฟัลต์บนหินคลุกผสมซีเมนต์", key="ac2_name")
             with st.expander(f"● {ac2_name}", expanded=True):
                 ac2_layers = render_layer_editor(get_default_ac2_layers(), "ac2", total_width, road_length, v=v)
                 ac2_cost, ac2_details = calculate_layer_cost(ac2_layers, road_length)
@@ -2031,22 +1733,7 @@ def main():
         
         with col3:
             jrcp1_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp1_show")
-            # ชื่อโครงสร้าง: อ่าน ctype จาก session_state เพื่อแสดง prefix ที่ถูกต้อง
-            # ctype_0 ถูกตั้งค่าจาก render_layer_editor ใน expander ด้านล่าง
-            # ใช้ session_state โดยตรงเพื่อหลีกเลี่ยงปัญหา render order
-            _jrcp1_ctype = st.session_state.get(f"jrcp1_ctype_0_v{v}", 'JRCP')
-            # default name ตาม ctype ที่เลือก
-            _jrcp1_default_names = {
-                'JPCP': 'JPCP (1): คอนกรีตบนดินซีเมนต์',
-                'JRCP': 'JRCP (1): คอนกรีตบนดินซีเมนต์',
-                'CRCP': 'CRCP (1): คอนกรีตบนดินซีเมนต์',
-            }
-            jrcp1_name = st.text_input(
-                "ชื่อโครงสร้าง (1) — แก้ไขได้",
-                value=_jrcp1_default_names.get(_jrcp1_ctype, f"{_jrcp1_ctype} (1): คอนกรีตบนดินซีเมนต์"),
-                key=f"jrcp1_fullname_{_jrcp1_ctype}_v{v}",
-                placeholder="เช่น JPCP (1): คอนกรีตบนดินซีเมนต์"
-            )
+            jrcp1_name = st.text_input("ชื่อโครงสร้าง JPCP/JRCP (1)", value="JPCP/JRCP (1): คอนกรีตบนดินซีเมนต์", key="jrcp1_name")
             with st.expander(f"● {jrcp1_name}", expanded=True):
                 jrcp1_layers = render_layer_editor(get_default_jrcp1_layers(), "jrcp1", total_width, road_length, v=v)
                 jrcp1_layer_cost, jrcp1_layer_details = calculate_layer_cost(jrcp1_layers, road_length)
@@ -2071,18 +1758,7 @@ def main():
         
         with col4:
             jrcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="jrcp2_show")
-            _jrcp2_ctype = st.session_state.get(f"jrcp2_ctype_0_v{v}", 'JRCP')
-            _jrcp2_default_names = {
-                'JPCP': 'JPCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์',
-                'JRCP': 'JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์',
-                'CRCP': 'CRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์',
-            }
-            jrcp2_name = st.text_input(
-                "ชื่อโครงสร้าง (2) — แก้ไขได้",
-                value=_jrcp2_default_names.get(_jrcp2_ctype, f"{_jrcp2_ctype} (2): คอนกรีตบนหินคลุกผสมซีเมนต์"),
-                key=f"jrcp2_fullname_{_jrcp2_ctype}_v{v}",
-                placeholder="เช่น JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์"
-            )
+            jrcp2_name = st.text_input("ชื่อโครงสร้าง JPCP/JRCP (2)", value="JPCP/JRCP (2): คอนกรีตบนหินคลุกผสมซีเมนต์", key="jrcp2_name")
             with st.expander(f"● {jrcp2_name}", expanded=True):
                 jrcp2_layers = render_layer_editor(get_default_jrcp2_layers(), "jrcp2", total_width, road_length, v=v)
                 jrcp2_layer_cost, jrcp2_layer_details = calculate_layer_cost(jrcp2_layers, road_length)
@@ -2111,49 +1787,25 @@ def main():
         
         with col5:
             crcp1_show = st.checkbox("แสดงในรายงาน", value=True, key="crcp1_show")
-            crcp1_name = st.text_input("ชื่อโครงสร้าง CRCP (1)", value="CRCP (1): คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์", key="crcp1_name_input")
+            crcp1_name = st.text_input("ชื่อโครงสร้าง CRCP1", value="CRCP1: คอนกรีตเสริมเหล็กต่อเนื่องบนดินซีเมนต์", key="crcp1_name")
             with st.expander(f"● {crcp1_name}", expanded=True):
                 crcp1_layers = render_layer_editor(get_default_crcp1_layers(), "crcp1", total_width, road_length, v=v)
-                crcp1_layer_cost, crcp1_layer_details = calculate_layer_cost(crcp1_layers, road_length)
-                crcp1_joints, crcp1_include_joints = render_joint_editor(get_default_crcp1_joints(), "crcp1", area_per_km, road_length, v=v)
-                crcp1_joint_cost, crcp1_joint_details = calculate_joint_cost(crcp1_joints, road_length)
-                crcp1_joints_sqm = sum(j.get('cost_per_sqm', 0) for j in crcp1_joints)
-                if crcp1_include_joints:
-                    crcp1_total = crcp1_layer_cost + crcp1_joint_cost
-                    crcp1_cost_per_sqm = crcp1_layer_cost / (area_per_km * road_length) + crcp1_joints_sqm
-                    crcp1_joints_note = "(รวม Steel Rebar)"
-                else:
-                    crcp1_total = crcp1_layer_cost + crcp1_joint_cost
-                    crcp1_cost_per_sqm = crcp1_layer_cost / (area_per_km * road_length)
-                    crcp1_joints_note = "(ไม่รวม Steel Rebar)"
-                crcp1_cost = crcp1_total
-                crcp1_cost_per_km = crcp1_total / road_length / 1_000_000
-                crcp1_details = crcp1_layer_details + crcp1_joint_details
+                crcp1_cost, crcp1_details = calculate_layer_cost(crcp1_layers, road_length)
+                crcp1_cost_per_km = crcp1_cost / road_length / 1_000_000
+                crcp1_cost_per_sqm = crcp1_cost / (area_per_km * road_length)
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_sqm:.2f} บาท/ตร.ม. {crcp1_joints_note}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp1_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
         
         with col6:
             crcp2_show = st.checkbox("แสดงในรายงาน", value=True, key="crcp2_show")
-            crcp2_name = st.text_input("ชื่อโครงสร้าง CRCP (2)", value="CRCP (2): คอนกรีตเสริมเหล็กต่อเนื่องบน CMCR", key="crcp2_name_input")
+            crcp2_name = st.text_input("ชื่อโครงสร้าง CRCP2", value="CRCP2: คอนกรีตเสริมเหล็กต่อเนื่องบน CMCR", key="crcp2_name")
             with st.expander(f"● {crcp2_name}", expanded=True):
                 crcp2_layers = render_layer_editor(get_default_crcp2_layers(), "crcp2", total_width, road_length, v=v)
-                crcp2_layer_cost, crcp2_layer_details = calculate_layer_cost(crcp2_layers, road_length)
-                crcp2_joints, crcp2_include_joints = render_joint_editor(get_default_crcp2_joints(), "crcp2", area_per_km, road_length, v=v)
-                crcp2_joint_cost, crcp2_joint_details = calculate_joint_cost(crcp2_joints, road_length)
-                crcp2_joints_sqm = sum(j.get('cost_per_sqm', 0) for j in crcp2_joints)
-                if crcp2_include_joints:
-                    crcp2_total = crcp2_layer_cost + crcp2_joint_cost
-                    crcp2_cost_per_sqm = crcp2_layer_cost / (area_per_km * road_length) + crcp2_joints_sqm
-                    crcp2_joints_note = "(รวม Steel Rebar)"
-                else:
-                    crcp2_total = crcp2_layer_cost + crcp2_joint_cost
-                    crcp2_cost_per_sqm = crcp2_layer_cost / (area_per_km * road_length)
-                    crcp2_joints_note = "(ไม่รวม Steel Rebar)"
-                crcp2_cost = crcp2_total
-                crcp2_cost_per_km = crcp2_total / road_length / 1_000_000
-                crcp2_details = crcp2_layer_details + crcp2_joint_details
+                crcp2_cost, crcp2_details = calculate_layer_cost(crcp2_layers, road_length)
+                crcp2_cost_per_km = crcp2_cost / road_length / 1_000_000
+                crcp2_cost_per_sqm = crcp2_cost / (area_per_km * road_length)
                 st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_km:.2f} ล้านบาท/กม.</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_sqm:.2f} บาท/ตร.ม. {crcp2_joints_note}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="cost-box">💰 <b>ค่าก่อสร้าง:</b> {crcp2_cost_per_sqm:.2f} บาท/ตร.ม.</div>', unsafe_allow_html=True)
         
         # Store in session state
         st.session_state['construction'] = {
@@ -2161,8 +1813,8 @@ def main():
             'AC2': {'name': ac2_name, 'cost': ac2_cost_per_km, 'cost_sqm': ac2_cost_per_sqm, 'details': ac2_details, 'layers': ac2_layers, 'joints': None, 'show': ac2_show},
             'JRCP1': {'name': jrcp1_name, 'cost': jrcp1_cost_per_km, 'cost_sqm': jrcp1_cost_per_sqm, 'details': jrcp1_details, 'layers': jrcp1_layers, 'joints': jrcp1_joints, 'show': jrcp1_show},
             'JRCP2': {'name': jrcp2_name, 'cost': jrcp2_cost_per_km, 'cost_sqm': jrcp2_cost_per_sqm, 'details': jrcp2_details, 'layers': jrcp2_layers, 'joints': jrcp2_joints, 'show': jrcp2_show},
-            'CRCP1': {'name': crcp1_name, 'cost': crcp1_cost_per_km, 'cost_sqm': crcp1_cost_per_sqm, 'details': crcp1_details, 'layers': crcp1_layers, 'joints': crcp1_joints, 'show': crcp1_show},
-            'CRCP2': {'name': crcp2_name, 'cost': crcp2_cost_per_km, 'cost_sqm': crcp2_cost_per_sqm, 'details': crcp2_details, 'layers': crcp2_layers, 'joints': crcp2_joints, 'show': crcp2_show},
+            'CRCP1': {'name': crcp1_name, 'cost': crcp1_cost_per_km, 'cost_sqm': crcp1_cost_per_sqm, 'details': crcp1_details, 'layers': crcp1_layers, 'joints': None, 'show': crcp1_show},
+            'CRCP2': {'name': crcp2_name, 'cost': crcp2_cost_per_km, 'cost_sqm': crcp2_cost_per_sqm, 'details': crcp2_details, 'layers': crcp2_layers, 'joints': None, 'show': crcp2_show},
         }
         st.session_state['project_info'] = project_info
         st.session_state['area_per_km'] = area_per_km
@@ -2246,7 +1898,7 @@ def main():
                         'รายการ': joint['name'],
                         'ความหนา': '-',
                         'ปริมาณ (ตร.ม.)': f"{joint['quantity']:,.0f}",
-                        'ราคา (บาท/ม.)': f"{joint['unit_cost']:,.2f}",
+                        'ราคา (บาท/ตร.ม.)': f"{joint['unit_cost']:,.2f}",
                         'มูลค่า (บาท)': f"{joint_cost:,.0f}"
                     })
             
@@ -2407,15 +2059,13 @@ def main():
                             'construction': {
                                 k: {
                                     'cost': v.get('cost', 0),
-                                    'details': v.get('details', []),
-                                    'layers': v.get('layers', []),
-                                    'joints': v.get('joints') or [],
+                                    'details': v.get('details', [])
                                 } for k, v in st.session_state.get('construction', {}).items()
                             },
                             'saved_at': datetime.now().isoformat()
                         }
                         st.download_button("⬇️ ดาวน์โหลด JSON", data=json.dumps(data, ensure_ascii=False, indent=2),
-                                           file_name=f"Cost Est {st.session_state['project_info'].get('name', 'Project')}_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+                                           file_name=f"Project_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
                                            mime="application/json",
                                            use_container_width=True)
                         st.success("✅ บันทึกโครงการสำเร็จ!")
