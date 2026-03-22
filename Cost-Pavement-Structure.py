@@ -1754,10 +1754,10 @@ def main():
             'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บนดินซีเมนต์', '#C94040', 20),
         }
         STRUCT_CONFIG_B = {
-            'AC':   (get_default_ac2_layers,   None,                     'แอสฟัลต์คอนกรีต บนหินคลุกผสมซีเมนต์',  '#378ADD', 20),
-            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต บนดินซีเมนต์ (เปรียบเทียบ)',   '#E29A30', 20),
+            'AC':   (get_default_ac1_layers,   None,                     'แอสฟัลต์คอนกรีต บนหินคลุกผสมซีเมนต์',       '#378ADD', 20),
+            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต บนดินซีเมนต์ (เปรียบเทียบ)',         '#E29A30', 20),
             'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต บนหินคลุกผสมซีเมนต์ (เปรียบเทียบ)', '#E29A30', 20),
-            'CRCP': (get_default_crcp2_layers, get_default_crcp2_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บน CMCR',   '#C94040', 20),
+            'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บน CMCR',         '#C94040', 20),
         }
 
         ptypes = ['AC', 'JPCP', 'JRCP', 'CRCP']
@@ -1925,24 +1925,35 @@ def main():
         if 'construction' in st.session_state and st.session_state['construction']:
             constr = st.session_state.get('construction', {})
 
-            # map key → ชื่อสั้นแสดงใน Tab 3
-            _short_name = {
-                'AC1': 'AC (ชุดที่ 1)', 'AC2': 'AC (ชุดที่ 2)',
-                'JPCP1': 'JPCP (ชุดที่ 1)', 'JPCP2': 'JPCP (ชุดที่ 2)',
-                'JRCP1': 'JRCP (ชุดที่ 1)', 'JRCP2': 'JRCP (ชุดที่ 2)',
-                'CRCP1': 'CRCP (ชุดที่ 1)', 'CRCP2': 'CRCP (ชุดที่ 2)',
-            }
-
-            all_details = {}
+            # สร้าง all_details ก่อน แล้วค่อยตรวจว่ามีกี่ชุด
+            _raw_details = {}
             for k, v_data in constr.items():
                 if v_data.get('show', True) and v_data.get('details'):
-                    all_details[k] = {
-                        'name':         _short_name.get(k, k),          # ชื่อสั้น: AC / JPCP / JRCP / CRCP
-                        'name_detail':  v_data.get('name', k),           # ชื่อยาว: เก็บไว้ใช้ใน Word report
-                        'details':      v_data.get('details', []),
-                        'cost_per_km':  v_data.get('cost', 0),
-                        'cost_sqm':     v_data.get('cost_sqm', 0),
-                    }
+                    _raw_details[k] = v_data
+
+            # ตรวจว่ามีชุดที่ 2 อยู่ในรายงานด้วยหรือไม่
+            _has_set2 = any(k.endswith('2') for k in _raw_details)
+
+            # กำหนดชื่อสั้น: ถ้ามีแค่ชุดที่ 1 → ไม่ต้องใส่ "ชุดที่ 1"
+            def _make_short_name(k):
+                _base = {'AC1': 'AC', 'AC2': 'AC',
+                         'JPCP1': 'JPCP', 'JPCP2': 'JPCP',
+                         'JRCP1': 'JRCP', 'JRCP2': 'JRCP',
+                         'CRCP1': 'CRCP', 'CRCP2': 'CRCP'}.get(k, k)
+                if _has_set2:
+                    _set_num = '1' if k.endswith('1') else '2'
+                    return f"{_base} (ชุดที่ {_set_num})"
+                return _base  # ชุดเดียว → ไม่ต้องบอก "ชุดที่ 1"
+
+            all_details = {}
+            for k, v_data in _raw_details.items():
+                all_details[k] = {
+                    'name':        _make_short_name(k),
+                    'name_detail': v_data.get('name', k),
+                    'details':     v_data.get('details', []),
+                    'cost_per_km': v_data.get('cost', 0),
+                    'cost_sqm':    v_data.get('cost_sqm', 0),
+                }
 
             if not all_details:
                 st.warning("⚠️ กรุณาเลือกอย่างน้อย 1 โครงสร้างที่ต้องการแสดงในรายงาน (tick ✅ แสดงในรายงาน ใน Tab 2)")
