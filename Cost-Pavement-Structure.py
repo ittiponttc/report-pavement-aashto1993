@@ -357,8 +357,8 @@ def get_default_crcp1_joints():
         _, joints = _parse_json_details_to_layers(_d['details'])
         if joints: return joints
     return [
-        {'name': 'Steel Reinforcement (CRCP)', 'quantity': 1000, 'qty_unit': 'm', 'unit_cost': 200},
-        {'name': 'Transverse Joint', 'quantity': 4000, 'qty_unit': 'm', 'unit_cost': 120},
+        {'name': 'Longitudinal Steel (CRCP)', 'quantity': 4000, 'qty_unit': 'm', 'unit_cost': 200},
+        {'name': 'Transverse Joint (End)',     'quantity': 0,    'qty_unit': 'm', 'unit_cost': 500},
     ]
 
 def get_default_crcp2_joints():
@@ -370,8 +370,8 @@ def get_default_crcp2_joints():
         _, joints = _parse_json_details_to_layers(_d['details'])
         if joints: return joints
     return [
-        {'name': 'Steel Reinforcement (CRCP)', 'quantity': 1000, 'qty_unit': 'm', 'unit_cost': 200},
-        {'name': 'Transverse Joint', 'quantity': 4000, 'qty_unit': 'm', 'unit_cost': 120},
+        {'name': 'Longitudinal Steel (CRCP)', 'quantity': 4000, 'qty_unit': 'm', 'unit_cost': 200},
+        {'name': 'Transverse Joint (End)',     'quantity': 0,    'qty_unit': 'm', 'unit_cost': 500},
     ]
 
 
@@ -838,32 +838,51 @@ def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0, ptype
     adjusted_joints = []
     for j in joints:
         jname = j['name']
+
         if concrete_type == 'CRCP':
             width_m = area_per_km / 1000
             lane_w = st.session_state.get('project_info', {}).get('lane_width', 3.5)
             if not lane_w or lane_w <= 0:
                 lane_w = 3.5
-            lane_w = st.session_state.get('project_info', {}).get('lane_width', 3.5)
-            if lane_w is None or lane_w <= 0:
-                lane_w = 3.5
-            num_joints = max(1, round(width_m / lane_w) - 1)
-            adj_qty = num_joints * road_length * 1000
+
+            if 'steel' in jname.lower() or 'longitudinal' in jname.lower():
+                # Longitudinal Steel = คำนวณเหมือน Longitudinal Joint
+                # จำนวนแถวเหล็ก = จำนวนรอยต่อตามยาว = round(กว้าง/ช่อง) - 1
+                num_lj = max(1, round(width_m / lane_w) - 1)
+                adj_qty = num_lj * road_length * 1000   # ม.
+                jname = 'Longitudinal Steel (CRCP)'
+            else:
+                # Transverse Joint ของ CRCP = ให้ผู้ใช้กรอกเอง (default 0)
+                adj_qty = j['quantity']  # ใช้ค่าที่บันทึกไว้ (default=0)
+                jname = 'Transverse Joint (End)'
+
         elif 'Transverse Joint' in jname:
+            # JPCP/JRCP: คำนวณจาก spacing
             jname = f"Transverse Joint {joint_label}"
             width_m = area_per_km / 1000
             adj_qty = (road_length * 1000 / joint_spacing) * width_m
+
+        elif 'Longitudinal' in jname:
+            # JPCP/JRCP: Longitudinal Joint คำนวณจากจำนวนรอยต่อตามยาว
+            width_m = area_per_km / 1000
+            lane_w = st.session_state.get('project_info', {}).get('lane_width', 3.5)
+            if not lane_w or lane_w <= 0:
+                lane_w = 3.5
+            num_lj = max(1, round(width_m / lane_w) - 1)
+            adj_qty = num_lj * road_length * 1000
         else:
             adj_qty = j['quantity']
+
         adjusted_joints.append({**j, 'name': jname, 'quantity': adj_qty})
 
     col_header = st.columns([3, 1])
     with col_header[0]:
         if concrete_type == 'CRCP':
-            st.markdown("**เหล็กเสริม & รอยต่อ (CRCP)**")
+            st.markdown("**Longitudinal Steel & Transverse Joint (CRCP)**")
         else:
             st.markdown(f"**รอยต่อ (Joints) — {concrete_type} ระยะ {joint_spacing} ม.**")
     with col_header[1]:
-        _cb_label = "รวมราคา Steel Rebar" if concrete_type == 'CRCP' else "รวมราคา Joints"
+        _cb_label = "รวมราคา Longitudinal Steel & Joints" if concrete_type == 'CRCP' else "รวมราคา Joints"
         include_joints = st.checkbox(_cb_label, value=True, key=f"{key_prefix}_include_joints_v{v}")
 
     cols = st.columns([3, 1.5, 1.5, 1.5])
@@ -1736,10 +1755,10 @@ def main():
                     total_cost = layer_cost + joint_cost
                     if include_joints:
                         cost_sqm = layer_cost / (area_per_km * road_length) + joints_sqm
-                        note = "(รวม Joints)" if ptype != 'CRCP' else "(รวม Steel Rebar)"
+                        note = "(รวม Joints)" if ptype != 'CRCP' else "(รวม Long. Steel & Joints)"
                     else:
                         cost_sqm = layer_cost / (area_per_km * road_length)
-                        note = "(ไม่รวม Joints)" if ptype != 'CRCP' else "(ไม่รวม Steel Rebar)"
+                        note = "(ไม่รวม Joints)" if ptype != 'CRCP' else "(ไม่รวม Long. Steel & Joints)"
                     all_details = layer_details + joint_details
                 else:
                     joints = None
