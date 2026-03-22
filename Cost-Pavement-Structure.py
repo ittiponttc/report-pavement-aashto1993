@@ -1733,25 +1733,36 @@ def main():
         # ── ตัวกำหนด default layers/joints ต่อประเภท ──
         STRUCT_CONFIG = {
             'AC':   (get_default_ac1_layers,   None,                     'แอสฟัลต์คอนกรีต บนหินคลุก',           '#378ADD', 20),
-            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต บนดินซีเมนต์',                 '#E29A30', 25),
-            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต บนหินคลุกผสมซีเมนต์',          '#E29A30', 25),
-            'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บนดินซีเมนต์', '#C94040', 30),
+            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต บนดินซีเมนต์',                 '#E29A30', 20),
+            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต บนหินคลุกผสมซีเมนต์',          '#E29A30', 20),
+            'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บนดินซีเมนต์', '#C94040', 20),
         }
         STRUCT_CONFIG_B = {
             'AC':   (get_default_ac2_layers,   None,                     'แอสฟัลต์คอนกรีต บนหินคลุกผสมซีเมนต์',  '#378ADD', 20),
-            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต บนดินซีเมนต์ (เปรียบเทียบ)',   '#E29A30', 25),
-            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต บนหินคลุกผสมซีเมนต์ (เปรียบเทียบ)', '#E29A30', 25),
-            'CRCP': (get_default_crcp2_layers, get_default_crcp2_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บน CMCR',   '#C94040', 30),
+            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต บนดินซีเมนต์ (เปรียบเทียบ)',   '#E29A30', 20),
+            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต บนหินคลุกผสมซีเมนต์ (เปรียบเทียบ)', '#E29A30', 20),
+            'CRCP': (get_default_crcp2_layers, get_default_crcp2_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บน CMCR',   '#C94040', 20),
         }
 
         ptypes = ['AC', 'JPCP', 'JRCP', 'CRCP']
         type_icons = {'AC': '🔵', 'JPCP': '🟠', 'JRCP': '🟠', 'CRCP': '🔴'}
 
         for ptype in ptypes:
-            layers_fn_a, joints_fn_a, label_a, color_a, life_a = STRUCT_CONFIG[ptype]
-            layers_fn_b, joints_fn_b, label_b, color_b, _      = STRUCT_CONFIG_B[ptype]
+            layers_fn_a, joints_fn_a, label_a, color_a, life_default = STRUCT_CONFIG[ptype]
+            layers_fn_b, joints_fn_b, label_b, color_b, _            = STRUCT_CONFIG_B[ptype]
 
-            st.subheader(f"{type_icons[ptype]} {ptype}")
+            # ── header: ชื่อประเภท + อายุออกแบบ (ชุดที่ 1 = ชุดที่ 2 เสมอ) ──
+            hcol1, hcol2 = st.columns([3, 1])
+            with hcol1:
+                st.subheader(f"{type_icons[ptype]} {ptype}")
+            with hcol2:
+                life_a = st.number_input(
+                    "อายุออกแบบ (ปี)",
+                    value=int(life_default),
+                    min_value=1, max_value=50, step=1,
+                    key=f"life_{ptype}_v{v}",
+                    help="ชุดที่ 1 และ 2 ใช้อายุออกแบบเดียวกัน"
+                )
 
             if show_set2:
                 col_a, col_b = st.columns(2)
@@ -1790,16 +1801,17 @@ def main():
 
         # ── บันทึก session_state ──
         # รักษา key เดิม (AC1/AC2/JRCP1/JRCP2/CRCP1/CRCP2) สำหรับ Tab 3 / JSON
+        # รักษา key เดิม (AC1/AC2/JRCP1/JRCP2/CRCP1/CRCP2) ให้ Tab 3 และ JSON ใช้ได้
+        # mapping: ชุดที่ 1 → key ลงท้าย 1, ชุดที่ 2 → key ลงท้าย 2
         st.session_state['construction'] = {
             'AC1':   construction['AC_A'],
             'AC2':   construction['AC_B'],
-            'JRCP1': construction['JPCP_A'],
-            'JRCP2': construction['JPCP_B'],
+            'JPCP1': construction['JPCP_A'],
+            'JPCP2': construction['JPCP_B'],
+            'JRCP1': construction['JRCP_A'],
+            'JRCP2': construction['JRCP_B'],
             'CRCP1': construction['CRCP_A'],
             'CRCP2': construction['CRCP_B'],
-            # CRCP เก็บไว้ด้วยสำหรับรายงาน
-            'CRCP_A': construction['CRCP_A'],
-            'CRCP_B': construction['CRCP_B'],
         }
         st.session_state['project_info'] = project_info
         st.session_state['area_per_km']  = area_per_km
