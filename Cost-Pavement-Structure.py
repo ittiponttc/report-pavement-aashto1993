@@ -639,40 +639,89 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
     st.markdown("---")
     st.markdown("**พื้นทาง/รองพื้นทาง** (ราคาแสดงเป็น บาท/ตร.ม.)")
 
-    is_concrete_pavement = any(x in key_prefix.lower() for x in ['jrcp', 'crcp'])
+    # FIX v6.1: ใช้ ptype แทน key_prefix เพื่อตรวจว่าเป็นคอนกรีตหรือไม่
+    is_concrete_pavement = ptype in ('JPCP', 'JRCP', 'CRCP')
 
+    # ===== AC Interlayer — checkbox แยกต่างหาก =====
+    if is_concrete_pavement:
+        col_acil1, col_acil2 = st.columns([2, 2])
+        with col_acil1:
+            use_ac_interlayer = st.checkbox(
+                "มี AC Interlayer รองใต้คอนกรีต",
+                value=True,
+                key=f"{key_prefix}_use_acil_v{v}",
+                help="ชั้น AC ที่รองใต้แผ่นคอนกรีต ทั่วไปใช้ 5 cm"
+            )
+        if use_ac_interlayer:
+            with col_acil2:
+                # ดึงราคาจาก Library
+                if 'price_library' in st.session_state:
+                    _ac_prices = st.session_state['price_library']['ac_prices'].get('AC Base Course', {})
+                    _acil_price_default = _ac_prices.get(5.0, 251)
+                else:
+                    _acil_price_default = 251
+
+                acil_thick = st.number_input(
+                    "ความหนา AC Interlayer (cm)",
+                    value=5.0, min_value=1.0, max_value=10.0, step=1.0,
+                    key=f"{key_prefix}_acil_thick_v{v}",
+                )
+
+            # คำนวณราคา AC Interlayer ตามความหนาที่เลือก
+            if 'price_library' in st.session_state:
+                _ac_prices = st.session_state['price_library']['ac_prices'].get('AC Base Course', {})
+                acil_cost_sqm = _ac_prices.get(acil_thick, 0)
+                if acil_cost_sqm == 0 and _ac_prices:
+                    acil_cost_sqm = _ac_prices.get(
+                        min(_ac_prices.keys(), key=lambda x: abs(x - acil_thick)), 251
+                    )
+            else:
+                acil_cost_sqm = _acil_price_default
+
+            acil_qty = area_per_km * road_length
+            st.markdown(
+                f'<div class="cost-box" style="border-left-color:#378ADD;padding:6px 10px;margin:4px 0;">'
+                f'AC Interlayer {acil_thick:.0f} cm &nbsp;|&nbsp; '
+                f'ราคา <b>{acil_cost_sqm:,.2f}</b> บาท/ตร.ม.</div>',
+                unsafe_allow_html=True
+            )
+            # เพิ่มเข้า updated_layers ทันที
+            updated_layers.append({
+                'name': f'AC Interlayer ({acil_thick:.0f} cm)',
+                'thickness': acil_thick, 'unit': 'cm',
+                'quantity': acil_qty, 'qty_unit': 'sq.m',
+                'unit_cost': acil_cost_sqm, 'cost_per_sqm': acil_cost_sqm,
+            })
+
+    # ── วัสดุพื้นทาง/รองพื้นทาง (ไม่รวม AC Interlayer อีกต่อไป) ──
     if 'price_library' in st.session_state:
         base_lib = st.session_state['price_library']['base_prices']
-        ac_lib = st.session_state['price_library']['ac_prices']
-        base_materials = {}
-        if is_concrete_pavement:
-            base_materials['AC Interlayer (5 cm)'] = {
-                'unit_cost_cum': ac_lib.get('AC Base Course', {}).get(5, 251),
-                'is_ac': True, 'default_thick': 5,
-            }
-        base_materials.update({
-            'Crushed Rock Base Course': {'unit_cost_cum': base_lib.get('Crushed Rock Base Course', 583), 'is_ac': False},
-            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost_cum': base_lib.get('Cement Modified Crushed Rock Base (UCS 24.5 ksc)', 864), 'is_ac': False},
-            'Cement Treated Base (UCS 40 ksc)': {'unit_cost_cum': base_lib.get('Cement Treated Base (UCS 40 ksc)', 1096), 'is_ac': False},
-            'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost_cum': base_lib.get('Soil Cement Subbase (UCS 7 ksc)', 854), 'is_ac': False},
-            'Soil Aggregate Subbase': {'unit_cost_cum': base_lib.get('Soil Aggregate Subbase', 375), 'is_ac': False},
-            'Selected Material A': {'unit_cost_cum': base_lib.get('Selected Material A', 375), 'is_ac': False},
-        })
+        base_materials = {
+            'Crushed Rock Base Course':                          {'unit_cost_cum': base_lib.get('Crushed Rock Base Course', 583),                          'is_ac': False},
+            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost_cum': base_lib.get('Cement Modified Crushed Rock Base (UCS 24.5 ksc)', 864),  'is_ac': False},
+            'Cement Treated Base (UCS 40 ksc)':                 {'unit_cost_cum': base_lib.get('Cement Treated Base (UCS 40 ksc)', 1096),                 'is_ac': False},
+            'Soil Cement Subbase (UCS 7 ksc)':                  {'unit_cost_cum': base_lib.get('Soil Cement Subbase (UCS 7 ksc)', 854),                   'is_ac': False},
+            'Soil Aggregate Subbase':                            {'unit_cost_cum': base_lib.get('Soil Aggregate Subbase', 375),                            'is_ac': False},
+            'Selected Material A':                               {'unit_cost_cum': base_lib.get('Selected Material A', 375),                               'is_ac': False},
+        }
     else:
-        base_materials = {}
-        if is_concrete_pavement:
-            base_materials['AC Interlayer (5 cm)'] = {'unit_cost_cum': 251, 'is_ac': True, 'default_thick': 5}
-        base_materials.update({
-            'Crushed Rock Base Course': {'unit_cost_cum': 583, 'is_ac': False},
-            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost_cum': 864, 'is_ac': False},
-            'Cement Treated Base (UCS 40 ksc)': {'unit_cost_cum': 1096, 'is_ac': False},
-            'Soil Cement Subbase (UCS 7 ksc)': {'unit_cost_cum': 854, 'is_ac': False},
-            'Soil Aggregate Subbase': {'unit_cost_cum': 375, 'is_ac': False},
-            'Selected Material A': {'unit_cost_cum': 375, 'is_ac': False},
-        })
+        base_materials = {
+            'Crushed Rock Base Course':                          {'unit_cost_cum': 583,  'is_ac': False},
+            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)': {'unit_cost_cum': 864,  'is_ac': False},
+            'Cement Treated Base (UCS 40 ksc)':                 {'unit_cost_cum': 1096, 'is_ac': False},
+            'Soil Cement Subbase (UCS 7 ksc)':                  {'unit_cost_cum': 854,  'is_ac': False},
+            'Soil Aggregate Subbase':                            {'unit_cost_cum': 375,  'is_ac': False},
+            'Selected Material A':                               {'unit_cost_cum': 375,  'is_ac': False},
+        }
 
     material_names = list(base_materials.keys())
-    num_base_default = len(base_layers) if len(base_layers) > 0 else 0
+
+    # กรอง base_layers ที่ไม่ใช่ AC Interlayer (เพราะ Interlayer ถูกจัดการแยกด้านบนแล้ว)
+    base_layers_filtered = [
+        bl for bl in base_layers
+        if 'interlayer' not in bl['name'].lower()
+    ]
+    num_base_default = len(base_layers_filtered) if base_layers_filtered else 0
     num_base = st.number_input("จำนวนชั้นพื้นทาง/รองพื้นทาง", value=num_base_default,
                                 min_value=0, max_value=5, key=f"{key_prefix}_num_base_v{v}")
 
@@ -686,9 +735,9 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
     for i in range(int(num_base)):
         cols = st.columns([3, 1, 1.2, 1.2, 1.2])
 
-        if i < len(base_layers):
-            default_name = base_layers[i]['name']
-            default_thick = base_layers[i]['thickness']
+        if i < len(base_layers_filtered):
+            default_name = base_layers_filtered[i]['name']
+            default_thick = base_layers_filtered[i]['thickness']
         else:
             default_name = material_names[0]
             default_thick = 20.0
