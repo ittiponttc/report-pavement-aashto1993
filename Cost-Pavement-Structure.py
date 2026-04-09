@@ -1425,6 +1425,7 @@ def main():
 
                 if 'project_info' in loaded_data:
                     st.info(f"📌 โครงการ: {loaded_data['project_info'].get('name', '-')}")
+                    st.info(f"📅 บันทึกเมื่อ: {loaded_data.get('saved_at', '-')}")
 
                 if st.button("📥 นำเข้าข้อมูล", key="import_json"):
                     if 'project_info' in loaded_data:
