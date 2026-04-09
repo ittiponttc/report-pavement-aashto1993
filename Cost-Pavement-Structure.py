@@ -710,7 +710,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
 
             # คำนวณราคา AC Interlayer ตามความหนาที่เลือก
             if 'price_library' in st.session_state:
-                _ac_prices = st.session_state['price_library']['ac_prices'].get('AC Bider Course', {})
+                _ac_prices = st.session_state['price_library']['ac_prices'].get('AC Binder Course', {})
                 acil_cost_sqm = _ac_prices.get(acil_thick, 0)
                 if acil_cost_sqm == 0 and _ac_prices:
                     acil_cost_sqm = _ac_prices.get(
