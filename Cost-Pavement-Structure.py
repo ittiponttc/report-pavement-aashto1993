@@ -1867,16 +1867,16 @@ def main():
 
         # ── ตัวกำหนด default layers/joints ต่อประเภท ──
         STRUCT_CONFIG = {
-            'AC':   (get_default_ac1_layers,   None,                     'แอสฟัลต์คอนกรีต บนหินคลุก',           '#378ADD', 20),
-            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต บนดินซีเมนต์',                 '#E29A30', 20),
-            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต บนหินคลุกผสมซีเมนต์',          '#E29A30', 20),
-            'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บนดินซีเมนต์', '#C94040', 20),
+            'AC':   (get_default_ac1_layers,   None,                     'แอสฟัลต์คอนกรีต AC ',           '#378ADD', 20),
+            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต JPCP',                 '#E29A30', 20),
+            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต JRCP',          '#E29A30', 20),
+            'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง CRCP', '#C94040', 20),
         }
         STRUCT_CONFIG_B = {
-            'AC':   (get_default_ac1_layers,   None,                     'แอสฟัลต์คอนกรีต บนหินคลุกผสมซีเมนต์',       '#378ADD', 20),
-            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต บนดินซีเมนต์ (เปรียบเทียบ)',         '#E29A30', 20),
-            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต บนหินคลุกผสมซีเมนต์ (เปรียบเทียบ)', '#E29A30', 20),
-            'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง บน CMCR',         '#C94040', 20),
+            'AC':   (get_default_ac1_layers,   None,                     'แอสฟัลต์คอนกรีต AC (เปรียบเทียบ)',       '#378ADD', 20),
+            'JPCP': (get_default_jrcp1_layers, get_default_jrcp1_joints, 'คอนกรีต JPCP (เปรียบเทียบ)',         '#E29A30', 20),
+            'JRCP': (get_default_jrcp2_layers, get_default_jrcp2_joints, 'คอนกรีต JRCP (เปรียบเทียบ)', '#E29A30', 20),
+            'CRCP': (get_default_crcp1_layers, get_default_crcp1_joints, 'คอนกรีตเสริมเหล็กต่อเนื่อง CRCP (เปรียบเทียบ)',         '#C94040', 20),
         }
 
         ptypes = ['AC', 'JPCP', 'JRCP', 'CRCP']
@@ -2110,7 +2110,7 @@ def main():
                     )
                     intro_text = st.text_area(
                         "บทเกริ่นนำ (แสดงใต้หัวข้อข้อมูลโครงการ)",
-                        value=_default_intro, height=120, key="rpt_intro_text"
+                        value=_default_intro, height=120, key="rpt_intro_text_v2"
                     )
 
                 if not DOCX_AVAILABLE:
