@@ -749,39 +749,6 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
                     help="ราดบนชั้น Base ก่อนปู AC Interlayer (บาท/ตร.ม.)"
                 )
             if use_prime_coat:
-                if 'price_library' in st.session_state:
-                    _pc_default = st.session_state['price_library']['base_prices'].get('Prime Coat', 37.47)
-                else:
-                    _pc_default = 37.47
-                with col_pc2:
-                    pc_cost = st.number_input(
-                        "ราคา Prime Coat (บาท/ตร.ม.)",
-                        value=float(_pc_default),
-                        min_value=0.0, step=1.0,
-                        key=f"{key_prefix}_pc_price_v{v}",
-                    )
-                st.markdown(
-                    f'<div class="cost-box" style="border-left-color:#FFA500;padding:6px 10px;margin:4px 0;">'
-                    f'Prime Coat &nbsp;|&nbsp; ราคา <b>{pc_cost:,.2f}</b> บาท/ตร.ม.</div>',
-                    unsafe_allow_html=True
-                )
-                updated_layers.append({
-                    'name': 'Prime Coat',
-                    'thickness': 1, 'unit': 'Layer',
-                    'quantity': area_per_km * road_length, 'qty_unit': 'sq.m',
-                    'unit_cost': pc_cost, 'cost_per_sqm': pc_cost,
-                })
-
-            # ===== Prime Coat — แสดงเมื่อมี AC Interlayer เท่านั้น =====
-            col_pc1, col_pc2 = st.columns([2, 2])
-            with col_pc1:
-                use_prime_coat = st.checkbox(
-                    "มี Prime Coat",
-                    value=True,
-                    key=f"{key_prefix}_use_pc_v{v}",
-                    help="ราดบนชั้น Base ก่อนปู AC Interlayer (บาท/ตร.ม.)"
-                )
-            if use_prime_coat:
                 # ดึงราคาจาก Library
                 if 'price_library' in st.session_state:
                     _pc_default = st.session_state['price_library']['base_prices'].get('Prime Coat', 37.47)
