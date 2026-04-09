@@ -111,19 +111,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-
-def _safe_closest(prices, thick, default=0):
-    """ดึงราคาที่ใกล้เคียงที่สุด — safe กรณี prices ว่าง หรือ type ผิด"""
-    if not prices:
-        return default
-    exact = prices.get(thick)
-    if exact:
-        return exact
-    try:
-        return prices.get(min(prices.keys(), key=lambda x: abs(x - thick)), default)
-    except (ValueError, TypeError):
-        return default
-
 # ===== Library ราคาวัสดุ (Price Library) =====
 AC_PRICE_TABLE = {
     'PMA Wearing Course': {
@@ -185,6 +172,20 @@ MATERIAL_LIBRARY = {
         'Non Woven Geotextile': {'unit_cost': 78, 'cost_unit': 'บาท/ตร.ม.'},
     },
 }
+
+def _safe_closest(prices, thick, default=0):
+    """ดึงราคาที่ใกล้เคียงที่สุด — safe กรณี prices ว่าง หรือ exact=0"""
+    if not prices:
+        return default
+    exact = prices.get(thick)
+    if exact:
+        return exact
+    try:
+        return prices.get(min(prices.keys(), key=lambda x: abs(x - thick)), default)
+    except (ValueError, TypeError):
+        return default
+
+
 
 
 # ===== BUG FIX 4: _parse_json_details_to_layers() =====
@@ -248,7 +249,7 @@ def get_default_ac1_layers():
         {'name': 'Prime Coat', 'thickness': 1, 'unit': 'Layer', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 30},
         {'name': 'Crushed Rock Base', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'sq.m', 'unit_cost': 714},
         {'name': 'Soil Aggregate Subbase', 'thickness': 30, 'unit': 'cm', 'quantity': 6600, 'qty_unit': 'sq.m', 'unit_cost': 714},
-        {'name': 'Embankment', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'sq.m', 'unit_cost': 0},
+        {'name': 'Sand Embankment', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'sq.m', 'unit_cost': 361},
     ]
 
 def get_default_ac2_layers():
@@ -266,7 +267,7 @@ def get_default_ac2_layers():
         {'name': 'Prime Coat', 'thickness': 1, 'unit': 'Layer', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 30},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'sq.m', 'unit_cost': 914},
         {'name': 'Soil Aggregate Subbase', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'sq.m', 'unit_cost': 714},
-        {'name': 'Embankment', 'thickness': 30, 'unit': 'cm', 'quantity': 6600, 'qty_unit': 'sq.m', 'unit_cost': 0},
+        {'name': 'Sand Embankment', 'thickness': 30, 'unit': 'cm', 'quantity': 6600, 'qty_unit': 'sq.m', 'unit_cost': 361},
     ]
 
 def get_default_jrcp1_layers():
@@ -283,7 +284,7 @@ def get_default_jrcp1_layers():
         {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Soil Cement Base', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'sq.m', 'unit_cost': 621},
-        {'name': 'Embankment', 'thickness': 60, 'unit': 'cm', 'quantity': 13200, 'qty_unit': 'sq.m', 'unit_cost': 0},
+        {'name': 'Sand Embankment', 'thickness': 60, 'unit': 'cm', 'quantity': 13200, 'qty_unit': 'sq.m', 'unit_cost': 361},
     ]
 
 def get_default_jrcp1_joints():
@@ -313,7 +314,7 @@ def get_default_jrcp2_layers():
         {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'sq.m', 'unit_cost': 914},
-        {'name': 'Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'sq.m', 'unit_cost': 0},
+        {'name': 'Sand Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'sq.m', 'unit_cost': 361},
     ]
 
 def get_default_jrcp2_joints():
@@ -343,7 +344,7 @@ def get_default_crcp1_layers():
         {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Soil Cement Base', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'sq.m', 'unit_cost': 621},
-        {'name': 'Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'sq.m', 'unit_cost': 0},
+        {'name': 'Sand Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'sq.m', 'unit_cost': 361},
     ]
 
 def get_default_crcp2_layers():
@@ -360,7 +361,7 @@ def get_default_crcp2_layers():
         {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'sq.m', 'unit_cost': 914},
-        {'name': 'Embankment', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'sq.m', 'unit_cost': 0},
+        {'name': 'Sand Embankment', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'sq.m', 'unit_cost': 361},
     ]
 
 def get_default_crcp1_joints():
@@ -469,7 +470,7 @@ def calculate_joint_cost(joints, road_length_km=1.0, include_joints=True):
 
     for joint in joints:
         qty = joint['quantity']   # ม. รวมทั้งโครงการ
-        cost = qty * joint['unit_cost'] if include_joints else 0
+        cost = qty * joint['unit_cost']if include_joints else 0
         total += cost
 
         unit_th = 'ม.' if joint.get('qty_unit', 'm') == 'm' else joint.get('qty_unit', 'm')
@@ -576,8 +577,10 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
         if is_wire_mesh and ptype == 'JPCP':
             continue
 
-        # คอนกรีต — Prime Coat และ Tack Coat จัดการผ่าน checkbox แล้ว
-        if ('prime' in name_lower or 'tack' in name_lower) and ptype in ('JPCP', 'JRCP', 'CRCP'):
+        # คอนกรีต (JPCP/JRCP/CRCP) — Prime Coat และ Tack Coat จัดการผ่าน checkbox แล้ว
+        is_prime = 'prime' in name_lower
+        is_tack  = 'tack'  in name_lower
+        if (is_prime or is_tack) and ptype in ('JPCP', 'JRCP', 'CRCP'):
             continue
 
         # Non Woven Geotextile — แสดงเป็น checkbox แยกออกมา
@@ -646,21 +649,32 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
                    else area_per_km * road_length
 
         # ดึงราคาจาก Library
+        def _closest(prices, thick):
+            if not prices:
+                return None
+            exact = prices.get(thick)
+            if exact:
+                return exact
+            try:
+                return prices.get(min(prices.keys(), key=lambda x: abs(x - thick)))
+            except (ValueError, TypeError):
+                return None
+
         lib_price = None
         if 'price_library' in st.session_state:
             lib = st.session_state['price_library']
             if is_wearing:
                 prices = lib['ac_prices'].get(selected_material, {})
-                lib_price = _safe_closest(prices, thick)
+                lib_price = _closest(prices, thick)
             elif is_binder:
                 prices = lib['ac_prices'].get('AC Binder Course', {})
-                lib_price = _safe_closest(prices, thick)
+                lib_price = _closest(prices, thick)
             elif is_ac_base:
                 prices = lib['ac_prices'].get('AC Base Course', {})
-                lib_price = _safe_closest(prices, thick)
+                lib_price = _closest(prices, thick)
             elif is_concrete:
                 prices = lib['concrete_prices'].get(ptype, {})
-                lib_price = _safe_closest(prices, int(thick))
+                lib_price = _closest(prices, int(thick))
 
         default_cost = lib_price if lib_price else layer['unit_cost']
 
@@ -719,8 +733,15 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
             if 'price_library' in st.session_state:
                 _ac_prices = st.session_state['price_library']['ac_prices'].get('AC Binder Course', {})
                 acil_cost_sqm = _ac_prices.get(acil_thick, 0)
+                if acil_cost_sqm == 0 and _ac_prices:
+                    try:
+                        acil_cost_sqm = _ac_prices.get(
+                            min(_ac_prices.keys(), key=lambda x: abs(x - acil_thick)), 251
+                        )
+                    except (ValueError, TypeError):
+                        acil_cost_sqm = 251
                 if acil_cost_sqm == 0:
-                    acil_cost_sqm = _safe_closest(_ac_prices, acil_thick, 251)
+                    acil_cost_sqm = 251
             else:
                 acil_cost_sqm = _acil_price_default
 
@@ -783,8 +804,6 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
         'Soil Cement Subbase (UCS 7 ksc)',
         'Soil Aggregate Subbase',
         'Selected Material A',
-        'Prime Coat',   # จัดการผ่าน checkbox — ไม่ให้โผล่ใน dropdown
-        'Embankment',
     }
     if 'price_library' in st.session_state:
         base_lib = st.session_state['price_library']['base_prices']
@@ -795,9 +814,8 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
             'Soil Cement Subbase (UCS 7 ksc)':                  {'unit_cost_cum': base_lib.get('Soil Cement Subbase (UCS 7 ksc)', 854),                   'is_ac': False},
             'Soil Aggregate Subbase':                            {'unit_cost_cum': base_lib.get('Soil Aggregate Subbase', 375),                            'is_ac': False},
             'Selected Material A':                               {'unit_cost_cum': base_lib.get('Selected Material A', 375),                               'is_ac': False},
-            'Embankment':  {'unit_cost_cum': base_lib.get('Embankment', 0), 'is_ac': False},
         }
-        # เพิ่มวัสดุที่ไม่ได้อยู่ใน hardcode list (Custom Materials)
+        # เพิ่มวัสดุที่ไม่ได้อยู่ใน hardcode list (Embankment, Custom Materials)
         for _mat, _price in base_lib.items():
             if _mat not in _HARDCODED_BASE:
                 try:
@@ -812,7 +830,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
             'Soil Cement Subbase (UCS 7 ksc)':                  {'unit_cost_cum': 854,  'is_ac': False},
             'Soil Aggregate Subbase':                            {'unit_cost_cum': 375,  'is_ac': False},
             'Selected Material A':                               {'unit_cost_cum': 375,  'is_ac': False},
-            'Embankment':  {'unit_cost_cum': 0, 'is_ac': False},
+            'Embankment':                                        {'unit_cost_cum': 0,    'is_ac': False},
         }
 
     material_names = list(base_materials.keys())
@@ -873,8 +891,12 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
             if 'price_library' in st.session_state:
                 ac_prices = st.session_state['price_library']['ac_prices'].get('AC Base Course', {})
                 cost_per_sqm = ac_prices.get(thick, 0)
-                if cost_per_sqm == 0:
-                    cost_per_sqm = _safe_closest(ac_prices, thick, 251)
+                if cost_per_sqm == 0 and ac_prices:
+                    try:
+                        closest = min(ac_prices.keys(), key=lambda x: abs(x - thick))
+                        cost_per_sqm = ac_prices.get(closest, 251)
+                    except (ValueError, TypeError):
+                        cost_per_sqm = 251
             else:
                 cost_per_sqm = 251
             lib_cost_cum = cost_per_sqm
@@ -1417,6 +1439,7 @@ def main():
                             st.session_state['loaded_json_hash'] = file_hash
                             new_v = st.session_state.get('json_version', 0) + 1
                             st.session_state['json_version'] = new_v
+                            # restore price_library จาก JSON (ถ้ามี)
                             if 'price_library' in loaded_data:
                                 st.session_state['price_library'] = loaded_data['price_library']
                                 st.session_state['uploaded_price_library'] = loaded_data['price_library']
