@@ -1412,6 +1412,10 @@ def main():
                             st.session_state['loaded_json_hash'] = file_hash
                             new_v = st.session_state.get('json_version', 0) + 1
                             st.session_state['json_version'] = new_v
+                            # restore price_library จาก JSON (ถ้ามี)
+                            if 'price_library' in loaded_data:
+                                st.session_state['price_library'] = loaded_data['price_library']
+                                st.session_state['uploaded_price_library'] = loaded_data['price_library']
                             # ล้าง widget keys ทั้งหมดที่ขึ้นกับ version
                             # ครอบคลุม: ความหนาผิวทาง (_st_), ความหนาพื้นทาง (_bt_),
                             # วัสดุพื้นทาง (_bm_), จำนวนชั้น (_num_base_),
@@ -2190,15 +2194,20 @@ def main():
                             'construction': {
                                 k: {
                                     'cost':     v_s.get('cost', 0),
-                                    'cost_sqm': v_s.get('cost_sqm', 0),   # ← FIX: เพิ่ม cost_sqm
-                                    'show':     v_s.get('show', True),     # ← FIX: เพิ่ม show flag
+                                    'cost_sqm': v_s.get('cost_sqm', 0),
+                                    'show':     v_s.get('show', True),
                                     'details':  v_s.get('details', []),
                                     'layers':   v_s.get('layers', []),
                                     'joints':   v_s.get('joints') or [],
                                 } for k, v_s in st.session_state.get('construction', {}).items()
                             },
+                            'price_library': st.session_state.get('price_library', {
+                                'ac_prices':       AC_PRICE_TABLE,
+                                'concrete_prices': CONCRETE_PRICE_TABLE,
+                                'base_prices':     BASE_MATERIAL_PRICES,
+                            }),
                             'saved_at': datetime.now().isoformat(),
-                            'version': '5.1',   # ← เพิ่ม version marker
+                            'version': '5.2',
                         }
                         st.download_button(
                             "⬇️ ดาวน์โหลด JSON", data=json.dumps(data, ensure_ascii=False, indent=2),
