@@ -2110,7 +2110,7 @@ def main():
                     )
                     intro_text = st.text_area(
                         "บทเกริ่นนำ (แสดงใต้หัวข้อข้อมูลโครงการ)",
-                        value=_default_intro, height=120, key="rpt_intro_text_v2"
+                        value=_default_intro, height=120, key=f"rpt_intro_text_{total_width:.0f}_{num_lanes}"
                     )
 
                 if not DOCX_AVAILABLE:
