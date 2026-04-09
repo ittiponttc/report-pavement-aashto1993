@@ -577,6 +577,12 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
         if is_wire_mesh and ptype == 'JPCP':
             continue
 
+        # คอนกรีต (JPCP/JRCP/CRCP) — Prime Coat และ Tack Coat จัดการผ่าน checkbox แล้ว
+        is_prime = 'prime' in name_lower
+        is_tack  = 'tack'  in name_lower
+        if (is_prime or is_tack) and ptype in ('JPCP', 'JRCP', 'CRCP'):
+            continue
+
         # Non Woven Geotextile — แสดงเป็น checkbox แยกออกมา
         if is_geotextile:
             geo_cols = st.columns([2.5, 1, 1.5])
@@ -643,32 +649,21 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
                    else area_per_km * road_length
 
         # ดึงราคาจาก Library
-        def _closest(prices, thick):
-            if not prices:
-                return None
-            exact = prices.get(thick)
-            if exact:
-                return exact
-            try:
-                return prices.get(min(prices.keys(), key=lambda x: abs(x - thick)))
-            except (ValueError, TypeError):
-                return None
-
         lib_price = None
         if 'price_library' in st.session_state:
             lib = st.session_state['price_library']
             if is_wearing:
                 prices = lib['ac_prices'].get(selected_material, {})
-                lib_price = _closest(prices, thick)
+                lib_price = _safe_closest(prices, thick)
             elif is_binder:
                 prices = lib['ac_prices'].get('AC Binder Course', {})
-                lib_price = _closest(prices, thick)
+                lib_price = _safe_closest(prices, thick)
             elif is_ac_base:
                 prices = lib['ac_prices'].get('AC Base Course', {})
-                lib_price = _closest(prices, thick)
+                lib_price = _safe_closest(prices, thick)
             elif is_concrete:
                 prices = lib['concrete_prices'].get(ptype, {})
-                lib_price = _closest(prices, int(thick))
+                lib_price = _safe_closest(prices, int(thick))
 
         default_cost = lib_price if lib_price else layer['unit_cost']
 
@@ -1425,7 +1420,6 @@ def main():
 
                 if 'project_info' in loaded_data:
                     st.info(f"📌 โครงการ: {loaded_data['project_info'].get('name', '-')}")
-                    st.info(f"📅 บันทึกเมื่อ: {loaded_data.get('saved_at', '-')}")
 
                 if st.button("📥 นำเข้าข้อมูล", key="import_json"):
                     if 'project_info' in loaded_data:
@@ -1438,6 +1432,13 @@ def main():
                             if 'price_library' in loaded_data:
                                 st.session_state['price_library'] = loaded_data['price_library']
                                 st.session_state['uploaded_price_library'] = loaded_data['price_library']
+                            else:
+                                # fallback default ถ้า JSON เก่าไม่มี price_library
+                                st.session_state.setdefault('price_library', {
+                                    'ac_prices':       AC_PRICE_TABLE,
+                                    'concrete_prices': CONCRETE_PRICE_TABLE,
+                                    'base_prices':     BASE_MATERIAL_PRICES,
+                                })
                             # ล้าง widget keys ทั้งหมดที่ขึ้นกับ version
                             # ครอบคลุม: ความหนาผิวทาง (_st_), ความหนาพื้นทาง (_bt_),
                             # วัสดุพื้นทาง (_bm_), จำนวนชั้น (_num_base_),
