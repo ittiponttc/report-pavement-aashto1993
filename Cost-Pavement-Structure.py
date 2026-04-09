@@ -1871,7 +1871,7 @@ def main():
                         default_joints_fn(), key_prefix, area_per_km, road_length, v=v,
                         ptype=ptype
                     )
-                    joint_cost, joint_details = calculate_joint_cost(joints, road_length)
+                    joint_cost, joint_details = calculate_joint_cost(joints, road_length, include_joints=include_joints)
                     joints_sqm = sum(j.get('cost_per_sqm', 0) for j in joints)
                     total_cost = layer_cost + (joint_cost if include_joints else 0)
                     if include_joints:
