@@ -830,8 +830,12 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
         if 'interlayer' not in bl['name'].lower()
     ]
     num_base_default = len(base_layers_filtered) if base_layers_filtered else 0
-    num_base = st.number_input("จำนวนชั้นพื้นทาง/รองพื้นทาง", value=num_base_default,
-                                min_value=0, max_value=5, key=f"{key_prefix}_num_base_v{v}")
+    _num_base_key = f"{key_prefix}_num_base_v{v}"
+    # ใช้ค่าจาก session_state ถ้ามีอยู่แล้ว เพื่อไม่ให้ reset เมื่อ Geotextile ถูก untick
+    if _num_base_key not in st.session_state:
+        st.session_state[_num_base_key] = num_base_default
+    num_base = st.number_input("จำนวนชั้นพื้นทาง/รองพื้นทาง", value=st.session_state[_num_base_key],
+                                min_value=0, max_value=5, key=_num_base_key)
 
     cols = st.columns([3, 1, 1.2, 1.2, 1.2])
     cols[0].markdown("วัสดุ")
