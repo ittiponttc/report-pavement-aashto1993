@@ -128,9 +128,9 @@ AC_PRICE_TABLE = {
 }
 
 CONCRETE_PRICE_TABLE = {
-    'JRCP': {25: 924, 28: 1002, 30: 0, 32: 1106, 35: 1184},
-    'JPCP': {25: 928, 28: 1000, 30: 0, 32: 1095, 35: 1167},
-    'CRCP': {25: 1245, 28: 1358, 30: 0, 32: 1509, 35: 1622},
+    'JRCP': {25: 924, 28: 1002, 32: 1106, 35: 1184},
+    'JPCP': {25: 928, 28: 1000, 32: 1095, 35: 1167},
+    'CRCP': {25: 1245, 28: 1358, 32: 1509, 35: 1622},
 }
 
 CONCRETE_EXCL_JOINT = {
@@ -146,7 +146,6 @@ BASE_MATERIAL_PRICES = {
     'Soil Aggregate Subbase': 375,
     'Soil Cement Subbase (UCS 7 ksc)': 854,
     'Selected Material A': 375,
-    'Embankment': 0,
 }
 
 MATERIAL_LIBRARY = {
@@ -734,6 +733,14 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
             })
 
     # ── วัสดุพื้นทาง/รองพื้นทาง (ไม่รวม AC Interlayer อีกต่อไป) ──
+    _HARDCODED_BASE = {
+        'Crushed Rock Base Course',
+        'Cement Modified Crushed Rock Base (UCS 24.5 ksc)',
+        'Cement Treated Base (UCS 40 ksc)',
+        'Soil Cement Subbase (UCS 7 ksc)',
+        'Soil Aggregate Subbase',
+        'Selected Material A',
+    }
     if 'price_library' in st.session_state:
         base_lib = st.session_state['price_library']['base_prices']
         base_materials = {
@@ -744,6 +751,13 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
             'Soil Aggregate Subbase':                            {'unit_cost_cum': base_lib.get('Soil Aggregate Subbase', 375),                            'is_ac': False},
             'Selected Material A':                               {'unit_cost_cum': base_lib.get('Selected Material A', 375),                               'is_ac': False},
         }
+        # เพิ่มวัสดุที่ไม่ได้อยู่ใน hardcode list (Embankment, Custom Materials)
+        for _mat, _price in base_lib.items():
+            if _mat not in _HARDCODED_BASE:
+                try:
+                    base_materials[_mat] = {'unit_cost_cum': float(_price), 'is_ac': False}
+                except (ValueError, TypeError):
+                    pass
     else:
         base_materials = {
             'Crushed Rock Base Course':                          {'unit_cost_cum': 583,  'is_ac': False},
@@ -752,6 +766,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
             'Soil Cement Subbase (UCS 7 ksc)':                  {'unit_cost_cum': 854,  'is_ac': False},
             'Soil Aggregate Subbase':                            {'unit_cost_cum': 375,  'is_ac': False},
             'Selected Material A':                               {'unit_cost_cum': 375,  'is_ac': False},
+            'Embankment':                                        {'unit_cost_cum': 0,    'is_ac': False},
         }
 
     material_names = list(base_materials.keys())
@@ -1299,13 +1314,12 @@ def generate_excel_template():
             'Type':  ['JRCP', 'JPCP', 'CRCP'],
             '25cm':  [924, 928, 1245],
             '28cm':  [1002, 1000, 1358],
-            '30cm':  [0, 0, 0],
             '32cm':  [1106, 1095, 1509],
             '35cm':  [1184, 1167, 1622],
         }),
         'Base_Materials': pd.DataFrame({
-            'Material':           list(BASE_MATERIAL_PRICES.keys()),
-            'Price (Baht/cu.m)': list(BASE_MATERIAL_PRICES.values()),
+            'Material':             list(BASE_MATERIAL_PRICES.keys()),
+            'Price (Baht/cu.m)':   list(BASE_MATERIAL_PRICES.values()),
         }),
     }
 
@@ -1398,57 +1412,22 @@ def main():
                     material = row['Material']
                     prices = {}
                     for col in ac_df.columns[1:]:
-                        try:
-                            thickness = float(col.replace('cm', '').strip())
-                            val = row[col]
-                            if pd.notna(val):
-                                prices[thickness] = float(val)
-                        except (ValueError, TypeError):
-                            pass
-                    if prices:
-                        uploaded_ac_prices[material] = prices
-                # เติม key ที่ขาดจาก default เพื่อป้องกัน KeyError
-                for mat, default_prices in AC_PRICE_TABLE.items():
-                    if mat not in uploaded_ac_prices:
-                        uploaded_ac_prices[mat] = dict(default_prices)
-                    else:
-                        for thk, dp in default_prices.items():
-                            uploaded_ac_prices[mat].setdefault(thk, dp)
+                        thickness = float(col.replace('cm', ''))
+                        prices[thickness] = float(row[col])
+                    uploaded_ac_prices[material] = prices
 
                 uploaded_concrete_prices = {}
                 for _, row in concrete_df.iterrows():
                     conc_type = row['Type']
                     prices = {}
                     for col in concrete_df.columns[1:]:
-                        try:
-                            thickness = int(float(col.replace('cm', '').strip()))
-                            val = row[col]
-                            if pd.notna(val):
-                                prices[thickness] = float(val)
-                        except (ValueError, TypeError):
-                            pass
-                    if prices:
-                        uploaded_concrete_prices[conc_type] = prices
-                # เติม key ที่ขาดจาก default
-                for ct, default_prices in CONCRETE_PRICE_TABLE.items():
-                    if ct not in uploaded_concrete_prices:
-                        uploaded_concrete_prices[ct] = dict(default_prices)
-                    else:
-                        for thk, dp in default_prices.items():
-                            uploaded_concrete_prices[ct].setdefault(thk, dp)
+                        thickness = int(col.replace('cm', ''))
+                        prices[thickness] = float(row[col])
+                    uploaded_concrete_prices[conc_type] = prices
 
                 uploaded_base_prices = {}
                 for _, row in base_df.iterrows():
-                    try:
-                        mat = row['Material']
-                        val = row['Price (Baht/cu.m)']
-                        if pd.notna(mat) and pd.notna(val):
-                            uploaded_base_prices[str(mat)] = float(val)
-                    except (ValueError, TypeError):
-                        pass
-                # เติม key ที่ขาดจาก default (รวม Embankment)
-                for mat, dp in BASE_MATERIAL_PRICES.items():
-                    uploaded_base_prices.setdefault(mat, dp)
+                    uploaded_base_prices[row['Material']] = float(row['Price (Baht/cu.m)'])
 
                 st.session_state['uploaded_price_library'] = {
                     'ac_prices': uploaded_ac_prices,
@@ -1601,7 +1580,7 @@ def main():
         st.subheader("🟠 ผิวทางคอนกรีต (บาท/ตร.ม.)")
         conc_cols = st.columns(3)
         conc_types = ['JRCP', 'JPCP', 'CRCP']
-        conc_thicknesses = [25, 28, 30, 32, 35]
+        conc_thicknesses = [25, 28, 32, 35]
 
         for col_idx, conc_type in enumerate(conc_types):
             with conc_cols[col_idx]:
