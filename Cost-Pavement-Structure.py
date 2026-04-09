@@ -173,6 +173,20 @@ MATERIAL_LIBRARY = {
     },
 }
 
+def _safe_closest(prices, thick, default=0):
+    """ดึงราคาที่ใกล้เคียงที่สุด — safe กรณี prices ว่าง หรือ exact=0"""
+    if not prices:
+        return default
+    exact = prices.get(thick)
+    if exact:
+        return exact
+    try:
+        return prices.get(min(prices.keys(), key=lambda x: abs(x - thick)), default)
+    except (ValueError, TypeError):
+        return default
+
+
+
 
 # ===== BUG FIX 4: _parse_json_details_to_layers() =====
 # เดิม: กำหนด qty_unit='cu.m' สำหรับ base materials → ไม่สอดคล้องกับ render_layer_editor() ที่ใช้ 'sq.m' เสมอ
@@ -714,9 +728,14 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
                 _ac_prices = st.session_state['price_library']['ac_prices'].get('AC Binder Course', {})
                 acil_cost_sqm = _ac_prices.get(acil_thick, 0)
                 if acil_cost_sqm == 0 and _ac_prices:
-                    acil_cost_sqm = _ac_prices.get(
-                        min(_ac_prices.keys(), key=lambda x: abs(x - acil_thick)), 251
-                    )
+                    try:
+                        acil_cost_sqm = _ac_prices.get(
+                            min(_ac_prices.keys(), key=lambda x: abs(x - acil_thick)), 251
+                        )
+                    except (ValueError, TypeError):
+                        acil_cost_sqm = 251
+                if acil_cost_sqm == 0:
+                    acil_cost_sqm = 251
             else:
                 acil_cost_sqm = _acil_price_default
 
@@ -867,8 +886,11 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
                 ac_prices = st.session_state['price_library']['ac_prices'].get('AC Base Course', {})
                 cost_per_sqm = ac_prices.get(thick, 0)
                 if cost_per_sqm == 0 and ac_prices:
-                    closest = min(ac_prices.keys(), key=lambda x: abs(x - thick))
-                    cost_per_sqm = ac_prices.get(closest, 251)
+                    try:
+                        closest = min(ac_prices.keys(), key=lambda x: abs(x - thick))
+                        cost_per_sqm = ac_prices.get(closest, 251)
+                    except (ValueError, TypeError):
+                        cost_per_sqm = 251
             else:
                 cost_per_sqm = 251
             lib_cost_cum = cost_per_sqm
@@ -2326,22 +2348,22 @@ def main():
                             prices = lib['ac_prices'].get('AC Wearing Course', {})
                             price_sqm = prices.get(thickness, 0)
                             if price_sqm == 0 and prices:
-                                price_sqm = prices.get(min(prices.keys(), key=lambda x: abs(x - thickness)), 0)
+                                price_sqm = _safe_closest(prices, thickness, 0)
                         elif 'pma' in mat_lower:
                             prices = lib['ac_prices'].get('PMA Wearing Course', {})
                             price_sqm = prices.get(thickness, 0)
                             if price_sqm == 0 and prices:
-                                price_sqm = prices.get(min(prices.keys(), key=lambda x: abs(x - thickness)), 0)
+                                price_sqm = _safe_closest(prices, thickness, 0)
                         elif 'binder' in mat_lower:
                             prices = lib['ac_prices'].get('AC Binder Course', {})
                             price_sqm = prices.get(thickness, 0)
                             if price_sqm == 0 and prices:
-                                price_sqm = prices.get(min(prices.keys(), key=lambda x: abs(x - thickness)), 0)
+                                price_sqm = _safe_closest(prices, thickness, 0)
                         elif 'ac base' in mat_lower or 'ac interlayer' in mat_lower:
                             prices = lib['ac_prices'].get('AC Base Course', {})
                             price_sqm = prices.get(thickness, 0)
                             if price_sqm == 0 and prices:
-                                price_sqm = prices.get(min(prices.keys(), key=lambda x: abs(x - thickness)), 0)
+                                price_sqm = _safe_closest(prices, thickness, 0)
                         elif 'tack' in mat_lower:
                             price_sqm = 20
                         elif 'prime' in mat_lower:
@@ -2361,7 +2383,7 @@ def main():
                                 prices = lib['concrete_prices'].get('JPCP', {})
                             price_sqm = prices.get(int(thickness), 0)
                             if price_sqm == 0 and prices:
-                                price_sqm = prices.get(min(prices.keys(), key=lambda x: abs(x - thickness)), 0)
+                                price_sqm = _safe_closest(prices, thickness, 0)
                         elif 'cement treated' in mat_lower:
                             price_sqm = lib['base_prices'].get('Cement Treated Base (UCS 40 ksc)', 1096) * thickness / 100
                         elif 'cement modified' in mat_lower:
