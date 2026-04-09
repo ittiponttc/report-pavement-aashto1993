@@ -783,6 +783,8 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
         'Soil Cement Subbase (UCS 7 ksc)',
         'Soil Aggregate Subbase',
         'Selected Material A',
+        'Prime Coat',   # จัดการผ่าน checkbox — ไม่ให้โผล่ใน dropdown
+        'Embankment',   # จัดการใน hardcode ด้านล่างแล้ว
     }
     if 'price_library' in st.session_state:
         base_lib = st.session_state['price_library']['base_prices']
@@ -793,8 +795,9 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
             'Soil Cement Subbase (UCS 7 ksc)':                  {'unit_cost_cum': base_lib.get('Soil Cement Subbase (UCS 7 ksc)', 854),                   'is_ac': False},
             'Soil Aggregate Subbase':                            {'unit_cost_cum': base_lib.get('Soil Aggregate Subbase', 375),                            'is_ac': False},
             'Selected Material A':                               {'unit_cost_cum': base_lib.get('Selected Material A', 375),                               'is_ac': False},
+            'Embankment':                                        {'unit_cost_cum': base_lib.get('Embankment', 0),                                         'is_ac': False},
         }
-        # เพิ่มวัสดุที่ไม่ได้อยู่ใน hardcode list (Embankment, Custom Materials)
+        # เพิ่มวัสดุที่ไม่ได้อยู่ใน hardcode list (Custom Materials)
         for _mat, _price in base_lib.items():
             if _mat not in _HARDCODED_BASE:
                 try:
