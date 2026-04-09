@@ -396,7 +396,7 @@ def calculate_layer_cost(layers, road_length_km=1.0):
     details = []
 
     BASE_KEYWORDS = ['crushed rock', 'soil aggregate', 'soil cement', 'cement modified',
-                     'cement treated', 'selected material', 'sand embankment']
+                     'cement treated', 'selected material', 'embankment']
 
     for layer in layers:
         qty_raw = layer['quantity']      # ตร.ม. (รวมทั้งโครงการ)
