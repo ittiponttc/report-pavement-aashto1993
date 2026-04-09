@@ -2034,30 +2034,16 @@ def main():
             total_cost = 0
             st.markdown(f"**{struct['name']}**")
 
-            for i, layer in enumerate(layers):
-                layer_cost = layer['quantity'] * layer['unit_cost']
-                total_cost += layer_cost
+            for i, d in enumerate(struct['details']):
+                total_cost += d['มูลค่า (บาท)']
                 detail_data.append({
                     'ลำดับ': i + 1,
-                    'รายการ': layer['name'],
-                    'ความหนา': f"{layer['thickness']} {layer['unit']}",
-                    'ปริมาณ (ตร.ม.)': f"{layer['quantity']:,.0f}",
-                    'ราคา (บาท/ตร.ม.)': f"{layer['unit_cost']:,.2f}",
-                    'มูลค่า (บาท)': f"{layer_cost:,.0f}",
+                    'รายการ': d['รายการ'],
+                    'ความหนา': d['ความหนา'],
+                    'ปริมาณ (ตร.ม.)': f"{d['ปริมาณ']:,.0f} {d['หน่วย']}",
+                    'ราคา (บาท/ตร.ม.)': f"{d['ราคา/หน่วย (แสดง)']} ({d['หน่วยราคา']})",
+                    'มูลค่า (บาท)': f"{d['มูลค่า (บาท)']:,.0f}",
                 })
-
-            if joints:
-                for j, joint in enumerate(joints):
-                    joint_cost = joint['quantity'] * joint['unit_cost']
-                    total_cost += joint_cost
-                    detail_data.append({
-                        'ลำดับ': len(layers) + j + 1,
-                        'รายการ': joint['name'],
-                        'ความหนา': '-',
-                        'ปริมาณ (ตร.ม.)': f"{joint['quantity']:,.0f} ม.",
-                        'ราคา (บาท/ตร.ม.)': f"{joint['unit_cost']:,.2f} บาท/ม.",
-                        'มูลค่า (บาท)': f"{joint_cost:,.0f}",
-                    })
 
             st.dataframe(pd.DataFrame(detail_data), use_container_width=True, hide_index=True)
 
