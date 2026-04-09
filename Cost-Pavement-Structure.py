@@ -2097,7 +2097,7 @@ def main():
                     with col_cfg2:
                         section_start = st.text_input("หมายเลขหัวข้อเริ่มต้น (เช่น 4.7)", value="4.7", key="rpt_section_start")
 
-                    _pi = st.session_state.get('project_info', {})
+                    _pi = project_info
                     _default_intro = (
                         f"รายงานวิเคราะห์ต้นทุนค่าก่อสร้างโครงสร้างชั้นทางฉบับนี้ "
                         f"จัดทำขึ้นเพื่อเปรียบเทียบทางเลือกโครงสร้างชั้นทางประเภทต่าง ๆ "
