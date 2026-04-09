@@ -1836,14 +1836,14 @@ def main():
                     )
                     joint_cost, joint_details = calculate_joint_cost(joints, road_length)
                     joints_sqm = sum(j.get('cost_per_sqm', 0) for j in joints)
-                    total_cost = layer_cost + joint_cost
+                    total_cost = layer_cost + (joint_cost if include_joints else 0)
                     if include_joints:
                         cost_sqm = layer_cost / (area_per_km * road_length) + joints_sqm
                         note = "(รวม Joints)" if ptype != 'CRCP' else "(รวม Long. Steel & Joints)"
                     else:
                         cost_sqm = layer_cost / (area_per_km * road_length)
                         note = "(ไม่รวม Joints)" if ptype != 'CRCP' else "(ไม่รวม Long. Steel & Joints)"
-                    all_details = layer_details + joint_details
+                    all_details = layer_details + (joint_details if include_joints else [])
                 else:
                     joints = None
                     total_cost = layer_cost
