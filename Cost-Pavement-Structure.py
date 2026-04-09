@@ -865,18 +865,23 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
                     break
 
         with cols[0]:
+            _bm_key = f"{key_prefix}_bm_{i}_v{v}"
+            if _bm_key not in st.session_state:
+                st.session_state[_bm_key] = material_names[default_idx]
             selected = st.selectbox("วัสดุ", material_names, index=default_idx,
-                key=f"{key_prefix}_bm_{i}_v{v}", label_visibility="collapsed")
+                key=_bm_key, label_visibility="collapsed")
         with cols[1]:
+            _bt_key = f"{key_prefix}_bt_{i}_v{v}"
             if base_materials[selected].get('is_ac', False):
-                default_thick_val = base_materials[selected].get('default_thick', 5)
-                thick = st.number_input("หนา", value=float(default_thick_val),
-                    key=f"{key_prefix}_bt_{i}_v{v}", label_visibility="collapsed",
-                    min_value=0.0, step=1.0)
+                _bt_default = float(base_materials[selected].get('default_thick', 5))
             else:
-                thick = st.number_input("หนา", value=float(default_thick),
-                    key=f"{key_prefix}_bt_{i}_v{v}", label_visibility="collapsed",
-                    min_value=0.0, step=5.0)
+                _bt_default = float(default_thick)
+            # เก็บค่าไว้ใน session_state เพื่อไม่ให้ reset เมื่อ checkbox เปลี่ยน
+            if _bt_key not in st.session_state:
+                st.session_state[_bt_key] = _bt_default
+            thick = st.number_input("หนา", value=st.session_state[_bt_key],
+                key=_bt_key, label_visibility="collapsed",
+                min_value=0.0, step=5.0)
 
         auto_qty = area_per_km * road_length  # ตร.ม. รวมทั้งโครงการ
 
@@ -1008,16 +1013,22 @@ def render_joint_editor(joints, key_prefix, area_per_km, road_length, v=0, ptype
             st.text(joint['name'])
 
         with cols[1]:
+            _jq_key = f"{key_prefix}_jq_{i}_s{joint_spacing}_v{v}"
+            if _jq_key not in st.session_state:
+                st.session_state[_jq_key] = float(joint['quantity'])
             qty = st.number_input(
-                "ปริมาณ (m)", value=float(joint['quantity']),
-                key=f"{key_prefix}_jq_{i}_s{joint_spacing}_v{v}", label_visibility="collapsed",
+                "ปริมาณ (m)", value=st.session_state[_jq_key],
+                key=_jq_key, label_visibility="collapsed",
                 min_value=0.0, step=100.0
             )
 
         with cols[2]:
+            _jc_key = f"{key_prefix}_jc_{i}_s{joint_spacing}_v{v}"
+            if _jc_key not in st.session_state:
+                st.session_state[_jc_key] = float(joint['unit_cost'])
             cost = st.number_input(
-                "ราคา/ม.", value=float(joint['unit_cost']),
-                key=f"{key_prefix}_jc_{i}_s{joint_spacing}_v{v}", label_visibility="collapsed",
+                "ราคา/ม.", value=st.session_state[_jc_key],
+                key=_jc_key, label_visibility="collapsed",
                 min_value=0.0, step=10.0
             )
 
