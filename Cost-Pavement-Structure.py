@@ -577,12 +577,6 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
         if is_wire_mesh and ptype == 'JPCP':
             continue
 
-        # คอนกรีต (JPCP/JRCP/CRCP) — Prime Coat และ Tack Coat จัดการผ่าน checkbox แล้ว
-        is_prime = 'prime' in name_lower
-        is_tack  = 'tack'  in name_lower
-        if (is_prime or is_tack) and ptype in ('JPCP', 'JRCP', 'CRCP'):
-            continue
-
         # Non Woven Geotextile — แสดงเป็น checkbox แยกออกมา
         if is_geotextile:
             geo_cols = st.columns([2.5, 1, 1.5])
