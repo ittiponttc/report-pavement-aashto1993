@@ -248,7 +248,7 @@ def get_default_ac1_layers():
         {'name': 'Prime Coat', 'thickness': 1, 'unit': 'Layer', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 30},
         {'name': 'Crushed Rock Base', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'sq.m', 'unit_cost': 714},
         {'name': 'Soil Aggregate Subbase', 'thickness': 30, 'unit': 'cm', 'quantity': 6600, 'qty_unit': 'sq.m', 'unit_cost': 714},
-        {'name': 'Embankment (AC Pavement)', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'sq.m', 'unit_cost': 351.96},
+        {'name': 'Embankment', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'sq.m', 'unit_cost': 0},
     ]
 
 def get_default_ac2_layers():
@@ -266,7 +266,7 @@ def get_default_ac2_layers():
         {'name': 'Prime Coat', 'thickness': 1, 'unit': 'Layer', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 30},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'sq.m', 'unit_cost': 914},
         {'name': 'Soil Aggregate Subbase', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'sq.m', 'unit_cost': 714},
-        {'name': 'Embankment (AC Pavement)', 'thickness': 30, 'unit': 'cm', 'quantity': 6600, 'qty_unit': 'sq.m', 'unit_cost': 351.96},
+        {'name': 'Embankment', 'thickness': 30, 'unit': 'cm', 'quantity': 6600, 'qty_unit': 'sq.m', 'unit_cost': 0},
     ]
 
 def get_default_jrcp1_layers():
@@ -283,7 +283,7 @@ def get_default_jrcp1_layers():
         {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Soil Cement Base', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'sq.m', 'unit_cost': 621},
-        {'name': 'Embankment (Concrete Pavement)', 'thickness': 60, 'unit': 'cm', 'quantity': 13200, 'qty_unit': 'sq.m', 'unit_cost': 418.13},
+        {'name': 'Embankment', 'thickness': 60, 'unit': 'cm', 'quantity': 13200, 'qty_unit': 'sq.m', 'unit_cost': 0},
     ]
 
 def get_default_jrcp1_joints():
@@ -313,7 +313,7 @@ def get_default_jrcp2_layers():
         {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 20, 'unit': 'cm', 'quantity': 4400, 'qty_unit': 'sq.m', 'unit_cost': 914},
-        {'name': 'Embankment (Concrete Pavement)', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'sq.m', 'unit_cost': 418.13},
+        {'name': 'Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'sq.m', 'unit_cost': 0},
     ]
 
 def get_default_jrcp2_joints():
@@ -343,7 +343,7 @@ def get_default_crcp1_layers():
         {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Soil Cement Base', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'sq.m', 'unit_cost': 621},
-        {'name': 'Embankment (Concrete Pavement)', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'sq.m', 'unit_cost': 418.13},
+        {'name': 'Embankment', 'thickness': 50, 'unit': 'cm', 'quantity': 11000, 'qty_unit': 'sq.m', 'unit_cost': 0},
     ]
 
 def get_default_crcp2_layers():
@@ -360,7 +360,7 @@ def get_default_crcp2_layers():
         {'name': 'Wire Mesh', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 100},
         {'name': 'Non Woven Geotextile', 'thickness': 1, 'unit': 'ชั้น', 'quantity': 22000, 'qty_unit': 'sq.m', 'unit_cost': 78},
         {'name': 'Cement Modified Crushed Rock', 'thickness': 15, 'unit': 'cm', 'quantity': 3300, 'qty_unit': 'sq.m', 'unit_cost': 914},
-        {'name': 'Embankment (Concrete Pavement)', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'sq.m', 'unit_cost': 418.13},
+        {'name': 'Embankment', 'thickness': 40, 'unit': 'cm', 'quantity': 8800, 'qty_unit': 'sq.m', 'unit_cost': 0},
     ]
 
 def get_default_crcp1_joints():
@@ -785,8 +785,6 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
         'Selected Material A',
         'Prime Coat',   # จัดการผ่าน checkbox — ไม่ให้โผล่ใน dropdown
         'Embankment',
-        'Embankment (AC Pavement)',
-        'Embankment (Concrete Pavement)',
     }
     if 'price_library' in st.session_state:
         base_lib = st.session_state['price_library']['base_prices']
@@ -797,8 +795,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
             'Soil Cement Subbase (UCS 7 ksc)':                  {'unit_cost_cum': base_lib.get('Soil Cement Subbase (UCS 7 ksc)', 854),                   'is_ac': False},
             'Soil Aggregate Subbase':                            {'unit_cost_cum': base_lib.get('Soil Aggregate Subbase', 375),                            'is_ac': False},
             'Selected Material A':                               {'unit_cost_cum': base_lib.get('Selected Material A', 375),                               'is_ac': False},
-            'Embankment (AC Pavement)':        {'unit_cost_cum': base_lib.get('Embankment (AC Pavement)', base_lib.get('Embankment', 0)),       'is_ac': False},
-            'Embankment (Concrete Pavement)':  {'unit_cost_cum': base_lib.get('Embankment (Concrete Pavement)', base_lib.get('Embankment', 0)),  'is_ac': False},
+            'Embankment':  {'unit_cost_cum': base_lib.get('Embankment', 0), 'is_ac': False},
         }
         # เพิ่มวัสดุที่ไม่ได้อยู่ใน hardcode list (Custom Materials)
         for _mat, _price in base_lib.items():
@@ -815,8 +812,7 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
             'Soil Cement Subbase (UCS 7 ksc)':                  {'unit_cost_cum': 854,  'is_ac': False},
             'Soil Aggregate Subbase':                            {'unit_cost_cum': 375,  'is_ac': False},
             'Selected Material A':                               {'unit_cost_cum': 375,  'is_ac': False},
-            'Embankment (AC Pavement)':        {'unit_cost_cum': 351.96, 'is_ac': False},
-            'Embankment (Concrete Pavement)':  {'unit_cost_cum': 418.13, 'is_ac': False},
+            'Embankment':  {'unit_cost_cum': 0, 'is_ac': False},
         }
 
     material_names = list(base_materials.keys())
