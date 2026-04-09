@@ -446,7 +446,7 @@ def calculate_layer_cost(layers, road_length_km=1.0):
     return total, details
 
 
-def calculate_joint_cost(joints, road_length_km=1.0):
+def calculate_joint_cost(joints, road_length_km=1.0, include_joints=True):
     """คำนวณค่ารอยต่อ
     หมายเหตุ: joint['quantity'] = ปริมาณรวมทั้งโครงการ (ม.) แล้ว
     road_length_km ยังคงส่งมาเพื่อ compatibility แต่ไม่ใช้คูณซ้ำ
@@ -456,7 +456,7 @@ def calculate_joint_cost(joints, road_length_km=1.0):
 
     for joint in joints:
         qty = joint['quantity']   # ม. รวมทั้งโครงการ
-        cost = qty * joint['unit_cost']
+        cost = qty * joint['unit_cost']if include_joints else 0
         total += cost
 
         unit_th = 'ม.' if joint.get('qty_unit', 'm') == 'm' else joint.get('qty_unit', 'm')
