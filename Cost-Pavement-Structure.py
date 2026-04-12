@@ -1,14 +1,17 @@
 """
 แอปพลิเคชันวิเคราะห์ความคุ้มค่าโครงสร้างชั้นทาง (AASHTO 1993)
-Version 5.1 - Bug Fixed
-พัฒนาโดย: Claude AI สำหรับ อ.อิทธิพล - KMUTNB
+Version 6.0 - Major UX Improvements
+พัฒนาโดย: รศ.ดร.อิทธิพล มีผล - KMUTNB
 
-CHANGELOG v5.1:
-  BUG FIX 1: generate_word_report_table() — qty คูณ road_length ซ้ำ (layer['quantity'] ถูก calc ด้วย road_length แล้ว)
-  BUG FIX 2: generate_word_report_table() — pre-allocate num_rows ไม่ถูกต้อง → ใช้ dynamic row append แทน
-  BUG FIX 3: render_joint_editor() CRCP — ใช้ area_per_km param แทน session_state ที่อาจยังไม่ถูก set
-  BUG FIX 4: _parse_json_details_to_layers() — qty_unit='cu.m' ไม่สอดคล้องกับ render_layer_editor() → แก้เป็น 'sq.m' เสมอ
-  CLEANUP: generate_word_report_table() ถูก dead code → ลบออก (ไม่ถูกเรียกใช้ที่ไหน)
+CHANGELOG v6.0:
+  1. Tab โครงสร้างชั้นทาง → Sub Tabs แยก AC / JPCP / JRCP / CRCP
+  2. Tab รายงาน → "สรุปต้นทุนและรายงาน" พร้อม card summary 4 ใบ ตัดชุดที่ 2 ออก
+  3. Tab วิเคราะห์จากรูปภาพ → ตัดออก
+  4. Tab ราคาวัสดุ AC → เพิ่ม calculator บาท/ตัน + ตารางทุกความหนา
+  5. Tab ราคาวัสดุ คอนกรีต/พื้นทาง/ผิว → ปรับ layout ใหม่ (บาท/ลบ.ม. → บาท/ตร.ม.)
+  6. Layer editor ผิวทาง AC → Radio Wearing + Binder fixed + checkbox AC Base
+  7. Layer editor ผิวทางคอนกรีต → Slab + วัสดุประกอบ tick ได้
+  8. ปุ่มคัดลอก Base จาก JPCP → JRCP และ CRCP
 """
 
 import streamlit as st
@@ -787,7 +790,6 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
 
     # ── วัสดุพื้นทาง/รองพื้นทาง (ไม่รวม AC Interlayer อีกต่อไป) ──
     _HARDCODED_BASE = {
-        'Crushed Rock Base Course',
         'Cement Modified Crushed Rock Base (UCS 24.5 ksc)',
         'Cement Treated Base (UCS 40 ksc)',
         'Soil Cement Subbase (UCS 7 ksc)',
@@ -829,13 +831,51 @@ def render_layer_editor(layers, key_prefix, total_width, road_length, v=0, ptype
         bl for bl in base_layers
         if 'interlayer' not in bl['name'].lower()
     ]
+
+    # ── ปุ่ม Copy Base ──
+    st.markdown("---")
+    _base_hdr_col, _base_btn_col = st.columns([3, 1])
+    with _base_hdr_col:
+        st.markdown("**🪨 พื้นทาง / รองพื้นทาง** &nbsp; บาท/ลบ.ม. × ความหนา = บาท/ตร.ม.")
+    with _base_btn_col:
+        # แสดงปุ่ม copy เฉพาะ JRCP และ CRCP (JPCP เป็นต้นทาง, AC ไม่ใช้)
+        _copy_src = None
+        if ptype == 'JRCP':
+            _copy_src = 'JPCP'
+        elif ptype == 'CRCP':
+            _copy_src = 'JRCP'
+
+        if _copy_src is not None:
+            if st.button(f"📋 คัดลอก Base จาก {_copy_src}", key=f"{key_prefix}_copy_base_v{v}",
+                         use_container_width=True):
+                # อ่าน base layers จาก session_state ของ source ptype
+                _src_key_prefix = f"{_copy_src.lower()}_a"
+                _src_const = st.session_state.get('construction', {})
+                _src_data = _src_const.get(f'{_copy_src}1', {})
+                _src_layers = _src_data.get('layers', [])
+                # กรองเฉพาะ base layers (ไม่ใช่ผิวทาง/interlayer/prime/tack/geotextile)
+                _BASE_KW = ['crushed', 'cement', 'soil', 'selected', 'embankment', 'subbase', 'base course']
+                _copied = [l for l in _src_layers
+                           if any(kw in l['name'].lower() for kw in _BASE_KW)
+                           and 'interlayer' not in l['name'].lower()]
+                if _copied:
+                    st.session_state[f'{key_prefix}_copied_base'] = _copied
+                    st.success(f"✅ คัดลอก Base จาก {_copy_src} แล้ว ({len(_copied)} ชั้น)")
+                    st.rerun()
+                else:
+                    st.warning(f"⚠️ ไม่พบข้อมูล Base ใน {_copy_src} — กรุณากรอก {_copy_src} ก่อน")
+
+    # ถ้ามีข้อมูล copy มา ให้ใช้แทน base_layers_filtered
+    _copied_base = st.session_state.get(f'{key_prefix}_copied_base')
+    if _copied_base:
+        base_layers_filtered = _copied_base
+
     num_base_default = len(base_layers_filtered) if base_layers_filtered else 0
     _num_base_key = f"{key_prefix}_num_base_v{v}"
-    # ใช้ค่าจาก session_state ถ้ามีอยู่แล้ว เพื่อไม่ให้ reset เมื่อ Geotextile ถูก untick
     if _num_base_key not in st.session_state:
         st.session_state[_num_base_key] = num_base_default
     num_base = st.number_input("จำนวนชั้นพื้นทาง/รองพื้นทาง", value=st.session_state[_num_base_key],
-                                min_value=0, max_value=5, key=_num_base_key)
+                                min_value=0, max_value=8, key=_num_base_key)
 
     cols = st.columns([3, 1, 1.2, 1.2, 1.2])
     cols[0].markdown("วัสดุ")
@@ -1623,41 +1663,26 @@ def main():
 
     area_per_km = total_width * 1000
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 Library ราคา",
+    tab1, tab2, tab3 = st.tabs([
+        "💰 ราคาวัสดุ",
         "🏗️ โครงสร้างชั้นทาง",
-        "📄 รายงาน",
-        "📷 วิเคราะห์จากรูปภาพ",
+        "📊 สรุปต้นทุน & รายงาน",
     ])
 
-    # ===== Tab 1: Library ราคา =====
+    # ===== Tab 1: ราคาวัสดุ =====
     with tab1:
-        st.header("📊 ตารางราคาเปรียบเทียบโครงสร้างชั้นทาง")
-        st.info("💡 สามารถปรับเปลี่ยนราคาได้ตามต้องการ หรือ Upload ไฟล์ Excel ใน **Sidebar** เพื่ออัพเดทราคาทั้งหมด")
+        st.header("💰 ตารางราคาวัสดุ")
 
-        st.subheader("📥 ดาวน์โหลด Template Excel")
-        col1, col2, col3 = st.columns([2, 1, 2])
-        with col2:
-            template_bytes = generate_excel_template()
-            st.download_button(
-                label="⬇️ ดาวน์โหลด Template",
-                data=template_bytes,
-                file_name=f"Price_Library_Template_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-        st.caption("📌 ดาวน์โหลด Template → แก้ไขราคา → Upload ใน Sidebar ด้านซ้าย")
-        st.divider()
-
+        # ── init price_library ──
         if 'uploaded_price_library' in st.session_state:
             st.session_state['price_library'] = st.session_state['uploaded_price_library'].copy()
         elif 'price_library' not in st.session_state:
             st.session_state['price_library'] = {
                 'ac_prices': {
                     'PMA Wearing Course': dict(AC_PRICE_TABLE['PMA Wearing Course']),
-                    'AC Wearing Course': dict(AC_PRICE_TABLE['AC Wearing Course']),
-                    'AC Binder Course': dict(AC_PRICE_TABLE['AC Binder Course']),
-                    'AC Base Course': dict(AC_PRICE_TABLE['AC Base Course']),
+                    'AC Wearing Course':  dict(AC_PRICE_TABLE['AC Wearing Course']),
+                    'AC Binder Course':   dict(AC_PRICE_TABLE['AC Binder Course']),
+                    'AC Base Course':     dict(AC_PRICE_TABLE['AC Base Course']),
                 },
                 'concrete_prices': {
                     'JRCP': dict(CONCRETE_PRICE_TABLE['JRCP']),
@@ -1667,178 +1692,260 @@ def main():
                 'base_prices': dict(BASE_MATERIAL_PRICES),
             }
 
-        if 'uploaded_price_library' in st.session_state:
-            st.info("📋 **กำลังใช้ราคาจากไฟล์ Excel ที่ Upload ใน Sidebar**")
-            ac_7 = st.session_state['price_library']['ac_prices'].get('AC Wearing Course', {}).get(7.0, 'N/A')
-            st.caption(f"ตัวอย่าง: AC Wearing Course 7cm = {ac_7} บาท")
-        else:
-            st.caption("💡 กำลังใช้ราคา Default (Upload Excel ใน Sidebar เพื่อเปลี่ยนราคา)")
-
         upload_version = st.session_state.get('price_upload_version', 'default')
+        lib = st.session_state['price_library']
 
-        st.subheader("🔵 ผิวทาง Asphalt Concrete (บาท/ตร.ม.)")
-        ac_cols = st.columns(4)
-        ac_types = ['PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course']
-        thicknesses = [2.5, 3, 4, 5, 6, 7, 8, 9, 10]
-
-        for col_idx, ac_type in enumerate(ac_types):
-            with ac_cols[col_idx]:
-                st.markdown(f"**{ac_type}**")
-                for thk in thicknesses:
-                    current_price = st.session_state['price_library']['ac_prices'][ac_type].get(thk, 0)
-                    price = st.number_input(
-                        f"{thk} cm", value=float(current_price),
-                        key=f"ac_{ac_type}_{thk}_{upload_version}", step=10.0
-                    )
-                    st.session_state['price_library']['ac_prices'][ac_type][thk] = price
+        # ── ดาวน์โหลด Template ──
+        col_dl, col_mid, col_r = st.columns([2, 1, 2])
+        with col_mid:
+            template_bytes = generate_excel_template()
+            st.download_button(
+                label="⬇️ ดาวน์โหลด Template Excel",
+                data=template_bytes,
+                file_name=f"Price_Library_Template_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+        st.caption("📌 ดาวน์โหลด Template → แก้ไขราคา → Upload ใน Sidebar ด้านซ้าย")
 
         st.divider()
 
-        st.subheader("🟠 ผิวทางคอนกรีต (บาท/ตร.ม.)")
-        conc_cols = st.columns(3)
-        conc_types = ['JRCP', 'JPCP', 'CRCP']
-        conc_thicknesses = [25, 28, 30, 32, 35]
+        # ════════════════════════════════════════════════════════
+        # ส่วนที่ 1: ราคา AC — คำนวณจากบาท/ตัน
+        # ════════════════════════════════════════════════════════
+        with st.expander("🏎️ คำนวณราคา AC จากราคาต่อตัน", expanded=True):
+            st.caption("ราคา (บาท/ตร.ม.) = ราคา (บาท/ตัน) × density × ความหนา (m)")
 
-        for col_idx, conc_type in enumerate(conc_types):
-            with conc_cols[col_idx]:
-                st.markdown(f"**{conc_type}**")
-                for thk in conc_thicknesses:
-                    current_price = st.session_state['price_library']['concrete_prices'][conc_type].get(thk, 0)
-                    price = st.number_input(
-                        f"{thk} cm", value=float(current_price),
-                        key=f"conc_{conc_type}_{thk}_{upload_version}", step=10.0
-                    )
-                    st.session_state['price_library']['concrete_prices'][conc_type][thk] = price
-                st.markdown("---")
-                st.number_input(
-                    f"{conc_type} (excl. Joint)",
-                    value=float(CONCRETE_EXCL_JOINT[conc_type]),
-                    key=f"conc_excl_{conc_type}_{upload_version}", step=10.0
+            ac_col_dens, ac_col_ex = st.columns([2, 2])
+            with ac_col_dens:
+                ac_density = st.number_input(
+                    "Density (ตัน/ลบ.ม.)",
+                    value=st.session_state.get('ac_density', 2.40),
+                    min_value=2.0, max_value=2.6, step=0.01,
+                    key="ac_density_input"
                 )
+                st.session_state['ac_density'] = ac_density
+            with ac_col_ex:
+                ac_example_thick = st.number_input(
+                    "ดูตัวอย่างที่ความหนา (cm)",
+                    value=5.0, min_value=2.5, max_value=10.0, step=0.5,
+                    key="ac_example_thick"
+                )
+
+            st.markdown("**ตัวอย่างราคาที่ความหนา {:.1f} cm**".format(ac_example_thick))
+            ac_types = ['PMA Wearing Course', 'AC Wearing Course', 'AC Binder Course', 'AC Base Course']
+            # default ราคาต่อตัน
+            _ac_ton_defaults = {
+                'PMA Wearing Course': 3100,
+                'AC Wearing Course':  2973,
+                'AC Binder Course':   2929,
+                'AC Base Course':     1795,
+            }
+
+            ac_header_cols = st.columns([3, 2, 2])
+            ac_header_cols[0].markdown("**วัสดุ**")
+            ac_header_cols[1].markdown("**บาท/ตัน**")
+            ac_header_cols[2].markdown(f"**บาท/ตร.ม. ({ac_example_thick:.1f}cm)**")
+
+            for ac_type in ac_types:
+                ac_row = st.columns([3, 2, 2])
+                with ac_row[0]:
+                    st.markdown(ac_type)
+                with ac_row[1]:
+                    ton_price = st.number_input(
+                        "บาท/ตัน", value=float(_ac_ton_defaults.get(ac_type, 2000)),
+                        min_value=0.0, step=10.0,
+                        key=f"ac_ton_{ac_type}_{upload_version}",
+                        label_visibility="collapsed"
+                    )
+                    st.session_state[f'ac_ton_price_{ac_type}'] = ton_price
+                with ac_row[2]:
+                    example_sqm = ton_price * ac_density * (ac_example_thick / 100)
+                    st.markdown(f"**{example_sqm:,.2f}**")
+
+            if st.button("🔄 คำนวณและอัพเดท Price Table AC", type="primary", key="btn_calc_ac"):
+                thicknesses = [2.5, 3, 4, 5, 6, 7, 8, 9, 10]
+                for ac_type in ac_types:
+                    ton_p = st.session_state.get(f'ac_ton_price_{ac_type}', _ac_ton_defaults[ac_type])
+                    new_prices = {}
+                    for thk in thicknesses:
+                        new_prices[thk] = round(ton_p * ac_density * (thk / 100), 2)
+                    lib['ac_prices'][ac_type] = new_prices
+                st.session_state['price_library'] = lib
+                st.success("✅ อัพเดท Price Table AC แล้ว")
+                st.rerun()
 
         st.divider()
 
-        st.subheader("🟤 วัสดุพื้นทาง/รองพื้นทาง (บาท/ลบ.ม.)")
-        base_cols = st.columns(3)
-        base_materials_list = list(BASE_MATERIAL_PRICES.keys())
+        # ════════════════════════════════════════════════════════
+        # ส่วนที่ 2: ตาราง AC ราคาทุกความหนา (read-only)
+        # ════════════════════════════════════════════════════════
+        st.subheader("📋 ราคา AC — บาท/ตัน และ บาท/ตร.ม. ทุกความหนา")
+        st.caption("แก้บาท/ตัน ได้โดยตรง — ราคา/ตร.ม. คำนวณอัตโนมัติ (read-only)")
 
-        for i, mat in enumerate(base_materials_list):
-            with base_cols[i % 3]:
-                current_price = st.session_state['price_library']['base_prices'].get(mat, 0)
-                price = st.number_input(
-                    mat, value=float(current_price),
-                    key=f"base_{mat}_{upload_version}", step=10.0
-                )
-                st.session_state['price_library']['base_prices'][mat] = price
-
-        st.markdown("---")
-        st.markdown("**✨ วัสดุกำหนดเอง** (เพิ่มวัสดุของคุณเอง)")
-        custom_cols = st.columns(3)
-
-        for i in range(1, 4):
-            with custom_cols[i - 1]:
-                custom_key = f"custom_material_{i}"
-                if 'custom_materials' not in st.session_state:
-                    st.session_state['custom_materials'] = {}
-
-                existing_data = st.session_state['custom_materials'].get(custom_key, {'name': '', 'price': 0.0})
-                material_name = st.text_input(
-                    f"ชื่อวัสดุ {i}", value=existing_data['name'],
-                    key=f"custom_name_{i}_{upload_version}", placeholder=f"ระบุชื่อวัสดุ {i}..."
-                )
-
-                if material_name:
-                    material_price = st.number_input(
-                        "ราคา (บาท/ลบ.ม.)", value=float(existing_data['price']),
-                        key=f"custom_price_{i}_{upload_version}", step=10.0, min_value=0.0
-                    )
-                    st.session_state['custom_materials'][custom_key] = {
-                        'name': material_name, 'price': material_price
-                    }
-                    st.session_state['price_library']['base_prices'][material_name] = material_price
-                else:
-                    if custom_key in st.session_state['custom_materials']:
-                        old_name = st.session_state['custom_materials'][custom_key]['name']
-                        if old_name in st.session_state['price_library']['base_prices']:
-                            del st.session_state['price_library']['base_prices'][old_name]
-                        del st.session_state['custom_materials'][custom_key]
+        thicknesses_ac = [2.5, 3, 4, 5, 6, 7, 8, 9, 10]
+        ac_table_data = []
+        for ac_type in ac_types:
+            row = {'วัสดุ': ac_type}
+            prices_dict = lib['ac_prices'].get(ac_type, {})
+            for thk in thicknesses_ac:
+                row[f"{thk:.1f}cm".replace('.0cm', 'cm')] = prices_dict.get(thk, 0)
+            ac_table_data.append(row)
+        st.dataframe(pd.DataFrame(ac_table_data), use_container_width=True, hide_index=True)
 
         st.divider()
-        st.subheader("📥 ดาวน์โหลดตารางราคา")
-        col_dl1, col_dl2 = st.columns(2)
 
-        with col_dl1:
-            if st.button("📊 สร้างไฟล์ Excel", key="btn_excel_price", use_container_width=True):
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    ac_data = []
-                    for ac_type in ac_types:
-                        for thk in thicknesses:
-                            ac_data.append({'ประเภท': ac_type, 'ความหนา (cm)': thk,
-                                            'ราคา (บาท/ตร.ม.)': st.session_state['price_library']['ac_prices'][ac_type][thk]})
-                    pd.DataFrame(ac_data).to_excel(writer, sheet_name='AC Prices', index=False)
+        # ════════════════════════════════════════════════════════
+        # ส่วนที่ 3: ราคาคอนกรีต — บาท/ลบ.ม. → บาท/ตร.ม.
+        # ════════════════════════════════════════════════════════
+        st.subheader("🏗️ ราคาคอนกรีต — บาท/ลบ.ม. และ บาท/ตร.ม. ทุกความหนา")
+        st.caption("แก้ บาท/ลบ.ม. ได้โดยตรง — ราคา/ตร.ม. คำนวณอัตโนมัติ (read-only)")
 
-                    conc_data = []
-                    for conc_type in conc_types:
-                        for thk in conc_thicknesses:
-                            conc_data.append({'ประเภท': conc_type, 'ความหนา (cm)': thk,
-                                              'ราคา (บาท/ตร.ม.)': st.session_state['price_library']['concrete_prices'][conc_type][thk]})
-                    pd.DataFrame(conc_data).to_excel(writer, sheet_name='Concrete Prices', index=False)
+        conc_thicknesses = [20, 25, 28, 30, 32, 35]
+        conc_types = ['JPCP', 'JRCP', 'CRCP']
 
-                    base_data = [{'วัสดุ': k, 'ราคา (บาท/ลบ.ม.)': v}
-                                 for k, v in st.session_state['price_library']['base_prices'].items()]
-                    pd.DataFrame(base_data).to_excel(writer, sheet_name='Base Materials', index=False)
+        # header row
+        conc_header = st.columns([2, 2] + [1.5] * len(conc_thicknesses))
+        conc_header[0].markdown("**ประเภท**")
+        conc_header[1].markdown("**บาท/ลบ.ม.**")
+        for ci, thk in enumerate(conc_thicknesses):
+            conc_header[2 + ci].markdown(f"**{thk}cm**")
 
-                output.seek(0)
-                st.download_button(
-                    label="⬇️ Download Excel", data=output,
-                    file_name="ราคาเปรียบเทียบโครงสร้างชั้นทาง.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        conc_cum_values = {}
+        for conc_type in conc_types:
+            # คำนวณ บาท/ลบ.ม. จาก price table ที่มีอยู่ (ใช้ 28cm เป็น ref)
+            _existing = lib['concrete_prices'].get(conc_type, {})
+            _ref_thick = 28
+            _ref_price = _existing.get(_ref_thick, 0)
+            _default_cum = round(_ref_price / (_ref_thick / 100), 0) if _ref_price > 0 else 3000
+
+            row_cols = st.columns([2, 2] + [1.5] * len(conc_thicknesses))
+            row_cols[0].markdown(f"**{conc_type}**")
+            with row_cols[1]:
+                cum_price = st.number_input(
+                    f"{conc_type} บาท/ลบ.ม.",
+                    value=float(st.session_state.get(f'conc_cum_{conc_type}', _default_cum)),
+                    min_value=0.0, step=10.0,
+                    key=f"conc_cum_{conc_type}_{upload_version}",
+                    label_visibility="collapsed"
                 )
+                conc_cum_values[conc_type] = cum_price
+                st.session_state[f'conc_cum_{conc_type}'] = cum_price
 
-        with col_dl2:
-            if st.button("📄 สร้างไฟล์ Word", key="btn_word_price", use_container_width=True):
-                doc = Document()
-                doc.add_heading('ตารางราคาเปรียบเทียบโครงสร้างชั้นทาง', 0)
-                doc.add_heading('1. ผิวทาง Asphalt Concrete (บาท/ตร.ม.)', level=1)
-                table = doc.add_table(rows=len(thicknesses) + 1, cols=5)
-                table.style = 'Table Grid'
-                for j, h in enumerate(['ความหนา (cm)'] + ac_types):
-                    table.rows[0].cells[j].text = h
-                for i, thk in enumerate(thicknesses):
-                    table.rows[i + 1].cells[0].text = str(thk)
-                    for j, ac_type in enumerate(ac_types):
-                        table.rows[i + 1].cells[j + 1].text = f"{st.session_state['price_library']['ac_prices'][ac_type][thk]:,.0f}"
+            for ci, thk in enumerate(conc_thicknesses):
+                sqm_price = cum_price * (thk / 100)
+                row_cols[2 + ci].markdown(f"{sqm_price:,.0f}")
+                # อัพเดท library
+                lib['concrete_prices'].setdefault(conc_type, {})[thk] = round(sqm_price, 2)
 
-                doc.add_heading('2. ผิวทางคอนกรีต (บาท/ตร.ม.)', level=1)
-                table = doc.add_table(rows=len(conc_thicknesses) + 1, cols=4)
-                table.style = 'Table Grid'
-                for j, h in enumerate(['ความหนา (cm)'] + conc_types):
-                    table.rows[0].cells[j].text = h
-                for i, thk in enumerate(conc_thicknesses):
-                    table.rows[i + 1].cells[0].text = str(thk)
-                    for j, conc_type in enumerate(conc_types):
-                        table.rows[i + 1].cells[j + 1].text = f"{st.session_state['price_library']['concrete_prices'][conc_type][thk]:,.0f}"
+        st.session_state['price_library'] = lib
 
-                doc.add_heading('3. วัสดุพื้นทาง/รองพื้นทาง (บาท/ลบ.ม.)', level=1)
-                table = doc.add_table(rows=len(base_materials_list) + 1, cols=2)
-                table.style = 'Table Grid'
-                table.rows[0].cells[0].text = 'วัสดุ'
-                table.rows[0].cells[1].text = 'ราคา (บาท/ลบ.ม.)'
-                for i, mat in enumerate(base_materials_list):
-                    table.rows[i + 1].cells[0].text = mat
-                    table.rows[i + 1].cells[1].text = f"{st.session_state['price_library']['base_prices'][mat]:,.0f}"
+        st.divider()
 
-                doc_output = io.BytesIO()
-                doc.save(doc_output)
-                doc_output.seek(0)
-                st.download_button(
-                    label="⬇️ Download Word", data=doc_output,
-                    file_name="ราคาเปรียบเทียบโครงสร้างชั้นทาง.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        # ════════════════════════════════════════════════════════
+        # ส่วนที่ 4: ราคาวัสดุพื้นทาง/รองพื้นทาง
+        # ════════════════════════════════════════════════════════
+        st.subheader("🪨 ราคาวัสดุพื้นทาง / รองพื้นทาง (บาท/ลบ.ม.)")
+
+        base_mat_list = [
+            'Cement Treated Base (UCS 40 ksc)',
+            'Cement Modified Crushed Rock Base (UCS 24.5 ksc)',
+            'Crushed Rock Base Course',
+            'Soil Cement Subbase (UCS 7 ksc)',
+            'Soil Aggregate Subbase',
+            'Selected Material A',
+            'Embankment',
+            'Sand Embankment',
+        ]
+        # เพิ่ม default ถ้ายังไม่มีใน library
+        for mat in ['Embankment', 'Sand Embankment']:
+            lib['base_prices'].setdefault(mat, 0)
+
+        base_cols_hdr = st.columns([4, 2])
+        base_cols_hdr[0].markdown("**วัสดุ**")
+        base_cols_hdr[1].markdown("**ราคา (บาท/ลบ.ม.)**")
+
+        for mat in base_mat_list:
+            bc = st.columns([4, 2])
+            bc[0].markdown(mat)
+            with bc[1]:
+                bp = st.number_input(
+                    mat, value=float(lib['base_prices'].get(mat, 0)),
+                    min_value=0.0, step=10.0,
+                    key=f"base2_{mat}_{upload_version}",
+                    label_visibility="collapsed"
                 )
+                lib['base_prices'][mat] = bp
 
-    # ===== Tab 2: โครงสร้างชั้นทาง (v6 — 2 ชุด) =====
+        st.divider()
+
+        # ════════════════════════════════════════════════════════
+        # ส่วนที่ 5: ราคาวัสดุผิว / อุปกรณ์
+        # ════════════════════════════════════════════════════════
+        st.subheader("🛢️ ราคาวัสดุผิว / อุปกรณ์ (บาท/ตร.ม.)")
+        st.caption("Prime Coat, Tack Coat, Non Woven Geotextile, Wire Mesh — คิดตามพื้นที่ ไม่ใช่ปริมาตร")
+
+        accessory_mats = {
+            'Prime Coat':           37.47,
+            'Non Woven Geotextile': 78.0,
+            'Wire Mesh':            100.0,
+            'Tack Coat':            20.0,
+        }
+        for mat, def_val in accessory_mats.items():
+            lib['base_prices'].setdefault(mat, def_val)
+
+        acc_hdr = st.columns([4, 2])
+        acc_hdr[0].markdown("**วัสดุ**")
+        acc_hdr[1].markdown("**ราคา (บาท/ตร.ม.)**")
+
+        for mat in accessory_mats:
+            ac2 = st.columns([4, 2])
+            ac2[0].markdown(mat)
+            with ac2[1]:
+                ap = st.number_input(
+                    mat, value=float(lib['base_prices'].get(mat, accessory_mats[mat])),
+                    min_value=0.0, step=1.0,
+                    key=f"acc_{mat}_{upload_version}",
+                    label_visibility="collapsed"
+                )
+                lib['base_prices'][mat] = ap
+
+        st.divider()
+
+        if st.button("💾 บันทึกราคาทั้งหมดลง Library", type="primary", use_container_width=True, key="btn_save_all_prices"):
+            st.session_state['price_library'] = lib
+            st.success("✅ บันทึกราคาทั้งหมดลง Library แล้ว")
+
+        st.divider()
+        # ── ดาวน์โหลด Excel ──
+        if st.button("📊 สร้างไฟล์ Excel ราคาปัจจุบัน", key="btn_excel_price2", use_container_width=True):
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                ac_data = []
+                for ac_type in ac_types:
+                    for thk in thicknesses_ac:
+                        ac_data.append({'ประเภท': ac_type, 'ความหนา (cm)': thk,
+                                        'ราคา (บาท/ตร.ม.)': lib['ac_prices'].get(ac_type, {}).get(thk, 0)})
+                pd.DataFrame(ac_data).to_excel(writer, sheet_name='AC Prices', index=False)
+
+                conc_data = []
+                for ct in conc_types:
+                    for thk in conc_thicknesses:
+                        conc_data.append({'ประเภท': ct, 'ความหนา (cm)': thk,
+                                          'ราคา (บาท/ตร.ม.)': lib['concrete_prices'].get(ct, {}).get(thk, 0)})
+                pd.DataFrame(conc_data).to_excel(writer, sheet_name='Concrete Prices', index=False)
+
+                base_data = [{'วัสดุ': k, 'ราคา (บาท/ลบ.ม.)': v}
+                             for k, v in lib['base_prices'].items()]
+                pd.DataFrame(base_data).to_excel(writer, sheet_name='Base Materials', index=False)
+            output.seek(0)
+            st.download_button(
+                label="⬇️ Download Excel", data=output,
+                file_name=f"ราคาวัสดุโครงสร้างชั้นทาง_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    # ===== Tab 2: โครงสร้างชั้นทาง =====
     with tab2:
         st.header("กำหนดโครงสร้างชั้นทาง")
 
@@ -1962,62 +2069,57 @@ def main():
         ptypes = ['AC', 'JPCP', 'JRCP', 'CRCP']
         type_icons = {'AC': '🔵', 'JPCP': '🟠', 'JRCP': '🟠', 'CRCP': '🔴'}
 
-        for ptype in ptypes:
-            layers_fn_a, joints_fn_a, label_a, color_a, life_default = STRUCT_CONFIG[ptype]
-            layers_fn_b, joints_fn_b, label_b, color_b, _            = STRUCT_CONFIG_B[ptype]
+        # ── Sub Tabs แยกตาม ptype ──
+        sub_tabs = st.tabs([f"{type_icons[p]} {p}" for p in ptypes])
 
-            # ── header: ชื่อประเภท + อายุออกแบบ (ชุดที่ 1 = ชุดที่ 2 เสมอ) ──
-            hcol1, hcol2 = st.columns([3, 1])
-            with hcol1:
-                st.subheader(f"{type_icons[ptype]} {ptype}")
-            with hcol2:
-                life_a = st.number_input(
-                    "อายุออกแบบ (ปี)",
-                    value=int(life_default),
-                    min_value=1, max_value=50, step=1,
-                    key=f"life_{ptype}_v{v}",
-                    help="ชุดที่ 1 และ 2 ใช้อายุออกแบบเดียวกัน"
-                )
+        for sub_tab, ptype in zip(sub_tabs, ptypes):
+            with sub_tab:
+                layers_fn_a, joints_fn_a, label_a, color_a, life_default = STRUCT_CONFIG[ptype]
+                layers_fn_b, joints_fn_b, label_b, color_b, _            = STRUCT_CONFIG_B[ptype]
 
-            if show_set2:
-                col_a, col_b = st.columns(2)
-            else:
-                col_a = st.container()
-
-            with col_a:
-                (name_a, cpk_a, csqm_a, det_a, lay_a, jnt_a, show_a) = _render_structure(
-                    ptype, 'a', layers_fn_a, joints_fn_a, label_a, color_a, 'ชุดที่ 1', v=v
-                )
-            construction[f'{ptype}_A'] = {
-                'name': name_a, 'cost': cpk_a, 'cost_sqm': csqm_a,
-                'details': det_a, 'layers': lay_a, 'joints': jnt_a,
-                'show': show_a, 'life': life_a, 'set': 1,
-            }
-
-            if show_set2:
-                with col_b:
-                    (name_b, cpk_b, csqm_b, det_b, lay_b, jnt_b, show_b) = _render_structure(
-                        ptype, 'b', layers_fn_b, joints_fn_b, label_b, color_b, 'ชุดที่ 2', v=v
+                hcol1, hcol2 = st.columns([3, 1])
+                with hcol1:
+                    st.subheader(f"{type_icons[ptype]} {ptype}")
+                with hcol2:
+                    life_a = st.number_input(
+                        "อายุออกแบบ (ปี)", value=int(life_default),
+                        min_value=1, max_value=50, step=1,
+                        key=f"life_{ptype}_v{v}",
                     )
-                construction[f'{ptype}_B'] = {
-                    'name': name_b, 'cost': cpk_b, 'cost_sqm': csqm_b,
-                    'details': det_b, 'layers': lay_b, 'joints': jnt_b,
-                    'show': show_b, 'life': life_a, 'set': 2,
-                }
-            else:
-                # ชุดที่ 2 ไม่ได้เปิด → เก็บ placeholder ไว้ (show=False)
-                construction[f'{ptype}_B'] = {
-                    'name': f"{ptype} (ชุดที่ 2)", 'cost': 0, 'cost_sqm': 0,
-                    'details': [], 'layers': [], 'joints': None,
-                    'show': False, 'life': life_a, 'set': 2,
+
+                if show_set2:
+                    col_a, col_b = st.columns(2)
+                else:
+                    col_a = st.container()
+
+                with col_a:
+                    (name_a, cpk_a, csqm_a, det_a, lay_a, jnt_a, show_a) = _render_structure(
+                        ptype, 'a', layers_fn_a, joints_fn_a, label_a, color_a, 'ชุดที่ 1', v=v
+                    )
+                construction[f'{ptype}_A'] = {
+                    'name': name_a, 'cost': cpk_a, 'cost_sqm': csqm_a,
+                    'details': det_a, 'layers': lay_a, 'joints': jnt_a,
+                    'show': show_a, 'life': life_a, 'set': 1,
                 }
 
-            st.divider()
+                if show_set2:
+                    with col_b:
+                        (name_b, cpk_b, csqm_b, det_b, lay_b, jnt_b, show_b) = _render_structure(
+                            ptype, 'b', layers_fn_b, joints_fn_b, label_b, color_b, 'ชุดที่ 2', v=v
+                        )
+                    construction[f'{ptype}_B'] = {
+                        'name': name_b, 'cost': cpk_b, 'cost_sqm': csqm_b,
+                        'details': det_b, 'layers': lay_b, 'joints': jnt_b,
+                        'show': show_b, 'life': life_a, 'set': 2,
+                    }
+                else:
+                    construction[f'{ptype}_B'] = {
+                        'name': f"{ptype} (ชุดที่ 2)", 'cost': 0, 'cost_sqm': 0,
+                        'details': [], 'layers': [], 'joints': None,
+                        'show': False, 'life': life_a, 'set': 2,
+                    }
 
         # ── บันทึก session_state ──
-        # รักษา key เดิม (AC1/AC2/JRCP1/JRCP2/CRCP1/CRCP2) สำหรับ Tab 3 / JSON
-        # รักษา key เดิม (AC1/AC2/JRCP1/JRCP2/CRCP1/CRCP2) ให้ Tab 3 และ JSON ใช้ได้
-        # mapping: ชุดที่ 1 → key ลงท้าย 1, ชุดที่ 2 → key ลงท้าย 2
         st.session_state['construction'] = {
             'AC1':   construction['AC_A'],
             'AC2':   construction['AC_B'],
@@ -2102,66 +2204,68 @@ def main():
             with col_s4:
                 st.metric("📐 บาท/ตร.ม.", f"{cost_per_sqm_det:.2f}")
 
-    # ===== Tab 3: รายงาน =====
+    # ===== Tab 3: สรุปต้นทุน & รายงาน =====
     with tab3:
-        st.header("📄 สร้างรายงาน")
-        st.info("💡 รายงานจะแสดงเฉพาะข้อมูลวัสดุและราคา (ไม่รวม NPV)")
+        st.header("📊 สรุปต้นทุนและรายงาน")
 
         if 'construction' in st.session_state and st.session_state['construction']:
             constr = st.session_state.get('construction', {})
 
-            # สร้าง all_details ก่อน แล้วค่อยตรวจว่ามีกี่ชุด
-            _raw_details = {}
-            for k, v_data in constr.items():
-                if v_data.get('show', True) and v_data.get('details'):
-                    _raw_details[k] = v_data
+            # ── Card Summary 4 ใบ — ชุดที่ 1 เท่านั้น ──
+            _card_map = {
+                'AC':   ('AC1',   '#378ADD', '🔵'),
+                'JPCP': ('JPCP1', '#E29A30', '🟠'),
+                'JRCP': ('JRCP1', '#E29A30', '🟠'),
+                'CRCP': ('CRCP1', '#C94040', '🔴'),
+            }
+            card_cols = st.columns(4)
+            for ci, (ptype_label, (data_key, card_color, icon)) in enumerate(_card_map.items()):
+                d = constr.get(data_key, {})
+                cpk   = d.get('cost', 0)
+                csqm  = d.get('cost_sqm', 0)
+                cname = d.get('name', ptype_label)
+                with card_cols[ci]:
+                    st.markdown(
+                        f"""<div style="border:1px solid #e0e0e0;border-top:4px solid {card_color};
+                        border-radius:8px;padding:16px 18px;margin-bottom:8px;background:#fff;">
+                        <div style="font-size:0.82rem;color:#888;margin-bottom:4px;">{icon} {ptype_label}</div>
+                        <div style="font-size:1.7rem;font-weight:700;color:#1a1a2e;line-height:1.2;">
+                            {csqm:,.0f} <span style="font-size:0.9rem;font-weight:400;">บาท/ตร.ม.</span></div>
+                        <div style="font-size:0.88rem;color:#555;margin-top:4px;">{cpk:.3f} ล้านบาท/กม.</div>
+                        <div style="font-size:0.75rem;color:#aaa;margin-top:6px;white-space:nowrap;
+                        overflow:hidden;text-overflow:ellipsis;" title="{cname}">{cname}</div>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
 
-            # ตรวจว่ามีชุดที่ 2 อยู่ในรายงานด้วยหรือไม่
-            _has_set2 = any(k.endswith('2') for k in _raw_details)
+            st.divider()
 
-            # กำหนดชื่อสั้น: ถ้ามีแค่ชุดที่ 1 → ไม่ต้องใส่ "ชุดที่ 1"
-            def _make_short_name(k):
-                _base = {'AC1': 'AC', 'AC2': 'AC',
-                         'JPCP1': 'JPCP', 'JPCP2': 'JPCP',
-                         'JRCP1': 'JRCP', 'JRCP2': 'JRCP',
-                         'CRCP1': 'CRCP', 'CRCP2': 'CRCP'}.get(k, k)
-                if _has_set2:
-                    _set_num = '1' if k.endswith('1') else '2'
-                    return f"{_base} (ชุดที่ {_set_num})"
-                return _base  # ชุดเดียว → ไม่ต้องบอก "ชุดที่ 1"
+            # ── สร้าง all_details (ชุดที่ 1 เท่านั้น) ──
+            _set1_keys = ['AC1', 'JPCP1', 'JRCP1', 'CRCP1']
+            _name_map  = {'AC1': 'AC', 'JPCP1': 'JPCP', 'JRCP1': 'JRCP', 'CRCP1': 'CRCP'}
 
             all_details = {}
-            for k, v_data in _raw_details.items():
-                all_details[k] = {
-                    'name':        _make_short_name(k),
-                    'name_detail': v_data.get('name', k),
-                    'details':     v_data.get('details', []),
-                    'cost_per_km': v_data.get('cost', 0),
-                    'cost_sqm':    v_data.get('cost_sqm', 0),
-                }
+            for k in _set1_keys:
+                v_data = constr.get(k, {})
+                if v_data.get('show', True) and v_data.get('details'):
+                    all_details[k] = {
+                        'name':        _name_map.get(k, k),
+                        'name_detail': v_data.get('name', k),
+                        'details':     v_data.get('details', []),
+                        'cost_per_km': v_data.get('cost', 0),
+                        'cost_sqm':    v_data.get('cost_sqm', 0),
+                    }
 
             if not all_details:
-                st.warning("⚠️ กรุณาเลือกอย่างน้อย 1 โครงสร้างที่ต้องการแสดงในรายงาน (tick ✅ แสดงในรายงาน ใน Tab 2)")
+                st.warning("⚠️ กรุณาเลือก 'รวมในรายงาน' อย่างน้อย 1 โครงสร้างใน Tab 🏗️")
             else:
-                st.subheader("📊 ข้อมูลที่จะรวมในรายงาน")
-                for k, data in all_details.items():
-                    if data['details']:
-                        with st.expander(f"🔍 {data['name']}"):
-                            # แสดงชื่อยาวเป็น caption
-                            if data.get('name_detail') and data['name_detail'] != data['name']:
-                                st.caption(f"รายละเอียด: {data['name_detail']}")
-                            df_preview = pd.DataFrame(data['details'])
-                            st.dataframe(df_preview, use_container_width=True, hide_index=True)
-
-                st.divider()
-
-                st.subheader("📋 สร้างรายงานแบบที่ปรึกษา")
-                with st.expander("⚙️ ตั้งค่ารายงาน", expanded=True):
+                # ── ตั้งค่ารายงาน ──
+                with st.expander("⚙️ ตั้งค่ารายงาน", expanded=False):
                     col_cfg1, col_cfg2 = st.columns(2)
                     with col_cfg1:
-                        chapter_num = st.text_input("หมายเลขบทหลัก (เช่น 4, 5)", value="4", key="rpt_chapter_num")
+                        chapter_num   = st.text_input("หมายเลขบทหลัก", value="4", key="rpt_chapter_num")
                     with col_cfg2:
-                        section_start = st.text_input("หมายเลขหัวข้อเริ่มต้น (เช่น 4.7)", value="4.7", key="rpt_section_start")
+                        section_start = st.text_input("หมายเลขหัวข้อเริ่มต้น", value="4.7", key="rpt_section_start")
 
                     _pi = project_info
                     _default_intro = (
@@ -2171,49 +2275,49 @@ def main():
                         f"ความกว้างรวม {_pi.get('total_width', 0):.2f} เมตร "
                         f"ระยะทาง {_pi.get('length', 1):.2f} กิโลเมตร "
                         f"โดยครอบคลุมทั้งผิวทางแอสฟัลต์คอนกรีต (AC) และผิวทางคอนกรีตซีเมนต์ (JPCP, JRCP, CRCP) "
-                        f"การวิเคราะห์อ้างอิงราคาวัสดุและค่าก่อสร้างตามมาตรฐานกรมกรมบัญชีกลาง "
-                        f"เพื่อใช้เป็นข้อมูลประกอบการตัดสินใจเลือกโครงสร้างชั้นทางที่เหมาะสมกับสภาพโครงการ"
+                        f"การวิเคราะห์อ้างอิงราคาวัสดุและค่าก่อสร้างตามมาตรฐานกรมบัญชีกลาง"
                     )
                     intro_text = st.text_area(
-                        "บทเกริ่นนำ (แสดงใต้หัวข้อข้อมูลโครงการ)",
-                        value=_default_intro, height=120, key=f"rpt_intro_text_{total_width:.0f}_{num_lanes}"
+                        "บทเกริ่นนำ", value=_default_intro, height=100,
+                        key=f"rpt_intro_text_{total_width:.0f}_{num_lanes}"
                     )
 
-                if not DOCX_AVAILABLE:
-                    st.warning("⚠️ ไม่สามารถสร้างรายงาน Word ได้ เนื่องจาก python-docx ไม่สามารถใช้งานได้")
-                elif st.button("📋 สร้างรายงาน Word แบบที่ปรึกษา", type="primary", use_container_width=True, key="btn_consultant_report"):
-                    try:
-                        doc = generate_word_report_consultant(
-                            st.session_state['project_info'], all_details,
-                            chapter_num=chapter_num, section_start=section_start, intro_text=intro_text
-                        )
-                        buf = io.BytesIO()
-                        doc.save(buf)
-                        buf.seek(0)
-                        _proj_name = st.session_state.get('project_info', {}).get('name', 'Project')
-                        st.download_button(
-                            "⬇️ ดาวน์โหลด Word แบบที่ปรึกษา", data=buf,
-                            file_name=f"Cost Est {_proj_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            use_container_width=True, key="dl_consultant_report"
-                        )
-                        st.success("✅ สร้างรายงานแบบที่ปรึกษาสำเร็จ!")
-                    except Exception as e:
-                        st.error(f"❌ เกิดข้อผิดพลาด: {str(e)}")
+                # ── ปุ่มรายงาน ──
+                btn_c1, btn_c2, btn_c3 = st.columns(3)
 
-                st.divider()
-
-                c1, c2 = st.columns(2)
-
-                with c1:
+                with btn_c1:
                     if not DOCX_AVAILABLE:
-                        st.warning("⚠️ ไม่สามารถสร้างรายงาน Word ได้")
-                    elif st.button("📄 สร้างรายงาน Word แบบย่อ", use_container_width=True, key="btn_short_report"):
+                        st.warning("⚠️ python-docx ไม่พร้อมใช้งาน")
+                    elif st.button("📋 Word แบบที่ปรึกษา", type="primary",
+                                   use_container_width=True, key="btn_consultant_report"):
                         try:
-                            doc = generate_word_report_materials_only(st.session_state['project_info'], all_details)
+                            doc = generate_word_report_consultant(
+                                st.session_state['project_info'], all_details,
+                                chapter_num=chapter_num, section_start=section_start,
+                                intro_text=intro_text
+                            )
                             buf = io.BytesIO()
-                            doc.save(buf)
-                            buf.seek(0)
+                            doc.save(buf); buf.seek(0)
+                            _proj_name = st.session_state.get('project_info', {}).get('name', 'Project')
+                            st.download_button(
+                                "⬇️ ดาวน์โหลด Word แบบที่ปรึกษา", data=buf,
+                                file_name=f"Cost Est {_proj_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                use_container_width=True, key="dl_consultant_report"
+                            )
+                            st.success("✅ สร้างรายงานสำเร็จ!")
+                        except Exception as e:
+                            st.error(f"❌ {str(e)}")
+
+                with btn_c2:
+                    if not DOCX_AVAILABLE:
+                        st.warning("⚠️ python-docx ไม่พร้อมใช้งาน")
+                    elif st.button("📄 Word แบบย่อ", use_container_width=True, key="btn_short_report"):
+                        try:
+                            doc = generate_word_report_materials_only(
+                                st.session_state['project_info'], all_details)
+                            buf = io.BytesIO()
+                            doc.save(buf); buf.seek(0)
                             st.download_button(
                                 "⬇️ ดาวน์โหลด Word แบบย่อ", data=buf,
                                 file_name=f"Materials_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.docx",
@@ -2222,11 +2326,10 @@ def main():
                             )
                             st.success("✅ สร้างรายงานสำเร็จ!")
                         except Exception as e:
-                            st.error(f"❌ เกิดข้อผิดพลาดในการสร้างรายงาน: {str(e)}")
+                            st.error(f"❌ {str(e)}")
 
-                with c2:
+                with btn_c3:
                     if st.button("💾 บันทึกโครงการ (JSON)", use_container_width=True):
-                        # FIX: บันทึก 'show' และ 'cost_sqm' ด้วย เพื่อให้ load กลับมาครบถ้วน
                         data = {
                             'project_info': st.session_state['project_info'],
                             'construction': {
@@ -2239,13 +2342,9 @@ def main():
                                     'joints':   v_s.get('joints') or [],
                                 } for k, v_s in st.session_state.get('construction', {}).items()
                             },
-                            'price_library': st.session_state.get('price_library', {
-                                'ac_prices':       AC_PRICE_TABLE,
-                                'concrete_prices': CONCRETE_PRICE_TABLE,
-                                'base_prices':     BASE_MATERIAL_PRICES,
-                            }),
+                            'price_library': st.session_state.get('price_library', {}),
                             'saved_at': datetime.now().isoformat(),
-                            'version': '5.2',
+                            'version': '6.0',
                         }
                         st.download_button(
                             "⬇️ ดาวน์โหลด JSON", data=json.dumps(data, ensure_ascii=False, indent=2),
@@ -2253,207 +2352,22 @@ def main():
                             mime="application/json", use_container_width=True
                         )
                         st.success("✅ บันทึกโครงการสำเร็จ!")
-        else:
-            st.warning("⚠️ กรุณาเพิ่มข้อมูลโครงสร้างชั้นทางใน Tab 2 ก่อน")
-
-    # ===== Tab 4: วิเคราะห์จากรูปภาพ =====
-    with tab4:
-        st.info("💡 Upload รูปภาพโครงสร้างชั้นทาง แล้วระบบจะวิเคราะห์และคำนวณราคาให้อัตโนมัติ")
-
-        uploaded_image = st.file_uploader(
-            "เลือกรูปภาพโครงสร้างชั้นทาง", type=['png', 'jpg', 'jpeg'],
-            help="รองรับไฟล์ PNG, JPG, JPEG"
-        )
-
-        if uploaded_image is not None:
-            col_img, col_result = st.columns([1, 1])
-
-            with col_img:
-                st.subheader("🖼️ รูปภาพที่ Upload")
-                st.image(uploaded_image, use_container_width=True)
-
-            with col_result:
-                st.subheader("📋 กรอกข้อมูลโครงสร้างชั้นทาง")
-                st.markdown("กรุณาตรวจสอบและแก้ไขข้อมูลที่อ่านจากรูปภาพ")
-
-                structure_type = st.selectbox(
-                    "ประเภทโครงสร้าง",
-                    options=['AC Pavement', 'JPCP', 'JRCP', 'CRCP'],
-                    key="img_structure_type"
-                )
-
-                num_layers = st.number_input(
-                    "จำนวนชั้นโครงสร้าง", min_value=1, max_value=10, value=6,
-                    key="img_num_layers"
-                )
 
                 st.divider()
 
-                surface_materials = {
-                    'AC Pavement': ['AC Wearing Course', 'PMA Wearing Course', 'AC Binder Course', 'AC Base Course', 'Tack Coat', 'Prime Coat'],
-                    'JPCP': ['Concrete Slab (JPCP)', 'AC Interlayer', 'Non Woven Geotextile'],
-                    'JRCP': ['Concrete Slab (JRCP)', 'AC Interlayer', 'Non Woven Geotextile'],
-                    'CRCP': ['Concrete Slab (CRCP)', 'AC Interlayer', 'Steel Reinforcement', 'Non Woven Geotextile'],
-                }
+                # ── Preview รายละเอียดแต่ละโครงสร้าง ──
+                st.subheader("🔍 รายละเอียดราคาแต่ละโครงสร้าง")
+                for k, data in all_details.items():
+                    if data['details']:
+                        with st.expander(f"{data['name']} — {data['cost_sqm']:,.0f} บาท/ตร.ม."):
+                            if data.get('name_detail') and data['name_detail'] != data['name']:
+                                st.caption(data['name_detail'])
+                            st.dataframe(pd.DataFrame(data['details']),
+                                         use_container_width=True, hide_index=True)
 
-                base_materials_img = [
-                    'Cement Treated Base (UCS 40 ksc)',
-                    'Cement Modified Crushed Rock Base (UCS 24.5 ksc)',
-                    'Crushed Rock Base Course',
-                    'Soil Cement Subbase (UCS 7 ksc)',
-                    'Soil Aggregate Subbase',
-                    'Selected Material A',
-                ]
+        else:
+            st.warning("⚠️ กรุณาเพิ่มข้อมูลโครงสร้างชั้นทางใน Tab 🏗️ ก่อน")
 
-                all_materials = surface_materials.get(structure_type, []) + base_materials_img
-
-                if 'img_layers' not in st.session_state:
-                    st.session_state['img_layers'] = []
-
-                img_layers = []
-
-                st.markdown("**รายละเอียดแต่ละชั้น:**")
-                cols_h = st.columns([3, 1.5, 2])
-                cols_h[0].markdown("**วัสดุ**")
-                cols_h[1].markdown("**ความหนา (cm)**")
-                cols_h[2].markdown("**ราคา (บาท/ตร.ม.)**")
-
-                for i in range(int(num_layers)):
-                    cols = st.columns([3, 1.5, 2])
-
-                    default_materials_map = {
-                        'AC Pavement': ['AC Wearing Course', 'AC Binder Course', 'AC Base Course', 'Cement Treated Base (UCS 40 ksc)', 'Soil Aggregate Subbase', 'Selected Material A'],
-                        'JPCP': ['Concrete Slab (JPCP)', 'AC Interlayer', 'Cement Treated Base (UCS 40 ksc)', 'Crushed Rock Base Course', 'Soil Aggregate Subbase', 'Selected Material A'],
-                        'JRCP': ['Concrete Slab (JRCP)', 'AC Interlayer', 'Cement Treated Base (UCS 40 ksc)', 'Crushed Rock Base Course', 'Soil Aggregate Subbase', 'Selected Material A'],
-                        'CRCP': ['Concrete Slab (CRCP)', 'AC Interlayer', 'Cement Treated Base (UCS 40 ksc)', 'Crushed Rock Base Course', 'Soil Aggregate Subbase', 'Selected Material A'],
-                    }
-                    default_list = default_materials_map.get(structure_type, all_materials)
-                    default_mat = default_list[i] if i < len(default_list) else all_materials[0]
-                    try:
-                        mat_idx = all_materials.index(default_mat)
-                    except Exception:
-                        mat_idx = 0
-
-                    with cols[0]:
-                        material = st.selectbox(
-                            f"วัสดุชั้น {i+1}", options=all_materials, index=mat_idx,
-                            key=f"img_mat_{i}", label_visibility="collapsed"
-                        )
-
-                    default_thicknesses_map = {
-                        'AC Pavement': [5, 7, 8, 20, 25, 30],
-                        'JPCP': [30, 5, 20, 15, 25, 30],
-                        'JRCP': [30, 5, 20, 15, 25, 30],
-                        'CRCP': [30, 5, 20, 15, 25, 30],
-                    }
-                    default_thick_list = default_thicknesses_map.get(structure_type, [20] * 10)
-                    default_thick = default_thick_list[i] if i < len(default_thick_list) else 20
-
-                    with cols[1]:
-                        thickness = st.number_input(
-                            f"หนา {i+1}", min_value=0.0, max_value=100.0,
-                            value=float(default_thick), step=1.0,
-                            key=f"img_thick_{i}", label_visibility="collapsed"
-                        )
-
-                    price_sqm = 0
-                    mat_lower = material.lower()
-                    if 'price_library' in st.session_state:
-                        lib = st.session_state['price_library']
-                        if 'ac wearing' in mat_lower:
-                            prices = lib['ac_prices'].get('AC Wearing Course', {})
-                            price_sqm = prices.get(thickness, 0)
-                            if price_sqm == 0 and prices:
-                                price_sqm = _safe_closest(prices, thickness, 0)
-                        elif 'pma' in mat_lower:
-                            prices = lib['ac_prices'].get('PMA Wearing Course', {})
-                            price_sqm = prices.get(thickness, 0)
-                            if price_sqm == 0 and prices:
-                                price_sqm = _safe_closest(prices, thickness, 0)
-                        elif 'binder' in mat_lower:
-                            prices = lib['ac_prices'].get('AC Binder Course', {})
-                            price_sqm = prices.get(thickness, 0)
-                            if price_sqm == 0 and prices:
-                                price_sqm = _safe_closest(prices, thickness, 0)
-                        elif 'ac base' in mat_lower or 'ac interlayer' in mat_lower:
-                            prices = lib['ac_prices'].get('AC Base Course', {})
-                            price_sqm = prices.get(thickness, 0)
-                            if price_sqm == 0 and prices:
-                                price_sqm = _safe_closest(prices, thickness, 0)
-                        elif 'tack' in mat_lower:
-                            price_sqm = 20
-                        elif 'prime' in mat_lower:
-                            price_sqm = 30
-                        elif 'geotextile' in mat_lower:
-                            price_sqm = 78
-                        elif 'steel' in mat_lower:
-                            price_sqm = 200
-                        elif 'concrete' in mat_lower or 'slab' in mat_lower:
-                            if 'jpcp' in mat_lower:
-                                prices = lib['concrete_prices'].get('JPCP', {})
-                            elif 'jrcp' in mat_lower:
-                                prices = lib['concrete_prices'].get('JRCP', {})
-                            elif 'crcp' in mat_lower:
-                                prices = lib['concrete_prices'].get('CRCP', {})
-                            else:
-                                prices = lib['concrete_prices'].get('JPCP', {})
-                            price_sqm = prices.get(int(thickness), 0)
-                            if price_sqm == 0 and prices:
-                                price_sqm = _safe_closest(prices, thickness, 0)
-                        elif 'cement treated' in mat_lower:
-                            price_sqm = lib['base_prices'].get('Cement Treated Base (UCS 40 ksc)', 1096) * thickness / 100
-                        elif 'cement modified' in mat_lower:
-                            price_sqm = lib['base_prices'].get('Cement Modified Crushed Rock Base (UCS 24.5 ksc)', 864) * thickness / 100
-                        elif 'crushed rock' in mat_lower:
-                            price_sqm = lib['base_prices'].get('Crushed Rock Base Course', 583) * thickness / 100
-                        elif 'soil cement' in mat_lower:
-                            price_sqm = lib['base_prices'].get('Soil Cement Subbase (UCS 7 ksc)', 854) * thickness / 100
-                        elif 'soil aggregate' in mat_lower or 'aggregate subbase' in mat_lower:
-                            price_sqm = lib['base_prices'].get('Soil Aggregate Subbase', 375) * thickness / 100
-                        elif 'selected' in mat_lower:
-                            price_sqm = lib['base_prices'].get('Selected Material A', 375) * thickness / 100
-
-                    with cols[2]:
-                        st.markdown(f"**{price_sqm:,.2f}**")
-
-                    img_layers.append({'material': material, 'thickness': thickness, 'price_sqm': price_sqm})
-
-                st.session_state['img_layers'] = img_layers
-
-        if uploaded_image is not None and 'img_layers' in st.session_state and st.session_state['img_layers']:
-            st.divider()
-            st.subheader("📊 สรุปผลการวิเคราะห์")
-
-            img_layers = st.session_state['img_layers']
-            total_cost_sqm = sum(layer['price_sqm'] for layer in img_layers)
-
-            summary_data_img = []
-            for i, layer in enumerate(img_layers):
-                summary_data_img.append({
-                    'ลำดับ': i + 1,
-                    'วัสดุ': layer['material'],
-                    'ความหนา (cm)': layer['thickness'],
-                    'ราคา (บาท/ตร.ม.)': f"{layer['price_sqm']:,.2f}",
-                })
-
-            st.dataframe(pd.DataFrame(summary_data_img), use_container_width=True, hide_index=True)
-
-            col_m1, col_m2, col_m3 = st.columns(3)
-            with col_m1:
-                st.metric("💰 ราคารวม", f"{total_cost_sqm:,.2f} บาท/ตร.ม.")
-            with col_m2:
-                area_km = st.session_state.get('area_per_km', 22000)
-                cost_per_km_img = total_cost_sqm * area_km / 1_000_000
-                st.metric("📏 ราคาต่อ กม.", f"{cost_per_km_img:,.2f} ล้านบาท/กม.")
-            with col_m3:
-                structure_type_img = st.session_state.get('img_structure_type', 'JPCP')
-                if 'AC' in structure_type_img:
-                    design_life = 20
-                elif 'CRCP' in structure_type_img:
-                    design_life = 30
-                else:
-                    design_life = 25
-                st.metric("⏱️ อายุออกแบบ", f"{design_life} ปี")
 
     st.divider()
     st.markdown("""
@@ -2462,7 +2376,7 @@ def main():
         รศ.ดร.อิทธิพล มีผล<br>
         ภาควิชาครุศาสตร์โยธา คณะครุศาสตร์อุตสาหกรรม<br>
         มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ (มจพ.)<br>
-        <small style='color: #aaa;'>Pavement Structure Cost Analysis System v5.1 — Bug Fixed</small>
+        <small style='color: #aaa;'>Pavement Structure Cost Analysis System v6.0</small>
     </div>
     """, unsafe_allow_html=True)
 
